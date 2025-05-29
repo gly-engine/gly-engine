@@ -7,8 +7,8 @@ local cli_fs = require('source/cli/tools/fs')
 local str_fs = require('source/shared/string/schema/fs')
 local env_ncl = require('source/shared/var/build/ncl')
 local env_build = require('source/shared/var/build/build')
-local pipeline = require('source/shared/functional/pipeline')
-local zeebo_decorators = require('source/shared/functional/decorator')
+local zeebo_pipeline = require('source/shared/functional/pipeline')
+local util_decorator = require('source/shared/functional/decorator')
 local lustache = require('source/third_party/olivinelabs_lustache')
 
 --! @todo move this function!
