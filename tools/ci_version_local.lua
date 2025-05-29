@@ -1,4 +1,4 @@
-local cli_file = io.open('src/version.lua')
+local cli_file = io.open('source/version.lua')
 local cli_text = cli_file and cli_file:read('*a')
 local cli_version = cli_text and cli_text:match('(%d+%.%d+%.%d+)')
 

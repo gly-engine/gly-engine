@@ -1,5 +1,34 @@
-local util_fs = require('src/lib/util/fs')
+local str_fs = require('source/shared/string/schema/fs')
 
+-- local function haxe_build(args)
+--     local game_name = args.game
+--     local game_file, file_error = io.open(game_name, 'r')
+--     local game_content = game_file and game_file:read('*a')
+
+--     if file_error then
+--         return false, file_error
+--     end
+
+--     local pattern_utf8 = '_G%.require%("lua%-utf8"%)'
+--     local replace_utf8 = 'select(2, pcall(require, "lua-utf8")) or select(2, pcall(require, "utf8")) or string'
+--     local pattern_object = 'std%.(%w+):(%w+)'
+--     local replace_object = 'std.%1.%2'
+
+--     game_content = game_content:gsub(pattern_utf8, replace_utf8)
+--     game_content = game_content:gsub(pattern_object, replace_object)
+
+--     game_file:close()
+--     game_file, file_error = io.open(game_name, 'w')
+
+--     if file_error then
+--         return false, file_error
+--     end
+
+--     game_file:write(game_content)
+--     game_file:close()
+    
+--     return true
+-- end
 local function optmizer(content, srcname, args)
     if args.dev and srcname == 'eeenginecoregingakeyslua' then
         content = content:gsub('evt%.type == \'press\'', 'evt.type ~= \'press\'')
@@ -39,7 +68,7 @@ local function move(src_filename, out_filename, prefix, args)
             local node_require = { line:match(pattern_gameload) }
             
             if node_require and #node_require > 0 and not is_comment then     
-                local mod = util_fs.file(node_require[1])
+                local mod = str_fs.file(node_require[1])
                 local module_path = (mod.get_unix_path()..mod.get_filename()):gsub('%./', '')
                 local var_name = 'node_'..module_path:gsub('/', '_')
                 deps[#deps + 1] = module_path..'.lua'
@@ -78,7 +107,7 @@ local function build(path_in, src_in, path_out, src_out, prefix, args)
     local deps = {}
     local deps_builded = {}
 
-    local src = util_fs.path(path_in, src_in)
+    local src = str_fs.path(path_in, src_in)
 
     repeat
         if src then
@@ -90,7 +119,7 @@ local function build(path_in, src_in, path_out, src_out, prefix, args)
                 out = prefix..src.get_unix_path():gsub('%./', ''):gsub('/', '_')..out
             end
             local srcfile = src.get_fullfilepath()
-            local outfile = util_fs.path(path_out, out).get_fullfilepath()
+            local outfile = str_fs.path(path_out, out).get_fullfilepath()
             local new_deps = move(srcfile, outfile, prefix, args)
             while index <= #new_deps do
                 deps[index_deps + index] = new_deps[index]
@@ -107,7 +136,7 @@ local function build(path_in, src_in, path_out, src_out, prefix, args)
                 local dep = deps[index]
                 if not deps_builded[dep] then
                     deps_builded[dep] = true
-                    src = util_fs.file(dep)
+                    src = str_fs.file(dep)
                 end
                 index = index + 1
             end

@@ -1,4 +1,4 @@
-local version = require('src/version')
+local version = require('source/version')
 
 local help_message = "Available commands:\n"
   .."- init: Initializes a new game project. Requires a game path.\n"

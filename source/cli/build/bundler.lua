@@ -1,4 +1,4 @@
-local util_fs = require('src/lib/util/fs')
+local str_fs = require('source/shared/string/schema/fs')
 
 --! @defgroup cli
 --! @{
@@ -93,8 +93,8 @@ local util_fs = require('src/lib/util/fs')
 --! @endcode
 local function build(src, dest)
     local from = 'main'
-    local src_path = util_fs.file(src)
-    local dest_path = util_fs.file(dest)
+    local src_path = str_fs.file(src)
+    local dest_path = str_fs.file(dest)
     local relative = src_path and dest_path and src_path.get_unix_path()
     local src_file, src_err = io.open((src_path and src_path.get_fullfilepath()) or '')
     local pattern_identify = '^table: (%w+)$'
@@ -202,8 +202,8 @@ local function build(src, dest)
             while index <= #deps_list and not lib_name do
                 local lib = deps_list[index]
                 if not deps_dict[lib].imported then
-                    local file1 = util_fs.lua(lib).get_fullfilepath()
-                    local file2 = util_fs.lua(relative..lib).get_fullfilepath()
+                    local file1 = str_fs.lua(lib).get_fullfilepath()
+                    local file2 = str_fs.lua(relative..lib).get_fullfilepath()
                     src_file = io.open(file1, 'r') or io.open(file2, 'r')
                     from = src_file and 'lib' or 'system'
                     lib_name = src_file and deps_dict[lib].func

@@ -1,12 +1,12 @@
 local os = require('os')
 
-local zeebo_fs = require('src/lib/cli/fs')
-local zeebo_bundler = require('src/lib/cli/bundler')
-local zeebo_bootstrap = require('src/lib/cli/bootstrap')
+local cli_fs = require('source/cli/tools/fs')
+local zeebo_bundler = require('source/cli/build/bundler')
+local zeebo_bootstrap = require('source/cli/hazard/bootstrap')
 
 local function cli_test(args)
     local coverage = args.coverage and '-lluacov' or ''
-    local files = zeebo_fs.ls('./tests/unit')
+    local files = cli_fs.ls('./tests/unit')
     local index = 1
     local ok = true
     while index <= #files do
@@ -22,7 +22,7 @@ end
 
 local function cli_build(args)
     local dist = args.dist
-    zeebo_fs.clear(dist)
+    cli_fs.clear(dist)
     zeebo_bundler.build('src/cli/main.lua', dist..'main.lua')
     local deps = { './src', './assets', './samples', './mock', './ee', './third_party'}
     local ok, message = zeebo_bootstrap.build(dist..'main.lua', dist..'cli.lua', deps)

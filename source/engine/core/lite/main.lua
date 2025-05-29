@@ -1,4 +1,4 @@
-local version = require('src/version')
+local version = require('source/version')
 local zeebo_module = require('src/lib/common/module')
 --
 local engine_encoder = require('src/lib/engine/api/encoder')

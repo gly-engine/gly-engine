@@ -25,7 +25,7 @@ local engine_fps = require('src/lib/engine/raw/fps')
 local engine_node = require('src/lib/engine/raw/node')
 local engine_memory = require('src/lib/engine/raw/memory')
 --
-local cfg_json_rxi = require('third_party/json/rxi')
+local cfg_json_rxi = require('source/third_party/rxi_json')
 local cfg_logsystem = require('src/lib/protocol/logsystem_print')
 local cfg_http_ginga = require('ee/lib/protocol/http_fsb09')
 local cfg_persistent = require('ee/lib/protocol/storage_fsd09')

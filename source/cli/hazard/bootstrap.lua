@@ -1,4 +1,4 @@
-local util_cmd = require('src/lib/util/cmd')
+local str_cmd = require('source/shared/string/schema/cmd')
 
 local function bootstrap()
     local fmock = io.open('mock/io.lua', 'r')
@@ -172,7 +172,7 @@ local function dump()
     do
         local index = 1
         while index <= #BOOTSTRAP_DIRS do
-            os.execute(util_cmd.mkdir()..BOOTSTRAP_DIRS[index])
+            os.execute(str_cmd.mkdir()..BOOTSTRAP_DIRS[index])
             index = index + 1
         end
     end

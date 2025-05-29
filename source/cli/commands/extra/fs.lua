@@ -1,8 +1,7 @@
-local zeebo_fs = require('src/lib/cli/fs')
-local zeebo_module = require('src/lib/common/module')
-local json = require('third_party/json/rxi')
-local version = require('src/version')
-local lustache = require('third_party/lustache/olivinelabs')
+local cli_fs = require('source/cli/tools/fs')
+local json = require('source/third_party/rxi_json')
+local version = require('source/version')
+local lustache = require('source/third_party/olivinelabs_lustache')
 
 local function replace(args)
     local file_in = io.open(args.file,'r')
@@ -27,10 +26,11 @@ local function download(args)
 end
 
 local function copy(args)
-    return zeebo_fs.move(args.file, args.dist)
+    return cli_fs.move(args.file, args.dist)
 end
 
 local function mustache(args)
+    --[[
     local file_json, ferr_json = io.open(args.game_or_json, 'r')
     local file_input, ferr_input = io.open(args.file, 'r')
     local file_output, ferr_output = io.open(args.dist, 'w')
@@ -90,6 +90,7 @@ local function mustache(args)
     file_output:close()
     
     return true
+    ]]--
 end
 
 local function vim_xxd_i(args)

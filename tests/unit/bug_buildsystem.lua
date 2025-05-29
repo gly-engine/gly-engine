@@ -1,5 +1,5 @@
 local test = require('src/lib/util/test')
-local zeebo_bundler = require('src/lib/cli/bundler')
+local zeebo_bundler = require('source/cli/build/bundler')
 local zeebo_buildsystem = require('src/cli/tools/buildsystem')
 local mock_io = require('mock/io')
 

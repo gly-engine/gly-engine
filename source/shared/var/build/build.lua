@@ -1,4 +1,4 @@
-local version = require('src/version')
+local version = require('source/version')
 
 local function need_atobify(args, text, render)
     local result = render and render(text) or text or true

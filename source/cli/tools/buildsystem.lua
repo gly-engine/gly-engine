@@ -1,15 +1,15 @@
 local os = require('os')
-local zeebo_pipeline = require('src/lib/util/pipeline')
-local zeebo_module = require('src/lib/common/module')
-local zeebo_bundler = require('src/lib/cli/bundler')
-local zeebo_builder = require('src/lib/cli/builder')
-local zeebo_assets = require('src/lib/cli/assets')
-local zeebo_fs = require('src/lib/cli/fs')
-local util_decorator = require('src/lib/util/decorator')
-local util_fs = require('src/lib/util/fs')
-local obj_ncl = require('src/lib/object/ncl')
-local env_build = require('src/env/build')
-local lustache = require('third_party/lustache/olivinelabs')
+local zeebo_module = require('source/shared/module')
+local zeebo_bundler = require('source/cli/build/bundler')
+local zeebo_builder = require('source/cli/build/builder')
+local zeebo_assets = require('source/cli/tools/assets')
+local cli_fs = require('source/cli/tools/fs')
+local str_fs = require('source/shared/string/schema/fs')
+local env_ncl = require('source/shared/var/build/ncl')
+local env_build = require('source/shared/var/build/build')
+local pipeline = require('source/shared/functional/pipeline')
+local zeebo_decorators = require('source/shared/functional/decorator')
+local lustache = require('source/third_party/olivinelabs_lustache')
 
 --! @todo move this function!
 local function parser_assets(font_list, register_key, register_value)
@@ -61,14 +61,14 @@ local function add_core(self, core_name, options)
     
     self.pipeline[#self.pipeline + 1] = function()
         if not options.src then return end
-        local from = util_fs.file(options.src)
-        local to = util_fs.path(self.args.dist..self.bundler, options.as or from.get_file())
+        local from = str_fs.file(options.src)
+        local to = str_fs.path(self.args.dist..self.bundler, options.as or from.get_file())
         assert(zeebo_builder.build(from.get_unix_path(), from.get_file(), to.get_unix_path(), to.get_file(), options.prefix or '', self.args))
     end
 
     if #self.bundler > 0 and options.src then 
         self.pipeline[#self.pipeline + 1] = function()
-            local file = options.as or util_fs.file(options.src).get_file()
+            local file = options.as or str_fs.file(options.src).get_file()
             assert(zeebo_bundler.build(self.args.dist..self.bundler..file, self.args.dist..file))
         end
     end
@@ -85,10 +85,10 @@ end
 
 local function add_file(self, file_in, options)
     self.pipeline[#self.pipeline + 1] = function()
-        local from = util_fs.file(file_in)
-        local to = util_fs.path(self.args.dist, (options and options.as) or from.get_file())
-        zeebo_fs.mkdir(to.get_sys_path())
-        zeebo_fs.move(from.get_fullfilepath(), to.get_fullfilepath())
+        local from = str_fs.file(file_in)
+        local to = str_fs.path(self.args.dist, (options and options.as) or from.get_file())
+        cli_fs.mkdir(to.get_sys_path())
+        cli_fs.move(from.get_fullfilepath(), to.get_fullfilepath())
     end
 
     return self
@@ -96,8 +96,8 @@ end
 
 local function add_meta(self, file_in, options)
     self.pipeline[#self.pipeline + 1] = function()
-        local from = util_fs.file(file_in)
-        local to = util_fs.path(self.args.dist, (options and options.as) or from.get_file())
+        local from = str_fs.file(file_in)
+        local to = str_fs.path(self.args.dist, (options and options.as) or from.get_file())
         local input = io.open(from.get_fullfilepath(), 'r')
         local output = io.open(to.get_fullfilepath(), 'w')
         local game_ok, game_app = pcall(zeebo_module.loadgame, self.args.dist..'game.lua')
@@ -112,7 +112,7 @@ local function add_meta(self, file_in, options)
             assets = {
                 fonts = parser_assets(game_ok and game_app and game_app.fonts or {}, 'font', 'url')
             },
-            ncl=obj_ncl,
+            ncl=env_ncl,
             args=self.args,
             meta=meta
         })

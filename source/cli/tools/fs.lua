@@ -1,6 +1,5 @@
-local util_fs = require('src/lib/util/fs')
-local util_cmd = require('src/lib/util/cmd')
-
+local str_fs = require('source/shared/string/schema/fs')
+local str_cmd = require('source/shared/string/schema/cmd')
 local function lazy(func)
     return function(a, b, c)
         return function()
@@ -11,8 +10,8 @@ local function lazy(func)
 end
 
 local function ls(src_path)
-    local p = util_fs.path(src_path).get_fullfilepath()
-    local ls_cmd = io.popen(util_cmd.lsdir()..p)
+    local p = str_fs.path(src_path).get_fullfilepath()
+    local ls_cmd = io.popen(str_cmd.lsdir()..p)
     local ls_files = {}
 
     if ls_cmd then
@@ -27,25 +26,25 @@ local function ls(src_path)
 end
 
 local function del(src)
-    local p = util_fs.file(src).get_fullfilepath()
-    os.execute(util_cmd.del()..p..util_cmd.silent())
+    local p = str_fs.file(src).get_fullfilepath()
+    os.execute(str_cmd.del()..p..str_cmd.silent())
 end
 
 local function mkdir(src_path)
-    local p = util_fs.path(src_path).get_fullfilepath()
-    os.execute(util_cmd.mkdir()..p..util_cmd.silent())
+    local p = str_fs.path(src_path).get_fullfilepath()
+    os.execute(str_cmd.mkdir()..p..str_cmd.silent())
 end
 
 local function rmdir(src_path)
-    local p = util_fs.path(src_path).get_fullfilepath()
-    os.execute(util_cmd.rmdir()..p..util_cmd.silent())
+    local p = str_fs.path(src_path).get_fullfilepath()
+    os.execute(str_cmd.rmdir()..p..str_cmd.silent())
 end
 
 local function clear(src_path)
-    local p = util_fs.path(src_path).get_fullfilepath()
-    os.execute(util_cmd.mkdir()..p..util_cmd.silent())
-    os.execute(util_cmd.rmdir()..p..'*'..util_cmd.silent())
-    os.execute(util_cmd.del()..p..'*'..util_cmd.silent())
+    local p = str_fs.path(src_path).get_fullfilepath()
+    os.execute(str_cmd.mkdir()..p..str_cmd.silent())
+    os.execute(str_cmd.rmdir()..p..'*'..str_cmd.silent())
+    os.execute(str_cmd.del()..p..'*'..str_cmd.silent())
 end
 
 local function move(src_in, dist_out)

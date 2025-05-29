@@ -1,4 +1,4 @@
-local zeebo_args = require('src/lib/common/args')
+local zeebo_args = require('source/shared/string/parse/args')
 
 local function add_next_value(self, param, opt)
     local index = #self.param_list_value[self.current]
@@ -129,7 +129,7 @@ local function run(self, host_args)
     return self.cmd_execution[command](args)
 end
 
-local function from(host_args)
+local function argparse(host_args)
     local cmd = {
         help = 'help',
         hidden = {},
@@ -188,7 +188,7 @@ local function from(host_args)
 end
 
 local P = {
-    from=from
+    argparse=argparse
 }
 
 return P

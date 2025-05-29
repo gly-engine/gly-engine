@@ -1,5 +1,5 @@
-local zeebo_pipeline = require('src/lib/util/pipeline')
-local application_default = require('src/lib/object/root')
+local zeebo_pipeline = require('source/shared/functional/pipeline')
+local application_default = require('source/shared/var/object/root')
 
 --! @todo refactore all!
 

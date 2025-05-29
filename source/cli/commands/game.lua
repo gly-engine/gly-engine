@@ -1,5 +1,5 @@
 local os = require('os')
-local zeebo_meta = require('src/lib/cli/meta')
+--local zeebo_meta = require('src/lib/cli/meta')
 
 local function init(args)
     return false, 'not implemented!'
@@ -20,7 +20,7 @@ end
 
 local function meta(args)
     arg = nil -- prevent infinite loop
-    zeebo_meta.current(args.game):stdout(args.format):run()
+    --@todo this: zeebo_meta.current(args.game):stdout(args.format):run()
     return true
 end
 

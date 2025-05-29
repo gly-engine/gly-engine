@@ -2,19 +2,16 @@
 --! @par Command List
 --! @call commands
 local os = require('os')
+local cli = require('source/shared/string/parse/cli')
+local commands_build = require('source/cli/commands/build/main')
+local commands_game = require('source/cli/commands/game')
+local commands_info = require('source/cli/commands/info')
+local commands_fs = require('source/cli/commands/extra/fs')
+local commands_cli = require('source/cli/commands/extra/cli')
+local commands_tools = require('source/cli/commands/extra/love')
 
-local zeebo_argparse = require('src/lib/cli/argparse')
-
-local commands_build = require('src/cli/commands/build')
-local commands_cli = require('src/cli/commands/cli')
-local commands_fs = require('src/cli/commands/fs')
-local commands_game = require('src/cli/commands/game')
-local commands_info = require('src/cli/commands/info')
-local commands_init = require('src/cli/commands/init')
-local commands_tools = require('src/cli/commands/tools')
-
-local command = zeebo_argparse.from(arg)
-    .add_subcommand('init', commands_init)
+local command = cli.argparse(arg)
+    .add_subcommand('init', {})
     .add_next_value('project', {required=true})
     .add_option_get('template', {alias='@samples/{{template}}/game.lua', default='samples/helloworld/game.lua'})
     --

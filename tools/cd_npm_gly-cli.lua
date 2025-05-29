@@ -1,5 +1,5 @@
 local cmd = function(c) assert(require('os').execute(c), c) end
-local version = io.open('src/version.lua'):read('*a'):match('(%d+%.%d+%.%d+)')
+local version = io.open('source/version.lua'):read('*a'):match('(%d+%.%d+%.%d+)')
 
 cmd('npm install -g demoon > /dev/null 2>/dev/null')
 cmd('rm -Rf ./dist')

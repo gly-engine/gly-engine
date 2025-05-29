@@ -1,4 +1,4 @@
-local version=require('src/version')
+local version=require('source/version')
 --
 local engine_game=require('src/lib/engine/api/app')
 local engine_key=require('src/lib/engine/api/key')

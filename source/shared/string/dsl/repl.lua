@@ -43,7 +43,7 @@ local application_default = require('src/lib/object/root')
 local color = require('src/lib/object/color')
 local std = require('src/lib/object/std')
 --
-local cfg_json_rxi = require('third_party/json/rxi')
+local cfg_json_rxi = require('source/third_party/rxi_json')
 local cfg_http_curl = require('src/lib/protocol/http_curl')
 --
 local engine = {

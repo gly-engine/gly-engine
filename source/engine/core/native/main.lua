@@ -1,4 +1,4 @@
-local version = require('src/version')
+local version = require('source/version')
 local util_decorator = require('src/lib/util/decorator')
 local zeebo_module = require('src/lib/common/module')
 --

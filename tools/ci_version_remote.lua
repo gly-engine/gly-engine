@@ -1,8 +1,8 @@
 local http_util = require('src/lib/util/http')
-local json = require('third_party/json/rxi')
+local json = require('source/third_party/rxi_json')
 
 local url = 'https://api.github.com/repos/gly-engine/gly-engine/releases'
-local ver_file = io.open('src/version.lua')
+local ver_file = io.open('source/version.lua')
 local ver_text = ver_file and ver_file:read('*a')
 local lmajor, lminor, lpatch = (ver_text or '0.0.0'):match('(%d+)%.(%d+)%.(%d+)')
 local version_local = (lmajor * 10000) + (lminor * 100) + lpatch

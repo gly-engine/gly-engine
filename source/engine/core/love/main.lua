@@ -23,7 +23,7 @@ local lib_raw_bus = require('src/lib/engine/raw/bus')
 local lib_raw_memory = require('src/lib/engine/raw/memory')
 local lib_raw_node = require('src/lib/engine/raw/node')
 --
-local cfg_json_rxi = require('third_party/json/rxi')
+local cfg_json_rxi = require('source/third_party/rxi_json')
 local cfg_http_love = require('src/lib/protocol/http_love')
 local cfg_logsystem = require('src/lib/protocol/logsystem_print')
 --

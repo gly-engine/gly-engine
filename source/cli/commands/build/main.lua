@@ -1,11 +1,11 @@
-local zeebo_buildsystem = require('src/cli/tools/buildsystem')
-local zeebo_fs = require('src/lib/cli/fs')
-local util_fs = require('src/lib/util/fs')
-local env_build = require('src/env/build')
-local atobify = require('src/cli/tools/atobify')
+local buildsystem = require('source/cli/tools/buildsystem')
+local atobify = require('source/cli/tools/atobify')
+local fs = require('source/cli/tools/fs')
+local str_fs = require('source/shared/string/schema/fs')
+local var_build = require('source/shared/var/build/build')
 
 local function build(args)
-    args.dist = util_fs.path(args.dist).get_fullfilepath()
+    args.dist = str_fs.path(args.dist).get_fullfilepath()
 
     if not args.core and not args.game then
         return false, 'usage: '..args[0]..' build [game] -'..'-core [core]'
@@ -19,15 +19,15 @@ local function build(args)
         args.fengari = true
     end
 
-    zeebo_fs.clear(args.dist)
-    zeebo_fs.mkdir(args.dist..'_bundler/')
+    fs.clear(args.dist)
+    fs.mkdir(args.dist..'_bundler/')
 
-    local atob = env_build.need_atobify(args)
+    local atob = var_build.need_atobify(args)
 
-    local build_game = zeebo_buildsystem.from({core='game', bundler=true, dist=args.dist})
+    local build_game = buildsystem.from({core='game', bundler=true, dist=args.dist})
         :add_core('game', {src=args.game, as='game.lua', prefix='game_', assets=true})
 
-    local build_core = zeebo_buildsystem.from(args)
+    local build_core = buildsystem.from(args)
         :add_rule('the middlware ginga html5 already has a streamming player', 'core=html5_ginga', 'videojs=true')
         :add_rule('please use flag -'..'-enterprise to use commercial modules', 'core=html5_ginga', 'enterprise=false')
         :add_rule('please use flag -'..'-enterprise to use commercial modules', 'core=ginga', 'enterprise=false')
@@ -49,7 +49,7 @@ local function build(args)
         --
         :add_core('ginga', {src='ee/engine/core/ginga/main.lua'})
         :add_meta('ee/engine/meta/ginga/ncl.mustache', {as='main.ncl'})
-        :add_step('ginga dist/main.ncl '..env_build.screen_ginga(args), {when=args.run})
+        :add_step('ginga dist/main.ncl '..var_build.screen_ginga(args), {when=args.run})
         --
         :add_core('html5', {src='src/engine/core/native/main.lua', force_bundler=true})
         :add_file('assets/icon80x80.png')
@@ -82,8 +82,8 @@ local function build(args)
         --
         :add_common_func(atobify.builder('engine_code', args.dist..'main.lua', args.dist..'index.js'), {when=atob and not args.enginecdn})
         :add_common_func(atobify.builder('game_code', args.dist..'game.lua', args.dist..'index.js'), {when=atob})
-        :add_common_func(zeebo_fs.lazy_del(args.dist..'main.lua'), {when=atob or args.enginecdn})
-        :add_common_func(zeebo_fs.lazy_del(args.dist..'game.lua'), {when=atob})
+        :add_common_func(fs.lazy_del(args.dist..'main.lua'), {when=atob or args.enginecdn})
+        :add_common_func(fs.lazy_del(args.dist..'game.lua'), {when=atob})
 
     local ok, message = build_game:run()
 
@@ -93,7 +93,7 @@ local function build(args)
 
     ok, message =  build_core:run()
     
-    zeebo_fs.rmdir(args.dist..'_bundler/')
+    cli_fs.rmdir(args.dist..'_bundler/')
 
     return ok, message
 end
