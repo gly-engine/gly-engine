@@ -1,4 +1,4 @@
-local test = require('src/lib/util/test')
+local test = require('teste/framework/microtest')
 local zeebo_args = require('src/lib/common/args')
 
 function test_shared_args_get_basic()

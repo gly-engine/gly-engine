@@ -1,5 +1,5 @@
 local pipeline = require ('src/lib/util/pipeline')
-local test = require('src/lib/util/test')
+local test = require('teste/framework/microtest')
 
 function test_pipe()
     local test_obj = {

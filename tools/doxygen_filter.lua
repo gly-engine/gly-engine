@@ -38,7 +38,7 @@ end
 
 function gingaenvs()
     local content, index1, index2 = '', 1, 1
-    local obj_ncl = require('src/lib/object/ncl')
+    local obj_ncl = require('source/shared/var/build/ncl')
 
     while index1 <= #obj_ncl.settings do
         content = content..'| '..obj_ncl.settings[index1].env..' |'

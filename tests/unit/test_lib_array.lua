@@ -1,4 +1,4 @@
-local test = require('src/lib/util/test')
+local test = require('teste/framework/microtest')
 local arraylib = require('source/engine/api/data/array')
 
 local std = {}

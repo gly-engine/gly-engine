@@ -2,9 +2,9 @@ local os = require('os')
 --
 local zeebo_module = require('source/shared/module')
 --
-local core_text = require('src/engine/core/love/text')
-local core_draw = require('src/engine/core/love/draw')
-local core_loop = require('src/engine/core/love/loop')
+local core_text = require('source/engine/core/love/text')
+local core_draw = require('source/engine/core/love/draw')
+local core_loop = require('source/engine/core/love/loop')
 local lib_api_encoder = require('source/engine/api/data/encoder')
 local lib_api_game = require('source/engine/api/system/app')
 local lib_api_hash = require('source/engine/api/data/hash')
@@ -27,8 +27,8 @@ local cfg_json_rxi = require('source/third_party/rxi_json')
 local cfg_http_love = require('source/engine/protocol/http_love')
 local cfg_logsystem = require('source/engine/protocol/logsystem_print')
 --
-local util_arg = require('src/lib/common/args')
-local util_envruntime = require('src/lib/util/env_runtime')
+local util_arg = require('source/shared/string/parse/args')
+local util_envruntime = require('source/shared/var/runtime/lang')
 --
 local color = require('source/engine/api/system/color')
 local std = require('source/shared/var/object/std')

@@ -1,4 +1,4 @@
-local test = require('src/lib/util/test')
+local test = require('teste/framework/microtest')
 local zeebo_http = require('source/engine/api/io/http')
 local mock_http = require('mock/protocol_http')
 local zeebo_pipeline = require('source/shared/functional/pipeline')

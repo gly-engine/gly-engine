@@ -1,5 +1,5 @@
 
-local test = require('src/lib/util/test')
+local test = require('teste/framework/microtest')
 local zeebo_util_http = require('src/lib/util/http')
 
 

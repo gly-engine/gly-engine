@@ -1,4 +1,4 @@
-local test = require('src/lib/util/test')
+local test = require('teste/framework/microtest')
 local mock_io = require('mock/io')
 local protocol_http = require('source/engine/protocol/http_curl')
 

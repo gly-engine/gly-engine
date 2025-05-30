@@ -1,5 +1,5 @@
 local engine_game = require('source/engine/api/system/app')
-local test = require('src/lib/util/test')
+local test = require('teste/framework/microtest')
 
 function test_app_reset()
     local index = 1

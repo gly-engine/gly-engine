@@ -1,4 +1,4 @@
-local test = require('src/lib/util/test')
+local test = require('teste/framework/microtest')
 local mock_require = require('mock/require')
 local without_os = false
 local without_locale = false

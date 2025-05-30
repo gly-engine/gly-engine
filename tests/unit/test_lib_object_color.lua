@@ -1,4 +1,4 @@
-local test = require('src/lib/util/test')
+local test = require('teste/framework/microtest')
 local zeebo_color = require('source/engine/api/system/color')
 
 local std = {}
