@@ -1,4 +1,4 @@
-local engine_game = require('src/lib/engine/api/app')
+local engine_game = require('source/engine/api/system/app')
 local test = require('src/lib/util/test')
 
 function test_app_reset()

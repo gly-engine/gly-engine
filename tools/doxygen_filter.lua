@@ -57,7 +57,7 @@ end
 function listlibmath()
     local content = ''
     local started = false
-    for line in io.lines('src/lib/engine/api/math.lua') do
+    for line in io.lines('source/engine/api/system/math.lua') do
         if line:find('std.math.acos') then
             started = true
         end

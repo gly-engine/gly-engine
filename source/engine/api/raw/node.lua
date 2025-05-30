@@ -1,5 +1,5 @@
-local zeebo_module = require('src/lib/common/module')
-local node_default = require('src/lib/object/node')
+local zeebo_module = require('source/shared/module')
+local node_default = require('source/shared/var/object/node')
 
 local buses = {
     list = {},

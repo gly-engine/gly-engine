@@ -1,8 +1,8 @@
-local http_util = require('src/lib/util/http')
+local str_http = require('source/shared/string/encode/http')
 local queue = {}
 
 local function http_handler(self)
-    local params = http_util.url_search_param(self.param_list, self.param_dict)
+    local params = str_http.url_search_param(self.param_list, self.param_dict)
     local url = self.url .. params
     local method = self.method
     local headers = self.header_dict or {}
@@ -45,7 +45,7 @@ local function http_callback(self)
             self.set('ok', false)
             self.set('error', 'Request failed')
         else
-            self.set('ok', http_util.is_ok(status))
+            self.set('ok', str_http.is_ok(status))
             self.set('body', body)
             self.set('status', status)
         end    

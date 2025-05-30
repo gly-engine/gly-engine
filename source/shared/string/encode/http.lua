@@ -26,22 +26,6 @@ local function get_user_agent()
     return 'Ginga (GlyOS;SmartTv/Linux)'
 end
 
-local function url_search_param(param_list, param_dict)
-    local index, params = 1, ''
-    while param_list and param_dict and index <= #param_list do
-        local param = param_list[index]
-        local value = param_dict[param]
-        if #params == 0 then
-            params = params..'?'
-        else
-            params = params..'&'
-        end
-        params = params..param:gsub(' ', '%20')..'='..(value or ''):gsub(' ', '%20')
-        index = index + 1
-    end
-    return params
-end
-
 local function create_request(method, uri)
     local self = {
         body_content = '',
@@ -188,6 +172,5 @@ return {
     is_redirect=is_redirect,
     get_content=get_content,
     get_user_agent=get_user_agent,
-    url_search_param=url_search_param,
     create_request=create_request
 }

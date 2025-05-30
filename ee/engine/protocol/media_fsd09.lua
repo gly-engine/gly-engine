@@ -1,4 +1,4 @@
-local http_util = require('src/lib/util/http')
+local str_http = require('source/shared/string/encode/http')
 local base_url = 'http://localhost:44642/dtv/mediaplayers/1'
 local pos_x, pos_y, width, height = 0, 0, 1280, 720
 local mutex = 0
@@ -23,7 +23,7 @@ local function ccws_command(action)
     return function()
         if ccws_mutex() then return end
         if not source or #source == 0 then return end
-        local headers = {['User-Agent'] = http_util.get_user_agent()}
+        local headers = {['User-Agent'] = str_http.get_user_agent()}
         local session = tonumber(tostring(headers):match("0x(%x+)$"), 16)
         local body = string.format(action_play, source, action, pos_x, pos_y, width, height)
 
@@ -58,7 +58,7 @@ end
 
 local function ccws_stop()
     if ccws_mutex() then some_error = 'abort' end
-    local headers = {['User-Agent'] = http_util.get_user_agent()}
+    local headers = {['User-Agent'] = str_http.get_user_agent()}
     local session = tonumber(tostring(headers):match("0x(%x+)$"), 16)
     pos_x, pos_y, width, height = 0, 0, 1280, 720
     source = ''

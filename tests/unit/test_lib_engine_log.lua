@@ -1,5 +1,5 @@
 local test = require('src/lib/util/test')
-local engine_log = require('src/lib/engine/api/log')
+local engine_log = require('source/engine/api/system/log')
 
 local function printers(msg)
     return {

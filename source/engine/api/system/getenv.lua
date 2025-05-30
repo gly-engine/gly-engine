@@ -1,4 +1,4 @@
-local util_decorator = require('src/lib/util/decorator')
+local util_decorator = require('source/shared/functional/decorator')
 local os = require('os')
 
 --! @defgroup std

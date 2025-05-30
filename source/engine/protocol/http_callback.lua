@@ -1,4 +1,4 @@
-local http_util = require('src/lib/util/http')
+local str_http = require('source/shared/string/encode/http')
 
 local callbacks = {
     ['async-promise'] = function(self)
@@ -11,7 +11,7 @@ local callbacks = {
         return self.url
     end,
     ['get-fullurl'] = function(self)
-        return self.url..http_util.url_search_param(self.param_list, self.param_dict)
+        return self.url..str_http.url_search_param(self.param_list, self.param_dict)
     end,
     ['get-method'] = function(self)
         return self.method
@@ -39,7 +39,7 @@ local callbacks = {
     end,
     ['set-status'] = function(self, data)
         self.set('status', data)
-        self.set('ok', http_util.is_ok(data))
+        self.set('ok', str_http.is_ok(data))
     end,
     ['set-error'] = function(self, data)
         self.set('error', data)

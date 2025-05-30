@@ -1,4 +1,4 @@
-local util_decorator = require('src/lib/util/decorator')
+local util_decorator = require('source/shared/functional/decorator')
 local old_font = nil
 
 local function text_print(std, engine, pos_x, pos_y, text)

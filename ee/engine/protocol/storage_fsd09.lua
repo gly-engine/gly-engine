@@ -1,8 +1,8 @@
-local http_util = require('src/lib/util/http')
+local str_http = require('source/shared/string/encode/http')
 local base_url = 'http://localhost:44642/dtv/current-service/ginga/persistent'
 local requests = {}
 local headers = {
-    ['User-Agent'] = http_util.get_user_agent()
+    ['User-Agent'] = str_http.get_user_agent()
 }
 
 local function storage_set(key, value, promise, resolve)

@@ -1,6 +1,6 @@
 local test = require('src/lib/util/test')
 local math = require('math')
-local engine_math = require('src/lib/engine/api/math')
+local engine_math = require('source/engine/api/system/math')
 local std = {}
 engine_math.install(std)
 engine_math.wave.install(std)

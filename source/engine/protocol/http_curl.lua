@@ -1,8 +1,8 @@
-local http_util = require('src/lib/util/http')
+local str_http = require('source/shared/string/encode/http')
 
 local function http_handler(self)
-    local params = http_util.url_search_param(self.param_list, self.param_dict)
-    local command, cleanup = http_util.create_request(self.method, self.url..params)
+    local params = str_http.url_search_param(self.param_list, self.param_dict)
+    local command, cleanup = str_http.create_request(self.method, self.url..params)
         .add_custom_headers(self.header_list, self.header_dict)
         .add_body_content(self.body_content)
         .to_curl_cmd()

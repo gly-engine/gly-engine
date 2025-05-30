@@ -1,4 +1,4 @@
-local util_decorator = require('src/lib/util/decorator')
+local util_decorator = require('source/shared/functional/decorator')
 
 local deafult_font_name = 'Tiresias'
 local previous_font_name = deafult_font_name

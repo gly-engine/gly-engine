@@ -1,5 +1,5 @@
-local ui_common = require('src/lib/engine/draw/ui/common')
-local util_decorator = require('src/lib/util/decorator')
+local ui_common = require('source/engine/api/draw/ui/common')
+local util_decorator = require('source/shared/functional/decorator')
 
 --! @defgroup std
 --! @{

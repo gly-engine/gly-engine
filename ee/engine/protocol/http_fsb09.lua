@@ -69,7 +69,7 @@
 --!    }
 --! }
 --! @endjson
-local http_util = require('src/lib/util/http')
+local str_http = require('source/shared/string/encode/http')
 local lua_util = require('src/lib/util/lua')
 
 --! @todo refactor this
@@ -78,14 +78,14 @@ application_internal = {}
 
 --! @cond
 local function http_connect(self)
-    local params = http_util.url_search_param(self.param_list, self.param_dict)
-    local request = http_util.create_request(self.method, self.p_uri..params)
+    local params = str_http.url_search_param(self.param_list, self.param_dict)
+    local request = str_http.create_request(self.method, self.p_uri..params)
         .add_imutable_header('Host', self.p_host)
         .add_imutable_header('Cache-Control', 'max-age=0')
         .add_mutable_header('Accept', '*/*')
         .add_mutable_header('Accept-Charset', 'utf-8', lua_util.has_support_utf8())
         .add_mutable_header('Accept-Charset', 'windows-1252, cp1252')
-        .add_mutable_header('User-Agent', http_util.get_user_agent())
+        .add_mutable_header('User-Agent', str_http.get_user_agent())
         .add_custom_headers(self.header_list, self.header_dict)
         .add_imutable_header('Content-Length', tostring(#self.body_content), #self.body_content > 0)
         .add_imutable_header('Connection', 'close')
@@ -206,7 +206,7 @@ local function http_data(self)
         if self.p_header_pos then
             application_internal.http.callbacks.http_headers(self)
         end
-        if http_util.is_redirect(self.p_status) then
+        if str_http.is_redirect(self.p_status) then
             application_internal.http.callbacks.http_redirect(self)
             return
         end
@@ -234,7 +234,7 @@ local function http_resolve(self)
     if self.speed ~= '_fast' then
         body = self.p_data:sub(self.p_header_pos + 4, #self.p_data)
     end
-    self.set('ok', http_util.is_ok(self.p_status))
+    self.set('ok', str_http.is_ok(self.p_status))
     self.set('status', self.p_status)
     self.set('body', body)
     application_internal.http.callbacks.http_clear(self)
@@ -463,7 +463,7 @@ end
 
 local P = {
     force = 'http',
-    util = http_util,
+    util = str_http,
     handler = http_handler,
     install = install
 }
