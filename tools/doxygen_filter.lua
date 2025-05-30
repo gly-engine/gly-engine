@@ -98,7 +98,7 @@ function color()
         return (0.2126 * ((hex >> 24) & 0xFF) + 0.7152 * ((hex >> 16) & 0xFF) + 0.0722 * ((hex >> 8) & 0xFF)) < 128
     end
     
-    for line in io.lines('src/lib/object/color.lua') do
+    for line in io.lines('source/engine/api/system/color.lua') do
         local var, hex = line:match("std.color.([%w_]+)%s*=%s*(0x[0-9A-Fa-f]+)")
         if var and hex then
             local hex_value = tonumber(hex)

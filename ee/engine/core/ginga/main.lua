@@ -4,18 +4,18 @@ local core_draw = require('ee/engine/core/ginga/draw')
 local core_text = require('ee/engine/core/ginga/text')
 local core_keys = require('ee/engine/core/ginga/keys')
 --
-local engine_encoder = require('source/engine/api/system/encoder')
+local engine_encoder = require('source/engine/api/data/encoder')
 local engine_game = require('source/engine/api/system/app')
-local engine_hash = require('source/engine/api/system/hash')
-local engine_http = require('source/engine/api/system/http')
-local engine_i18n = require('source/engine/api/system/i18n')
+local engine_hash = require('source/engine/api/data/hash')
+local engine_http = require('source/engine/api/io/http')
+local engine_i18n = require('source/engine/api/data/i18n')
 local engine_keys = require('source/engine/api/system/key')
-local engine_log = require('source/engine/api/system/log')
+local engine_log = require('source/engine/api/debug/log')
 local engine_math = require('source/engine/api/system/math')
-local engine_media = require('source/engine/api/system/media')
-local engine_array = require('source/engine/api/system/array')
+local engine_media = require('source/engine/api/io/media')
+local engine_array = require('source/engine/api/data/array')
 local engine_getenv = require('source/engine/api/system/getenv')
-local engine_storage = require('source/engine/api/system/storage')
+local engine_storage = require('source/engine/api/io/storage')
 local engine_api_draw_ui = require('source/engine/api/draw/ui')
 local engine_api_draw_fps = require('source/engine/api/draw/fps')
 local engine_api_draw_text = require('source/engine/api/draw/text')
@@ -26,14 +26,14 @@ local engine_node = require('source/engine/api/raw/node')
 local engine_memory = require('source/engine/api/raw/memory')
 --
 local cfg_json_rxi = require('source/third_party/rxi_json')
-local cfg_logsystem = require('src/lib/protocol/logsystem_print')
-local cfg_http_ginga = require('ee/lib/protocol/http_fsb09')
-local cfg_persistent = require('ee/lib/protocol/storage_fsd09')
-local cfg_mediaplayer = require('ee/lib/protocol/media_fsd09')
---local cfg_http_ginga2 = require('ee/lib/protocol/http_fsc09')
+local cfg_logsystem = require('source/engine/protocol/logsystem_print')
+local cfg_http_ginga = require('ee/engine/protocol/http_fsb09')
+local cfg_persistent = require('ee/engine/protocol/storage_fsd09')
+local cfg_mediaplayer = require('ee/engine/protocol/media_fsd09')
+--local cfg_http_ginga2 = require('ee/engine/protocol/http_fsc09')
 --
-local util_decorator = require('source/shared/var/object/root')
-local color = require('src/lib/object/color')
+local application_default = require('source/shared/var/object/root')
+local color = require('source/engine/api/system/color')
 local std = require('source/shared/var/object/std')
 --
 local application = application_default
@@ -58,10 +58,6 @@ local engine = {
     delay = 1,
     fps = 0
 }
-
---! @short clear ENV
---! @brief GINGA?
-_ENV = nil
 
 local cfg_system = {
     get_language = function() return 'pt-BR' end

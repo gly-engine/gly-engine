@@ -1,11 +1,12 @@
-local str_http = require('source/shared/string/encode/http')
+local str_url = require('source/shared/string/encode/url')
+local user_agent = require('source/agent')
 local ginga_support = require('ee/lib/util/support')
 local content_length = {}
 local request_dict = {}
 local data_dict = {}
 
 local function handler(self)
-    local uri = self.url..str_http.url_search_param(self.param_list, self.param_dict)
+    local uri = self.url..str_url.search_param(self.param_list, self.param_dict)
     local session = tonumber(tostring(self):match("0x(%x+)$"), 16)
     local allow_body = self.method ~= 'GET' and self.method ~= 'HEAD'
     local method = string.lower(self.method)
@@ -13,7 +14,7 @@ local function handler(self)
     local headers = self.header_dict
 
     if not headers['User-Agent'] then
-        headers['User-Agent'] = str_http.get_user_agent()
+        headers['User-Agent'] = user_agent
     end
 
     data_dict[session] = ''
@@ -53,7 +54,7 @@ local function callback(evt)
     end
 
     if evt.code then
-        self.set('ok', str_http.is_ok(evt.code))
+        self.set('ok', 200 <= tonumber(evt.code) and tonumber(evt.code) < 300)
         self.set('status', evt.code)
     end
 
@@ -71,7 +72,7 @@ local function callback(evt)
 end
 
 local function install(std)    
-    if not ginga_support.class('http') then
+    if not true then
         error('old device!')
     end
     std.bus.listen('ginga', callback)

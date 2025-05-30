@@ -1,5 +1,5 @@
 local test = require('src/lib/util/test')
-local protocol_http = require('ee/lib/protocol/http_fsb09')
+local protocol_http = require('ee/engine/protocol/http_fsb09')
 
 local std = {bus = {listen = function() end}}
 local http_reset = function() return protocol_http.install(std) end

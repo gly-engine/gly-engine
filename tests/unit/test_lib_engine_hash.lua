@@ -1,5 +1,5 @@
 local test = require('src/lib/util/test')
-local engine_hash = require('source/engine/api/system/hash')
+local engine_hash = require('source/engine/api/data/hash')
 
 local std ={}
 engine_hash.install(std, nil, {get_secret = function() return 'awesome42' end })

@@ -1,5 +1,5 @@
 local test = require('src/lib/util/test')
-local lua_util = require('src/lib/util/lua')
+local lua_util = require('source/shared/string/parse/lua')
 
 function test_no_support_utf8()
     jit = nil

@@ -1,5 +1,5 @@
 local test = require('src/lib/util/test')
-local protocol_http = require('ee/lib/protocol/http_fsb09')
+local protocol_http = require('ee/engine/protocol/http_fsb09')
 
 event = {
     post=function(evt)

@@ -70,7 +70,7 @@
 --! }
 --! @endjson
 local str_http = require('source/shared/string/encode/http')
-local lua_util = require('src/lib/util/lua')
+local str_url = require('source/shared/string/encode/url')
 
 --! @todo refactor this
 local application_internal
@@ -78,12 +78,12 @@ application_internal = {}
 
 --! @cond
 local function http_connect(self)
-    local params = str_http.url_search_param(self.param_list, self.param_dict)
+    local params = str_url.search_param(self.param_list, self.param_dict)
     local request = str_http.create_request(self.method, self.p_uri..params)
         .add_imutable_header('Host', self.p_host)
         .add_imutable_header('Cache-Control', 'max-age=0')
         .add_mutable_header('Accept', '*/*')
-        .add_mutable_header('Accept-Charset', 'utf-8', lua_util.has_support_utf8())
+        .add_mutable_header('Accept-Charset', 'utf-8', tonumber(_VERSION:match('Lua 5.(%d+)')) >= 3)
         .add_mutable_header('Accept-Charset', 'windows-1252, cp1252')
         .add_mutable_header('User-Agent', str_http.get_user_agent())
         .add_custom_headers(self.header_list, self.header_dict)
