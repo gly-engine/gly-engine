@@ -1,4 +1,4 @@
-local test = require('teste/framework/microtest')
+local test = require('tests/framework/microtest')
 local engine_hash = require('source/engine/api/data/hash')
 
 local std ={}

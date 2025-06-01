@@ -6,13 +6,13 @@ on:
     branches:
       - main
     paths:
-      - 'src/**'
+      - 'source/**'
   pull_request:
     branches:
       - main
       - develop
     paths:
-      - 'src/**'
+      - 'source/**'
 
 jobs:
   test:

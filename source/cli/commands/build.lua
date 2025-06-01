@@ -1,4 +1,4 @@
-local zeebo_compiler = require('src/lib/cli/compiler')
+local zeebo_compiler = require('source/cli/build/compiler')
 local zeebo_bundler = require('source/cli/build/bundler')
 local cli_fs = require('source/cli/tools/fs')
 local str_fs = require('source/shared/string/schema/fs')

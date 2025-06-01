@@ -1,5 +1,5 @@
-local test = require('teste/framework/microtest')
-local mock_io = require('mock/io')
+local test = require('tests/framework/microtest')
+local mock_io = require('tests/mock/io')
 local protocol_http = require('source/engine/protocol/http_curl')
 
 local mock_popen = mock_io.popen({

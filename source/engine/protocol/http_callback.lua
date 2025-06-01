@@ -1,4 +1,5 @@
 local str_http = require('source/shared/string/encode/http')
+local str_url = require('source/shared/string/encode/url')
 
 local callbacks = {
     ['async-promise'] = function(self)
@@ -11,7 +12,7 @@ local callbacks = {
         return self.url
     end,
     ['get-fullurl'] = function(self)
-        return self.url..str_http.url_search_param(self.param_list, self.param_dict)
+        return self.url..str_url.search_param(self.param_list, self.param_dict)
     end,
     ['get-method'] = function(self)
         return self.method

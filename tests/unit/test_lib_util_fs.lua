@@ -1,5 +1,5 @@
 local str_fs = require('source/shared/string/schema/fs')
-local test = require('teste/framework/microtest')
+local test = require('tests/framework/microtest')
 
 
 function test_path_with_src2()

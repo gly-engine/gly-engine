@@ -1,7 +1,7 @@
-local test = require('teste/framework/microtest')
+local test = require('tests/framework/microtest')
 local zeebo_bundler = require('source/cli/build/bundler')
-local zeebo_buildsystem = require('src/cli/tools/buildsystem')
-local mock_io = require('mock/io')
+local zeebo_buildsystem = require('source/cli/tools/buildsystem')
+local mock_io = require('tests/mock/io')
 
 io.open = mock_io.open({
     ['src/lib/object/application.lua'] = 'local math = require(\'math\')',

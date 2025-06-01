@@ -1,4 +1,4 @@
-local test = require('teste/framework/microtest')
+local test = require('tests/framework/microtest')
 local math = require('math')
 local engine_math = require('source/engine/api/system/math')
 local std = {}

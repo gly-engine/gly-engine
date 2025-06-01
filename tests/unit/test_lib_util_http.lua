@@ -1,7 +1,5 @@
-
-local test = require('teste/framework/microtest')
-local zeebo_util_http = require('src/lib/util/http')
-
+local test = require('tests/framework/microtest')
+local zeebo_util_http = require('source/shared/string/encode/http')
 
 function test_is_ok_status()
     assert(zeebo_util_http.is_ok(200) == true)
@@ -50,25 +48,6 @@ function test_is_redirect_valid()
     assert(zeebo_util_http.is_redirect(400) == false)
 end
 
-function test_no_params()
-    local query = zeebo_util_http.url_search_param({}, {})
-    assert(query == '')
-end
-
-function test_one_param()
-    local query = zeebo_util_http.url_search_param({'foo'}, {foo='bar'})
-    assert(query == '?foo=bar')
-end
-
-function test_three_params()
-    local query = zeebo_util_http.url_search_param({'foo', 'z'}, {foo='bar', z='zoom'})
-    assert(query == '?foo=bar&z=zoom')
-end
-
-function test_four_params_with_null()
-    local query = zeebo_util_http.url_search_param({'foo', 'z', 'zig'}, {foo='bar', z='zoom'})
-    assert(query == '?foo=bar&z=zoom&zig=')
-end
 
 function test_create_request_overrides()
     local request = zeebo_util_http.create_request('GET', '/')

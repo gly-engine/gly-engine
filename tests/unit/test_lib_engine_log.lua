@@ -1,4 +1,4 @@
-local test = require('teste/framework/microtest')
+local test = require('tests/framework/microtest')
 local engine_log = require('source/engine/api/debug/log')
 
 local function printers(msg)

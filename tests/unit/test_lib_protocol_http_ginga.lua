@@ -1,4 +1,4 @@
-local test = require('teste/framework/microtest')
+local test = require('tests/framework/microtest')
 local protocol_http = require('ee/engine/protocol/http_fsb09')
 
 event = {

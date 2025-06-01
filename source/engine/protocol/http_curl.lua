@@ -1,7 +1,8 @@
 local str_http = require('source/shared/string/encode/http')
+local str_url = require('source/shared/string/encode/url')
 
 local function http_handler(self)
-    local params = str_http.url_search_param(self.param_list, self.param_dict)
+    local params = str_url.search_param(self.param_list, self.param_dict)
     local command, cleanup = str_http.create_request(self.method, self.url..params)
         .add_custom_headers(self.header_list, self.header_dict)
         .add_body_content(self.body_content)

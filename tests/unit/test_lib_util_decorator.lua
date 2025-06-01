@@ -1,4 +1,4 @@
-local test = require('teste/framework/microtest')
+local test = require('tests/framework/microtest')
 local util_decorator = require('source/shared/functional/decorator')
 
 local function dummy_func3(zig, zag, zom, a, b, c, d, e, f)

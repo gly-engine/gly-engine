@@ -1,5 +1,5 @@
-local pipeline = require ('src/lib/util/pipeline')
-local test = require('teste/framework/microtest')
+local pipeline = require ('source/shared/functional/pipeline')
+local test = require('tests/framework/microtest')
 
 function test_pipe()
     local test_obj = {
