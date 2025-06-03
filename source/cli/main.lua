@@ -49,16 +49,17 @@ local command = cli.argparse(arg)
     .add_next_value('file', {required=true})
     .add_option_get('dist', {default='a.out'})
     --
-    .add_subcommand('tool-haxe-build', commands_tools)
+    .add_subcommand('love-exe', commands_tools)
     .add_next_value('game', {required=true})
+    .add_option_get('outfile', {required=true})
     --
-    .add_subcommand('tool-love-zip', commands_tools)
+    .add_subcommand('love-zip', commands_tools)
     .add_next_value('path', {required=true})
     .add_option_get('dist', {default='./dist/'})
     --
-    .add_subcommand('tool-love-exe', commands_tools)
-    .add_next_value('file', {required=true})
-    .add_option_get('dist', {required=true})
+    .add_subcommand('love-unzip', commands_tools)
+    .add_next_value('game', {required=true})
+    .add_option_get('outdir', {default='./dist/'})
     --
     .add_subcommand('tool-package-mock', commands_tools)
     .add_next_value('mock', {required=true})
