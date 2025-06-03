@@ -1,5 +1,6 @@
 local os = require('os')
---local zeebo_meta = require('src/lib/cli/meta')
+local str_fs = require('source/shared/string/schema/fs')
+local cli_meta = require('source/cli/tools/meta')
 
 local function init(args)
     return false, 'not implemented!'
@@ -20,8 +21,29 @@ end
 
 local function meta(args)
     arg = nil -- prevent infinite loop
-    --@todo this: zeebo_meta.current(args.game):stdout(args.format):run()
-    return true
+    local format = args.format
+
+    if args.infile and #args.infile > 0 then
+        local infile_f, infile_err = io.open(str_fs.file(args.infile).get_fullfilepath(), 'r')
+        if not infile_f then
+            return false, infile_err or args.infile
+        end
+        format = infile_f:read('*a')
+    end
+
+    local content = cli_meta.render(args.game, format)
+
+    if args.outfile and #args.outfile > 0 then
+        local outfile_f, outfile_err = io.open(str_fs.file(args.outfile).get_fullfilepath(), 'w')
+        if not outfile_f then
+            return false, outfile_err or args.outfile
+        end
+        outfile_f:write(content)
+        outfile_f:close()
+        content = nil
+    end
+
+    return true, content
 end
 
 local P = {
