@@ -37,7 +37,7 @@ local command = cli.argparse(arg)
     --
     .add_subcommand('meta', commands_game)
     .add_next_value('game', {required=true, alias='@samples/{{game}}/game.lua'})
-    .add_option_get('format', {default='{{ meta.title }} {{ meta.version }}', alias=commands_game.meta_alias})
+    .add_option_get('format', {default='{{& meta.title }} {{& meta.version }}', alias=commands_game.meta_alias})
     .add_option_get('infile', {hidden=true})
     .add_option_get('outfile', {hidden=true})
     --

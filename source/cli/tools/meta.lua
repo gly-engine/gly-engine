@@ -1,5 +1,7 @@
 local agent = require('source/agent')
 local version = require('source/version')
+local env = require('source/shared/string/dsl/env')
+local base64 = require('source/shared/string/encode/base64')
 local json = require('source/third_party/rxi_json')
 local ncl = require('source/shared/var/build/ncl')
 local env_build = require('source/shared/var/build/build')
@@ -19,36 +21,67 @@ local fn_case = {
     msdos = function(text, render)
         return render(text):upper():gsub('[^%a%d]', '')
     end,
-    upper = function()
+    alpha = function(text, render)
+        return render(text):gsub('[^%a%d]', ' '):gsub('[^%w]', ' ') :gsub('%s+', ' '):gsub('^%s+', ''):gsub('%s+$', '')
+    end,
+    upper = function(text, render)
         return render(text):upper()
     end,
-    lower = function()
-        return render(text):upper()
+    lower = function(text, render)
+        return render(text):lower()
     end
 }
 
-function clone_no_fn(t)
-  if type(t) ~= "table" then return t end
-  local r = {}
-  for k, v in pairs(t) do
-    if type(v) ~= "function" then
-      r[k] = type(v) == "table" and clone_no_fn(v) or v
+local fn_b64 = {
+    atob = function(text, render)
+        return base64.encode(render(text))
+    end, 
+    btoa = function(text, render)
+        return base64.decode(render(text))
     end
-  end
-  return r
+}
+
+local function dumper(tbl)
+    return {
+        dotenv = function()
+            return env.encode(tbl, true)
+        end,
+        json = function()
+            return json.encode(tbl)
+        end
+    }
 end
 
-function clean_copy(t)
-  if type(t) ~= "table" then return t end
+local function normalize_table(t)
+  if type(t) ~= 'table' then return t end
   local r, count = {}, 0
   for k, v in pairs(t) do
-    local val = clean_copy(v)
-    if type(val) ~= "table" or next(val) ~= nil then
-      r[k] = val
-      count = count + 1
+    if type(v) ~= 'function' then
+      local val = normalize_table(v)
+      if type(val) ~= 'table' or next(val) ~= nil then
+        r[k] = val
+        count = count + 1
+      end
     end
   end
   return count > 0 and r or nil
+end
+
+local function normalized_meta(app) 
+    local meta = app.meta or {}
+    return {
+        title = meta.title or meta.name or app.title or app.name or '',
+        author = meta.author or meta.vendor or app.author or app.vendor or '',
+        version = meta.version or app.version or app.tag or app.VERSION or '0.0.0',
+        description = meta.description or app.description or ''
+    }
+end
+
+local function try_table(infile)
+    if type(infile) == 'table' then
+        return infile
+    end
+    return nil
 end
 
 local function try_lua(infile)
@@ -56,49 +89,40 @@ local function try_lua(infile)
     return ok and lua
 end
 
-local function try_json(infile)
+local function try_decode(infile, parser)
     local ok, data = pcall(function()
-        return json.decode(io.open(infile, 'r'):read('*a'))
+        return parser.decode(io.open(infile, 'r'):read('*a'))
     end)
-    return ok and data
+    return ok and next(data) ~= nil and data
 end
 
 local function render(infile, content, args)
-    local game = try_lua(infile) or try_json(infile) or {}
-
-    game = clone_no_fn(game)
-    game = clean_copy(game)
+    local game = normalize_table(try_table(infile) or try_lua(infile) or try_decode(infile, json) or try_decode(infile, env) or {})
+    local meta = normalized_meta(game)
+    local envs = env.normalize(game)
 
     local data = {
+        app = game,
+        env = envs,
+        meta = meta,
         engine = {
             agent = agent,
             version = version,
-            ncl = env_ncl,
         },
-        env = {
-
-        },
-        meta = game.meta or game,
-        config = game.config or {},
+        meta = meta,
         assets = {
             list = game.assets or {},
             fonts = game.fonts or {}
         },
         dump = {
-            meta = {
-                json = function()
-                    return json.encode(game.meta)
-                end
-            },
-            raw = {
-                json = function()
-                    return json.encode(game)
-                end
-            }
+            meta = dumper(meta),
+            raw = dumper(game),
+            env = dumper(envs)
         },
         fn = {
             colon = fn_colon,
-            case = fn_case
+            case = fn_case,
+            b64 = fn_b64
         }
     }
 
@@ -107,9 +131,10 @@ local function render(infile, content, args)
     end
 
     if args then
+        --! @todo
         data.args = args
-        data.env.build = util_decorator.prefix1_t(self.args, env_build)
-        data.core = {[self.args.core] = true}
+        --data.gly.build = util_decorator.prefix1_t(self.args, env_build)
+        data.core = {[self.args.core or 'meta'] = true}
     end
 
     return lustache:render(content, data)
