@@ -19,6 +19,10 @@ local function build(args)
         args.fengari = true
     end
 
+    if args.core:find('html') then
+        print("[warning] 'html5' core will move to 'lua cli.lua build-html' in v0.2.")
+    end
+
     cli_fs.clear(args.outdir)
     cli_fs.mkdir(args.outdir..'_bundler/')
 
@@ -91,6 +95,10 @@ local function build(args)
     ok, message =  build_core:run()
     
     cli_fs.rmdir(args.outdir..'_bundler/')
+
+    if ok and args.core:find('html') then 
+        print('but don\'t worry, your build was a success!')
+    end
 
     return ok, message
 end

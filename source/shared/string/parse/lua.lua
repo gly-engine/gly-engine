@@ -1,4 +1,4 @@
-local function eval_lua(script)
+local function eval(script)
     local loader = loadstring or load
     if not loader then
         error('eval not allowed')
@@ -14,7 +14,7 @@ local function eval_lua(script)
 end
 
 local P = {
-    lua = eval_lua,
+    eval = eval,
 }
 
 return P

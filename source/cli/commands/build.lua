@@ -22,7 +22,7 @@ local P = {
     bundler = bundler,
     compile = compile,
     build = build.build,
-    ['build-html'] = build_html
+    ['build-html'] = build_html.build
 }
 
 return P
