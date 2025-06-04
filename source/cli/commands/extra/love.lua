@@ -44,28 +44,10 @@ local function love_unzip(args)
     return true
 end
 
-local function package_mock(args)
-    return zeebo_package.mock(args.file, args.mock, args.module)
-end
-
-local function template_fill(args)
-    return zeebo_filler.put(args.file, tonumber(args.size))
-end
-
-local function template_replace(args)
-    local src = str_fs.file(args.src).get_fullfilepath()
-    local game = str_fs.file(args.game).get_fullfilepath()
-    local output = str_fs.file(args.output).get_fullfilepath()
-    return zeebo_filler.replace(src, game, output, args.size)
-end
-
 local P = {
     ['love-exe'] = love_exe,
     ['love-zip'] = love_zip,
-    ['love-unzip'] = love_unzip,
-    ['tool-package-mock'] = package_mock,
-    ['tool-template-fill'] = template_fill,
-    ['tool-template-replace'] = template_replace
+    ['love-unzip'] = love_unzip
 }
 
 return P

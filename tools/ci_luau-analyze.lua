@@ -4,14 +4,13 @@ local core = arg[1] or 'native'
 local replace = './cli.sh fs-replace dist/main.lua dist/main.lua'
 
 if core == 'cli' then
-    cmd('./cli.sh bundler src/cli/main.lua')
-    cmd(replace..' --format "require%(\'src/engine/core/repl/main\'%)" --replace ""')
+    cmd('./cli.sh bundler source/cli/main.lua')
     cmd(replace..' --format "BOOTSTRAP_DISABLE = true" --replace ""')
     cmd(replace..' --format "string.dump" --replace "string.format"')
     cmd(replace..' --format "arg = {args.game}" --replace ""')    
     cmd(replace..' --format "arg = nil" --replace ""')    
-    cmd('./cli.sh tool-package-mock mock/json.lua dist/main.lua third_party_json_rxi')
-    cmd('./cli.sh tool-package-mock mock/lustache.lua dist/main.lua third_party_lustache_olivinelabs')
+    cmd('./cli.sh hazard-package-mock tests/mock/json.lua dist/main.lua source_third_party_rxi_json')
+    cmd('./cli.sh hazard-package-mock tests/mock/lustache.lua dist/main.lua source_third_party_olivinelabs_lustache')
     return
 end
 
@@ -23,4 +22,4 @@ end
 
 cmd('./cli.sh build --bundler --enterprise --core '..core)
 cmd(replace..' --format "function native_callback" --replace "local function _native_callback"')
-cmd('./cli.sh tool-package-mock mock/json.lua dist/main.lua third_party_json_rxi')
+cmd('./cli.sh hazard-package-mock tests/mock/json.lua dist/main.lua source_third_party_rxi_json')
