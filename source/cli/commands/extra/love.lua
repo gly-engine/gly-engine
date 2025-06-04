@@ -7,14 +7,16 @@ local function love_exe(args)
 end
 
 local function love_zip(args)
-    local dist = str_fs.path(args.dist).get_fullfilepath()
-    local path = str_fs.path(args.path).get_fullfilepath()
+    local path = str_fs.path(args.indir).get_fullfilepath()
+    local dist = str_fs.file(args.outfile).get_sys_path()
+    local love = str_fs.file(args.outfile).get_file()
+    print(path, dist, love)
     os.execute(str_cmd.mkdir()..dist..'_love')
     os.execute(str_cmd.move()..path..'* '..dist..'_love'..str_cmd.silent())
-    local zip_pid = io.popen('cd '..dist..'_love && zip -9 -r Game.love .')
+    local zip_pid = io.popen('cd '..dist..'_love && zip -9 -r '..love..' .')
     local stdout = zip_pid:read('*a')
     local ok = zip_pid:close()
-    cli_fs.move(dist..'_love/Game.love', dist..'Game.love')
+    cli_fs.move(dist..'_love/'..love, dist..love)
     cli_fs.clear(dist..'_love')
     os.remove(dist..'_love')
     return ok, stdout
@@ -22,7 +24,7 @@ end
 
 local function love_unzip(args)
     cli_fs.clear(args.outdir)
-    local f = assert(io.open(args.game, "rb"))
+    local f = assert(io.open(args.src, "rb"))
     local data = f:read("*a")
     f:close()
 

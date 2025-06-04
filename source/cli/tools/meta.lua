@@ -67,7 +67,7 @@ local function normalize_table(t)
   return count > 0 and r or nil
 end
 
-local function normalized_meta(app) 
+local function normalized_meta(app)
     local meta = app.meta or {}
     return {
         title = meta.title or meta.name or app.title or app.name or '',
@@ -97,7 +97,8 @@ local function try_decode(infile, parser)
 end
 
 local function render(infile, content, args)
-    local game = normalize_table(try_table(infile) or try_lua(infile) or try_decode(infile, json) or try_decode(infile, env) or {})
+    local game = normalize_table(try_table(infile) or try_lua(infile) or try_decode(infile, json) or try_decode(infile, env))
+    if not game then return nil end
     local meta = normalized_meta(game)
     local envs = env.normalize(game)
 

@@ -62,21 +62,21 @@ local function add_core(self, core_name, options)
     self.pipeline[#self.pipeline + 1] = function()
         if not options.src then return end
         local from = str_fs.file(options.src)
-        local to = str_fs.path(self.args.dist..self.bundler, options.as or from.get_file())
+        local to = str_fs.path(self.args.outdir..self.bundler, options.as or from.get_file())
         assert(zeebo_builder.build(from.get_unix_path(), from.get_file(), to.get_unix_path(), to.get_file(), options.prefix or '', self.args))
     end
 
     if #self.bundler > 0 and options.src then 
         self.pipeline[#self.pipeline + 1] = function()
             local file = options.as or str_fs.file(options.src).get_file()
-            assert(zeebo_bundler.build(self.args.dist..self.bundler..file, self.args.dist..file))
+            assert(zeebo_bundler.build(self.args.outdir..self.bundler..file, self.args.outdir..file))
         end
     end
 
     if options.assets then
         self.pipeline[#self.pipeline + 1] = function()
-            local game = zeebo_module.loadgame(self.args.dist..'game.lua')
-            assert(zeebo_assets.build(game and game.assets or {}, self.args.dist))
+            local game = zeebo_module.loadgame(self.args.outdir..'game.lua')
+            assert(zeebo_assets.build(game and game.assets or {}, self.args.outdir))
         end
     end
 
@@ -86,7 +86,7 @@ end
 local function add_file(self, file_in, options)
     self.pipeline[#self.pipeline + 1] = function()
         local from = str_fs.file(file_in)
-        local to = str_fs.path(self.args.dist, (options and options.as) or from.get_file())
+        local to = str_fs.path(self.args.outdir, (options and options.as) or from.get_file())
         cli_fs.mkdir(to.get_sys_path())
         cli_fs.move(from.get_fullfilepath(), to.get_fullfilepath())
     end
@@ -97,10 +97,10 @@ end
 local function add_meta(self, file_in, options)
     self.pipeline[#self.pipeline + 1] = function()
         local from = str_fs.file(file_in)
-        local to = str_fs.path(self.args.dist, (options and options.as) or from.get_file())
+        local to = str_fs.path(self.args.outdir, (options and options.as) or from.get_file())
         local input = io.open(from.get_fullfilepath(), 'r')
         local output = io.open(to.get_fullfilepath(), 'w')
-        local game_ok, game_app = pcall(zeebo_module.loadgame, self.args.dist..'game.lua')
+        local game_ok, game_app = pcall(zeebo_module.loadgame, self.args.outdir..'game.lua')
         local meta = (game_ok and game_app and game_app.meta) or {}
         local content = lustache:render(input:read('*a'), {
             core={

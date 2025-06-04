@@ -1,5 +1,6 @@
 luacov.*
 carousel/
+balatro/
 vendor/
 dist/
 html/
@@ -7,5 +8,5 @@ rtf/
 latex/
 doxygen/
 crt0.lua
-.out
+*.out
 *.xml

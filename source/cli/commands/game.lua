@@ -31,7 +31,10 @@ local function meta(args)
         format = infile_f:read('*a')
     end
 
-    local content = cli_meta.render(args.game, format)
+    local content = cli_meta.render(args.src, format)
+    if not content then
+        return false, 'cannot parse: '..args.src
+    end
 
     if args.outfile and #args.outfile > 0 then
         local outfile_f, outfile_err = io.open(str_fs.file(args.outfile).get_fullfilepath(), 'w')

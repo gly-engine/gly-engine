@@ -5,10 +5,10 @@ local str_fs = require('source/shared/string/schema/fs')
 local var_build = require('source/shared/var/build/build')
 
 local function build(args)
-    args.dist = str_fs.path(args.dist).get_fullfilepath()
+    args.outdir = str_fs.path(args.outdir).get_fullfilepath()
 
-    if not args.core and not args.game then
-        return false, 'usage: '..args[0]..' build [game] -'..'-core [core]'
+    if not args.core and not args.src then
+        return false, 'usage: '..args[0]..' build [src] -'..'-core [core]'
     end
 
     if not args.core then
@@ -19,13 +19,13 @@ local function build(args)
         args.fengari = true
     end
 
-    cli_fs.clear(args.dist)
-    cli_fs.mkdir(args.dist..'_bundler/')
+    cli_fs.clear(args.outdir)
+    cli_fs.mkdir(args.outdir..'_bundler/')
 
     local atob = var_build.need_atobify(args)
 
-    local build_game = buildsystem.from({core='game', bundler=true, dist=args.dist})
-        :add_core('game', {src=args.game, as='game.lua', prefix='game_', assets=true})
+    local build_game = buildsystem.from({core='game', bundler=true, outdir=args.outdir})
+        :add_core('game', {src=args.src, as='game.lua', prefix='game_', assets=true})
 
     local build_core = buildsystem.from(args)
         :add_rule('the middlware ginga html5 already has a streamming player', 'core=html5_ginga', 'videojs=true')
@@ -42,7 +42,7 @@ local function build(args)
         :add_core('native', {src='source/engine/core/native/main.lua'})
         --
         :add_core('love', {src='source/engine/core/love/main.lua'})
-        :add_step('love '..args.dist, {when=args.run})
+        :add_step('love '..args.outdir, {when=args.run})
         --
         :add_core('ginga', {src='ee/engine/core/ginga/main.lua'})
         :add_meta('ee/engine/meta/ginga/ncl.mustache', {as='main.ncl'})
@@ -69,7 +69,7 @@ local function build(args)
         :add_meta('source/engine/meta/html5/index.mustache', {as='index.html'})
         :add_meta('src/engine/meta/html5_tizen/config.xml')
         :add_meta('src/engine/meta/html5_tizen/.tproject')
-        :add_step('cd '..args.dist..';~/tizen-studio/tools/ide/bin/tizen.sh package -t wgt;true')
+        :add_step('cd '..args.outdir..';~/tizen-studio/tools/ide/bin/tizen.sh package -t wgt;true')
         --
         :add_core('html5_webos', {src='source/engine/core/native/main.lua', force_bundler=true})
         :add_file('assets/icon80x80.png')
@@ -77,10 +77,10 @@ local function build(args)
         :add_meta('src/engine/meta/html5_webos/appinfo.json')
         :add_step('webos24 $(pwd)/dist', {when=args.run})
         --
-        :add_common_func(atobify.builder('engine_code', args.dist..'main.lua', args.dist..'index.js'), {when=atob and not args.enginecdn})
-        :add_common_func(atobify.builder('game_code', args.dist..'game.lua', args.dist..'index.js'), {when=atob})
-        :add_common_func(cli_fs.lazy_del(args.dist..'main.lua'), {when=atob or args.enginecdn})
-        :add_common_func(cli_fs.lazy_del(args.dist..'game.lua'), {when=atob})
+        :add_common_func(atobify.builder('engine_code', args.outdir..'main.lua', args.outdir..'index.js'), {when=atob and not args.enginecdn})
+        :add_common_func(atobify.builder('game_code', args.outdir..'game.lua', args.outdir..'index.js'), {when=atob})
+        :add_common_func(cli_fs.lazy_del(args.outdir..'main.lua'), {when=atob or args.enginecdn})
+        :add_common_func(cli_fs.lazy_del(args.outdir..'game.lua'), {when=atob})
 
     local ok, message = build_game:run()
 
@@ -90,7 +90,7 @@ local function build(args)
 
     ok, message =  build_core:run()
     
-    cli_fs.rmdir(args.dist..'_bundler/')
+    cli_fs.rmdir(args.outdir..'_bundler/')
 
     return ok, message
 end
