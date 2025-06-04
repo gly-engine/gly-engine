@@ -71,7 +71,7 @@ local function normalize_table(t)
 end
 
 local function normalized_meta(app)
-    local meta = app.meta or {}
+    local meta = app.meta or app.Game or {}
     return {
         title = meta.title or meta.name or app.title or app.name or '',
         author = meta.author or meta.vendor or app.author or app.vendor or '',
