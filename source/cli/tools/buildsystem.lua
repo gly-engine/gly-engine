@@ -7,25 +7,6 @@ local cli_meta = require('source/cli/tools/meta')
 local cli_fs = require('source/cli/tools/fs')
 local str_fs = require('source/shared/string/schema/fs')
 local zeebo_pipeline = require('source/shared/functional/pipeline')
-local util_decorator = require('source/shared/functional/decorator')
-local lustache = require('source/third_party/olivinelabs_lustache')
-
---! @todo move this function!
-local function parser_assets(font_list, register_key, register_value)
-    local index = 1
-    local res = {}
-    while index <= #font_list do
-        local key, value = font_list[index]:match("([^:]+):(.+)")
-        if key and value then
-            res[#res + 1] = {
-                [register_key] = key,
-                [register_value] = value
-            }
-        end
-        index = index + 1
-    end
-    return res
-end
 
 local function add_func(self, func, options)
     self.pipeline[#self.pipeline + 1] = function()

@@ -1,7 +1,4 @@
 local cli_fs = require('source/cli/tools/fs')
-local json = require('source/third_party/rxi_json')
-local version = require('source/version')
-local lustache = require('source/third_party/olivinelabs_lustache')
 
 local function replace(args)
     local file_in = io.open(args.file,'r')
@@ -103,8 +100,7 @@ local P = {
     ['fs-xxd-i'] = vim_xxd_i,
     ['fs-luaconf'] = luaconf,
     ['fs-replace'] = replace,
-    ['fs-download'] = download,
-    ['fs-mustache'] = mustache
+    ['fs-download'] = download
 }
 
 return P

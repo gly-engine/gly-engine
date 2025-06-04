@@ -128,7 +128,6 @@ local function render(infile, content, args)
             agent = agent,
             version = version,
         },
-        meta = meta,
         assets = {
             list = game.assets or {},
             fonts = game.fonts or {}

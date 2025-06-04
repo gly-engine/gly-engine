@@ -25,7 +25,7 @@ local function encode(tbl, force_upper)
     end
     table.sort(keys)
     for _, key in ipairs(keys) do
-        key_name = force_upper and key:upper() or key
+        local key_name = force_upper and key:upper() or key
         table.insert(lines, string.format("%s=%s", key_name, tostring(tbl[key])))
     end
     return table.concat(lines, "\n")

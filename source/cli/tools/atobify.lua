@@ -1,6 +1,5 @@
 local str_base64 = require('source/shared/string/encode/base64')
 local str_fs = require('source/shared/string/schema/fs')
-local str_cmd = require('source/shared/string/schema/cmd')
 
 local function build(name, infile, outfile)
     local infile_p, outfile_p = str_fs.file(infile), str_fs.file(outfile) 
@@ -31,7 +30,7 @@ local function build(name, infile, outfile)
 end
 
 local P = {
-    builder = function(a, b, c, d) return function() return build(a, b, c, d) end end,
+    builder = function(a, b, c) return function() return build(a, b, c) end end,
     build = build
 }
 
