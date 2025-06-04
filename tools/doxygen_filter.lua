@@ -13,7 +13,7 @@ function support()
 end
 
 function commands()
-    local name = 'src/cli/main.lua'
+    local name = 'source/cli/main.lua'
     local file = io.open(name)
     local src = file:read('*a')
     local content = ''
