@@ -11,8 +11,9 @@ local function http_handler(self)
 
     local threadCode = [[
         local url, method, headers, body, channel = ...
-        local http = require("socket.http")
-        local ltn12 = require("ltn12")
+        local meow = require
+        local http = meow('socket.http')
+        local ltn12 = meow('ltn12')
         local response = {}
         local req = {
             url = url,
