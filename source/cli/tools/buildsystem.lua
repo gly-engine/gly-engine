@@ -3,10 +3,9 @@ local zeebo_module = require('source/shared/module')
 local zeebo_bundler = require('source/cli/build/bundler')
 local zeebo_builder = require('source/cli/build/builder')
 local zeebo_assets = require('source/cli/tools/assets')
+local cli_meta = require('source/cli/tools/meta')
 local cli_fs = require('source/cli/tools/fs')
 local str_fs = require('source/shared/string/schema/fs')
-local env_ncl = require('source/shared/var/build/ncl')
-local env_build = require('source/shared/var/build/build')
 local zeebo_pipeline = require('source/shared/functional/pipeline')
 local util_decorator = require('source/shared/functional/decorator')
 local lustache = require('source/third_party/olivinelabs_lustache')
@@ -100,22 +99,7 @@ local function add_meta(self, file_in, options)
         local to = str_fs.path(self.args.outdir, (options and options.as) or from.get_file())
         local input = io.open(from.get_fullfilepath(), 'r')
         local output = io.open(to.get_fullfilepath(), 'w')
-        local game_ok, game_app = pcall(zeebo_module.loadgame, self.args.outdir..'game.lua')
-        local meta = (game_ok and game_app and game_app.meta) or {}
-        local content = lustache:render(input:read('*a'), {
-            core={
-                [self.args.core] = true
-            },
-            env={
-                build=util_decorator.prefix1_t(self.args, env_build)
-            },
-            assets = {
-                fonts = parser_assets(game_ok and game_app and game_app.fonts or {}, 'font', 'url')
-            },
-            ncl=env_ncl,
-            args=self.args,
-            meta=meta
-        })
+        local content = cli_meta.render(self.args.outdir..'game.lua', input:read('*a'), self.args)
         output:write(content)
         output:close()
         input:close()

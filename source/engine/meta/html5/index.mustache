@@ -11,9 +11,9 @@
     <meta property="twitter:title" content="{{ meta.title }}" />
     <meta property="twitter:description" content="{{ meta.description }}" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    {{# assets.fonts }}
-    <link rel="preload" href="{{& url }}" as="font" type="font/ttf"/>
-    {{/ assets.fonts }}
+{{# assets.fonts }}
+    <link rel="preload" href="{{& fn.colon.to }}" as="font" type="font/ttf"/>
+{{/ assets.fonts }}
     <style>
         *, *::after, *::before {
             touch-action: none;
@@ -42,12 +42,12 @@
           image-rendering: pixelated;
         }
     </style>
-    {{# env.build.screen_flag }}
+    {{# gly.build.screen.has_flag }}
     <style>#gameCanvas { width: 100%; }</style>
-    {{/ env.build.screen_flag }}
-    {{^ core.html5_ginga }}
+    {{/ gly.build.screen.has_flag }}
+    {{^ gly.build.core.ginga }}
     <style>body { background-color: gray; }</style>
-    {{/ core.html5_ginga }}
+    {{/ gly.build.core.ginga }}
     {{# args.gamepadzilla }}
     <style>
       .gpz-btn4{
@@ -63,15 +63,15 @@
     {{# assets.fonts }}
     <style>
       @font-face {
-        font-family: "{{ font }}";
-        src: url("{{& url }}");
+        font-family: "{{ fn.colon.from }}";
+        src: url("{{& fn.colon.to }}");
       }
     </style>
     {{/ assets.fonts }}
   </head>
   <body>
     <main>
-      <canvas id="gameCanvas" {{& env.build.screen_html5 }}></canvas>
+      <canvas id="gameCanvas" {{& gly.build.screen.wh_attributes }}></canvas>
       {{# args.gamepadzilla }}
       <canvas width="150" height="150"
         class="gpz-joy"
@@ -86,9 +86,9 @@
     {{# args.videofake }}
     <script>window.videofake=100</script>
     {{/ args.videofake }}
-    {{# env.build.need_atobify }}
+    {{# gly.build.html5.atobify }}
     <script src="index.js" defer></script>
-    {{/ env.build.need_atobify }}
+    {{/ gly.build.html5.atobify }}
     {{# args.gamepadzilla }}
     <script src="https://cdn.jsdelivr.net/npm/gamepadzilla@1" defer></script>
     {{/ args.gamepadzilla }}
@@ -118,13 +118,13 @@
           .set_library('runtime', {unfocus_pause: true})
           .set_library('gamepad')
           .set_library('keyboard')
-          .set_library('{{ env.build.html5_lib_resize }}')
+          .set_library('{{ gly.build.html5.lib_resize }}')
           .set_library('player-html5')
           .set_library('player-youtube')
           .set_library('player-fake', window.videofake)
           .set_library('player-videojs', window.videojs)
-          .set_engine(`{{& env.build.html5_src_engine }}`)
-          .set_game(`{{& env.build.html5_src_game }}`)
+          .set_engine(`{{& gly.build.html5.src_engine }}`)
+          .set_game(`{{& gly.build.html5.src_game }}`)
           .build()
       })
     </script>

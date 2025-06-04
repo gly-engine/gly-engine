@@ -3,17 +3,20 @@ local version = require('source/version')
 local env = require('source/shared/string/dsl/env')
 local base64 = require('source/shared/string/encode/base64')
 local json = require('source/third_party/rxi_json')
-local ncl = require('source/shared/var/build/ncl')
-local env_build = require('source/shared/var/build/build')
 local lustache = require('source/third_party/olivinelabs_lustache')
 local util_decorator = require('source/shared/functional/decorator')
+local build_ncl = require('source/shared/var/build/ncl')
+local build_html = require('source/shared/var/build/html')
+local build_screen = require('source/shared/var/build/screen')
+local runtime_bin = require('source/shared/var/runtime/bin')
+local runtime_flag = require('source/shared/var/runtime/flag')
 
 local fn_colon = {
     from = function(self)
-        return self:match('^(.+):.+$')
+        return self:match('^(.-):')
     end,
     to = function(self)
-        return self:match('^.+:(.+)$')
+        return self:match('^.-:(.+)$')
     end
 }
 
@@ -96,6 +99,21 @@ local function try_decode(infile, parser)
     return ok and next(data) ~= nil and data
 end
 
+local function vars(args)
+    return {
+        build = {
+            core = {[(args.core or 'meta'):gsub('html5_', '')] = true},
+            ncl = util_decorator.prefix1_t(args, build_ncl),
+            html5 = util_decorator.prefix1_t(args, build_html),
+            screen = util_decorator.prefix1_t(args, build_screen)
+        },
+        run = {
+            bin = util_decorator.prefix1_t(args, runtime_bin),
+            flag = util_decorator.prefix1_t(args, runtime_flag),
+        }
+    }
+end
+
 local function render(infile, content, args)
     local game = normalize_table(try_table(infile) or try_lua(infile) or try_decode(infile, json) or try_decode(infile, env))
     if not game then return nil end
@@ -132,16 +150,15 @@ local function render(infile, content, args)
     end
 
     if args then
-        --! @todo
         data.args = args
-        --data.gly.build = util_decorator.prefix1_t(self.args, env_build)
-        data.core = {[self.args.core or 'meta'] = true}
+        data.gly = vars(args)
     end
 
     return lustache:render(content, data)
 end
 
 local P = {
+    vars = vars,
     render = render
 }
 

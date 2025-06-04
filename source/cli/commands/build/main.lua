@@ -1,8 +1,8 @@
 local buildsystem = require('source/cli/tools/buildsystem')
 local atobify = require('source/cli/tools/atobify')
+local cli_meta = require('source/cli/tools/meta')
 local cli_fs = require('source/cli/tools/fs')
 local str_fs = require('source/shared/string/schema/fs')
-local var_build = require('source/shared/var/build/build')
 
 local function build(args)
     args.outdir = str_fs.path(args.outdir).get_fullfilepath()
@@ -26,7 +26,8 @@ local function build(args)
     cli_fs.clear(args.outdir)
     cli_fs.mkdir(args.outdir..'_bundler/')
 
-    local atob = var_build.need_atobify(args)
+    local var = cli_meta.vars(args)
+    local atob = var.build.html5.atobify()
 
     local build_game = buildsystem.from({core='game', bundler=true, outdir=args.outdir})
         :add_core('game', {src=args.src, as='game.lua', prefix='game_', assets=true})
@@ -50,7 +51,7 @@ local function build(args)
         --
         :add_core('ginga', {src='ee/engine/core/ginga/main.lua'})
         :add_meta('ee/engine/meta/ginga/ncl.mustache', {as='main.ncl'})
-        :add_step('ginga dist/main.ncl '..var_build.screen_ginga(args), {when=args.run})
+        :add_step('ginga dist/main.ncl '..var.run.flag.screen_ginga(), {when=args.run})
         --
         :add_core('html5', {src='source/engine/core/native/main.lua', force_bundler=true})
         :add_file('assets/icon80x80.png')
