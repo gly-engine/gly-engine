@@ -151,7 +151,7 @@ local function render(infile, content, args)
 
     if args then
         data.args = args
-        data.gly = vars(args)
+        data.var = vars(args)
     end
 
     return lustache:render(content, data)

@@ -42,12 +42,12 @@
           image-rendering: pixelated;
         }
     </style>
-    {{# gly.build.screen.has_flag }}
+    {{# var.build.screen.has_flag }}
     <style>#gameCanvas { width: 100%; }</style>
-    {{/ gly.build.screen.has_flag }}
-    {{^ gly.build.core.ginga }}
+    {{/ var.build.screen.has_flag }}
+    {{^ var.build.core.ginga }}
     <style>body { background-color: gray; }</style>
-    {{/ gly.build.core.ginga }}
+    {{/ var.build.core.ginga }}
     {{# args.gamepadzilla }}
     <style>
       .gpz-btn4{
@@ -71,7 +71,7 @@
   </head>
   <body>
     <main>
-      <canvas id="gameCanvas" {{& gly.build.screen.wh_attributes }}></canvas>
+      <canvas id="gameCanvas" {{& var.build.screen.wh_attributes }}></canvas>
       {{# args.gamepadzilla }}
       <canvas width="150" height="150"
         class="gpz-joy"
@@ -86,9 +86,9 @@
     {{# args.videofake }}
     <script>window.videofake=100</script>
     {{/ args.videofake }}
-    {{# gly.build.html5.atobify }}
+    {{# var.build.html5.atobify }}
     <script src="index.js" defer></script>
-    {{/ gly.build.html5.atobify }}
+    {{/ var.build.html5.atobify }}
     {{# args.gamepadzilla }}
     <script src="https://cdn.jsdelivr.net/npm/gamepadzilla@1" defer></script>
     {{/ args.gamepadzilla }}
@@ -118,13 +118,13 @@
           .set_library('runtime', {unfocus_pause: true})
           .set_library('gamepad')
           .set_library('keyboard')
-          .set_library('{{ gly.build.html5.lib_resize }}')
+          .set_library('{{ var.build.html5.lib_resize }}')
           .set_library('player-html5')
           .set_library('player-youtube')
           .set_library('player-fake', window.videofake)
           .set_library('player-videojs', window.videojs)
-          .set_engine(`{{& gly.build.html5.src_engine }}`)
-          .set_game(`{{& gly.build.html5.src_game }}`)
+          .set_engine(`{{& var.build.html5.src_engine }}`)
+          .set_game(`{{& var.build.html5.src_game }}`)
           .build()
       })
     </script>
