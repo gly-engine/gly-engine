@@ -7,7 +7,7 @@ end
 
 local function screen_love(args)
     if args and args.screen then
-        return '--screen '..args.screen
+        return '-'..'-screen '..args.screen
     end
     return ''
 end

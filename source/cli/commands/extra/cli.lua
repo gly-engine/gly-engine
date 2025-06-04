@@ -23,8 +23,8 @@ end
 local function cli_build(args)
     local dist = args.dist
     cli_fs.clear(dist)
-    zeebo_bundler.build('src/cli/main.lua', dist..'main.lua')
-    local deps = { './src', './assets', './samples', './mock', './ee', './third_party'}
+    zeebo_bundler.build('source/cli/main.lua', dist..'main.lua')
+    local deps = { './source', './assets', './samples', './tests/mock', './ee'}
     local ok, message = zeebo_bootstrap.build(dist..'main.lua', dist..'cli.lua', deps)
     os.remove(dist..'main.lua')
     return ok, message

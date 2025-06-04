@@ -1,8 +1,8 @@
 local str_cmd = require('source/shared/string/schema/cmd')
 
 local function bootstrap()
-    local fmock = io.open('mock/io.lua', 'r')
-    local fbootstrap = io.open('mock/bootstrap.lua', 'r')
+    local fmock = io.open('tests/mock/io.lua', 'r')
+    local fbootstrap = io.open('source/cli/hazard/silvertap.lua', 'r')
     local content = fmock:read('*a'):match('%-%-! @bootstrap(.-)%-%-! @endbootstrap')..fbootstrap:read('*a')
     fmock:close()
     fbootstrap:close()
