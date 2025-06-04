@@ -103,7 +103,7 @@ local function vars(args)
     return {
         build = {
             core = {[(args.core or 'meta'):gsub('html5_', '')] = true},
-            ncl = util_decorator.prefix1_t(args, build_ncl),
+            ncl = build_ncl,
             html5 = util_decorator.prefix1_t(args, build_html),
             screen = util_decorator.prefix1_t(args, build_screen)
         },

@@ -39,20 +39,20 @@
     </media>
     <media id="application" descriptor="descriptorApplication" src="main.lua">
       <property name="currentKeyMaster"/>
-      {{# ncl.screens }}
+      {{# gly.build.ncl.screens }}
       <property name="screen_{{ left }}_{{ top }}_{{ width }}_{{ height }}"/>
-      {{/ ncl.screens }}
-      {{# ncl.settings }}
+      {{/ gly.build.ncl.screens }}
+      {{# gly.build.ncl.settings }}
       <property name="{{ env }}"/>
-      {{/ ncl.settings }}
+      {{/ gly.build.ncl.settings }}
     </media>
     <media type="application/x-ginga-settings" id="settings">
       <property name="service.currentKeyMaster" value="application"/>
-      {{# ncl.settings }}
+      {{# gly.build.ncl.settings }}
       {{# ginga }}
       <property name="{{ . }}"/>
       {{/ ginga }}
-      {{/ ncl.settings }}
+      {{/ gly.build.ncl.settings }}
     </media>
     {{! focus begin }}
     <link xconnector="onBeginSet">
@@ -62,7 +62,7 @@
       </bind>
     </link>
     {{! focus end }}
-    {{# ncl.screens }}
+    {{# gly.build.ncl.screens }}
     <link xconnector="onEndAttributionSet">      
       <bind component="application" interface="screen_{{ left }}_{{ top }}_{{ width }}_{{ height }}" role="onEndAttribution"/>
       <bind role="pause" component="tv"/>
@@ -71,8 +71,8 @@
       </bind>
       <bind role="resume" component="tv"/>
     </link>
-    {{/ ncl.screens }}
-    {{# ncl.settings }}
+    {{/ gly.build.ncl.screens }}
+    {{# gly.build.ncl.settings }}
     {{# ginga }}
     <link xconnector="onBeginSet">
       <bind role="onBegin" component="application"/>
@@ -82,6 +82,6 @@
       <bind role="get" component="settings" interface="{{ . }}"/>
     </link>
     {{/ ginga }}
-    {{/ ncl.settings }}
+    {{/ gly.build.ncl.settings }}
   </body>
 </ncl>
