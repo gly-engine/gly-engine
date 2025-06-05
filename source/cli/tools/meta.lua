@@ -72,11 +72,23 @@ end
 
 local function normalized_meta(app)
     local meta = app.meta or app.Game or {}
+    local scan = function(...)
+        for _, key in ipairs({...}) do
+            local value =  meta[key] or meta[key:upper()] or app[key] or app[key:upper()]
+            if value and #value > 0 then return value end
+        end
+        return ''
+    end
+    local version = function(s)
+        local t = {}
+        for part in s:gmatch("%d+") do t[#t+1] = part end
+        return string.format("%d.%d.%d", tonumber(t[1]) or 0, tonumber(t[2]) or 0, tonumber(t[3]) or 0)
+    end
     return {
-        title = meta.title or meta.name or app.title or app.name or '',
-        author = meta.author or meta.vendor or app.author or app.vendor or '',
-        version = meta.version or app.version or app.tag or app.VERSION or '0.0.0',
-        description = meta.description or meta.desc or app.description or app.desc or ''
+        title = scan('title', 'name'),
+        author = scan('author', 'vendor'),
+        version = version(scan('version', 'ver', 'tag')),
+        description = scan('description', 'desc', 'brief')
     }
 end
 
