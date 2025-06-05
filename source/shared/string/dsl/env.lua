@@ -32,20 +32,19 @@ local function encode(tbl, force_upper)
 end
 
 local function decode(str)
-    local result = {}
+    local res = {}
     for line in str:gmatch("[^\r\n]+") do
-        local clean = line:match("^%s*(.-)%s*$")
-        if clean ~= "" and not clean:match("^#") then
-            local key, value = clean:match("^([^=]+)=(.*)$")
-            if key then
-                key = key:match("^%s*(.-)%s*$")
-                value = value:match("^%s*(.-)%s*$")
-                value = value:match('^"(.*)"$') or value:match("^'(.*)'$") or value
-                result[key] = value
+        local l = line:match("^%s*(.-)%s*$")
+        if l ~= "" and not l:match("^#") then
+            local k,v = l:match("^([%w_.]+)=(.*)$")
+            if not k or res[k] then
+                return {}
             end
+            v = v:match('^"(.*)"$') or v:match("^'(.*)'$") or v
+            res[k] = v
         end
     end
-    return result
+    return res
 end
 
 local P = {

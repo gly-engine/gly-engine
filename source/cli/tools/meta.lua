@@ -76,7 +76,7 @@ local function normalized_meta(app)
         title = meta.title or meta.name or app.title or app.name or '',
         author = meta.author or meta.vendor or app.author or app.vendor or '',
         version = meta.version or app.version or app.tag or app.VERSION or '0.0.0',
-        description = meta.description or app.description or ''
+        description = meta.description or meta.desc or app.description or app.desc or ''
     }
 end
 
@@ -99,6 +99,26 @@ local function try_decode(infile, parser)
     return ok and next(data) ~= nil and data
 end
 
+local function try_tic80(infile, parser)
+    local ok, data = pcall(function()
+        local h, m = io.open(infile, "rb"), {}
+        if not h then return end
+        local done = false
+        for l in h:lines() do
+            if done then return next(m) and {meta = m} or {} end
+            local k, v = l:match("%-%-%s*(%w+)%s*:%s*(.*)")
+            if k and (k == 'title' or k == 'author' or k == 'desc' or k == 'version') then
+                m[k] = v
+            elseif next(m) and not l:match("%-%-") then
+                done = true
+            end
+        end
+        h:close()
+        return next(m) and {meta = m}
+    end)
+    return ok and next(data or {}) ~= nil and data
+end
+
 local function vars(args)
     return {
         build = {
@@ -115,8 +135,15 @@ local function vars(args)
 end
 
 local function render(infile, content, args)
-    local game = normalize_table(try_table(infile) or try_lua(infile) or try_decode(infile, json) or try_decode(infile, env))
-    if not game then return nil end
+    local game = normalize_table(
+        try_table(infile) or try_lua(infile) or try_decode(infile, json) or try_decode(infile, env) or 
+        try_tic80(infile)
+    )
+
+    if not game then 
+        return nil
+    end
+    
     local meta = normalized_meta(game)
     local envs = env.normalize(game)
 
