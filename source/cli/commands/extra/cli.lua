@@ -20,7 +20,6 @@ end
 
 local P = {
     ['cli-build'] = cli_build,
-    ['cli-test'] = cli_test,
     ['cli-dump'] = cli_dump
 }
 

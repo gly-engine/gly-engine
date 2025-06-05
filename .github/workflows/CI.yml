@@ -93,7 +93,7 @@ jobs:
       fail-fast: false
       matrix:
         core: [
-          'cli', 'repl', 'lite', 'micro', 'native', 'love', 'ginga',
+          'cli', 'lite', 'micro', 'native', 'love', 'ginga',
           'pong', 'asteroids'
         ]
     steps:
