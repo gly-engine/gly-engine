@@ -1,6 +1,5 @@
 local str_url = require('source/shared/string/encode/url')
 local user_agent = require('source/agent')
-local ginga_support = require('ee/lib/util/support')
 local content_length = {}
 local request_dict = {}
 local data_dict = {}
@@ -71,8 +70,8 @@ local function callback(evt)
     end
 end
 
-local function install(std)    
-    if not true then
+local function install(std, engine)    
+    if tostring(engine.envs.ginga_fsc_09) ~= 'true' then
         error('old device!')
     end
     std.bus.listen('ginga', callback)

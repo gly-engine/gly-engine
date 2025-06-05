@@ -1,3 +1,4 @@
+local json = require('source/third_party/rxi_json')
 local user_agent = require('source/agent')
 local base_url = 'http://localhost:44642/dtv/current-service/ginga/persistent'
 local requests = {}
@@ -9,7 +10,7 @@ local function storage_set(key, value, promise, resolve)
     local self = {promise=promise,resolve=resolve}
     local session = tonumber(tostring(self):match("0x(%x+)$"), 16)
     local uri = base_url..'/channel.'..key..'?var-name=channel.'..key
-    local body = '{"varValue": "'..value..'"}'
+    local body = json.encode({varValue=value})
 
     requests[session] = self
 
@@ -49,6 +50,12 @@ local function callback(std, engine, evt)
     local self = requests[evt.session]
 
     if self then
+        if not self.body then
+            requests[evt.session] = nil
+            self.resolve()
+            return
+        end
+
         if evt.body then
             self.body = self.body..evt.body
         end
@@ -61,7 +68,7 @@ local function callback(std, engine, evt)
 
         if evt.finished or evt.code == 200 then
             requests[evt.session] = nil
-            local ok, data = pcall(std.json.decode, self.body)
+            local ok, data = pcall(json.decode, self.body)
             data = ok and data and data.persistent or data
             data = data and data[1] or data
             data = data and data.value or data
@@ -74,9 +81,9 @@ local function callback(std, engine, evt)
     end
 end
 
-local function install(std)
-    if not std.json then
-        error('require json')
+local function install(std, engine)
+    if tostring(engine.envs.ginga_fsd_09) ~= 'true' then
+        error('old device!')
     end
     std.bus.listen_std_engine('ginga', callback)
 end

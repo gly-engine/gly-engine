@@ -463,7 +463,6 @@ end
 
 local P = {
     force = 'http',
-    util = str_http,
     handler = http_handler,
     install = install
 }

@@ -30,7 +30,7 @@ local cfg_logsystem = require('source/engine/protocol/logsystem_print')
 local cfg_http_ginga = require('ee/engine/protocol/http_fsb09')
 local cfg_persistent = require('ee/engine/protocol/storage_fsd09')
 local cfg_mediaplayer = require('ee/engine/protocol/media_fsd09')
---local cfg_http_ginga2 = require('ee/engine/protocol/http_fsc09')
+local cfg_http_ginga2 = require('ee/engine/protocol/http_fsc09')
 --
 local application_default = require('source/shared/var/object/root')
 local color = require('source/engine/api/system/color')
@@ -131,7 +131,7 @@ local function main(evt, gamefile)
         :package('media.video', engine_media, cfg_mediaplayer)
         --:package('media.audio', engine_media, {})
         :package('json', engine_encoder, cfg_json_rxi)
-        --:package('http', engine_http, cfg_http_ginga2)
+        :package('http', engine_http, cfg_http_ginga2)
         :package('http', engine_http, cfg_http_ginga)
         :package('storage', engine_storage, cfg_persistent)
         :package('i18n', engine_i18n, cfg_system)
@@ -160,7 +160,7 @@ end
 --! @{ @note for enterprise features contact bizdev@zedia.com.br @}
 local ok, crt0 = pcall(require, 'crt0') 
 if ok then
-    crt0(main, cfg_json_rxi, cfg_http_ginga.str_http)
+    crt0(main, cfg_json_rxi)
 else
     event.register(main)
 end
