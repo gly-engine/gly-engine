@@ -1,9 +1,14 @@
-local os = require('os')
+local build = require('source/cli/commands/build/main')
+local build_html = require('source/cli/commands/build/html')
+local zeebo_compiler = require('source/cli/build/compiler')
+local zeebo_bundler = require('source/cli/build/bundler')
 local str_fs = require('source/shared/string/schema/fs')
+local cli_fs = require('source/cli/tools/fs')
 local cli_meta = require('source/cli/tools/meta')
+local cli_initialize = require('source/cli/tools/initialize')
 
 local function init(args)
-    return false, 'not implemented!'
+    return cli_initialize.init(args)
 end
 
 local function run(args)
@@ -17,6 +22,34 @@ local function run(args)
         return false, 'cannot can execute'
     end
     return os.execute(command)
+end
+
+local function bundler(args)
+    local from = str_fs.file(args.src)
+    local to = str_fs.file(args.outfile)
+    cli_fs.clear(to.get_sys_path())
+    return zeebo_bundler.build(from.get_fullfilepath(), to.get_fullfilepath())
+end
+
+local function compile(args)
+    local from = str_fs.file(args.src)
+    local to = str_fs.file(args.outfile)
+    return zeebo_compiler.build(from.get_fullfilepath(), to.get_fullfilepath())
+end
+
+local function test(args)
+    local coverage = args.coverage and '-lluacov' or ''
+    local files = cli_fs.ls('./tests/unit')
+    local ok, index = true, 1
+    while index <= #files do
+        ok = ok and os.execute(args.luabin..' '..coverage..' ./tests/unit/'..files[index])
+        index = index + 1
+    end
+    if #coverage > 0 then
+        os.execute('luacov src')
+        os.execute('tail -n '..tostring(#files + 5)..' luacov.report.out')
+    end
+    return ok
 end
 
 local function meta(args)
@@ -51,8 +84,13 @@ end
 
 local P = {
     run = run,
+    init = init,
+    test = test,
     meta = meta,
-    init = init
+    bundler = bundler,
+    compile = compile,
+    build = build.build,
+    ['build-html'] = build_html.build
 }
 
 return P

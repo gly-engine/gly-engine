@@ -1,5 +1,6 @@
 local version = require('source/version')
 
+--! @todo rewrite this!
 local help_message = "Available commands:\n"
   .."- init: Initializes a new game project. Requires a game path.\n"
   .."- build: Builds the game for distribution. Defaults to the 'ginga' core.\n"

@@ -4,22 +4,6 @@ local cli_fs = require('source/cli/tools/fs')
 local zeebo_bundler = require('source/cli/build/bundler')
 local zeebo_bootstrap = require('source/cli/hazard/bootstrap')
 
-local function cli_test(args)
-    local coverage = args.coverage and '-lluacov' or ''
-    local files = cli_fs.ls('./tests/unit')
-    local index = 1
-    local ok = true
-    while index <= #files do
-        ok = ok and os.execute('lua '..coverage..' ./tests/unit/'..files[index])
-        index = index + 1
-    end
-    if #coverage > 0 then
-        os.execute('luacov src')
-        os.execute('tail -n '..tostring(#files + 5)..' luacov.report.out')
-    end
-    return ok
-end
-
 local function cli_build(args)
     local dist = args.dist
     cli_fs.clear(dist)

@@ -3,20 +3,20 @@
 --! @call commands
 local os = require('os')
 local cli = require('source/shared/string/parse/cli')
-local commands_build = require('source/cli/commands/build')
-local commands_game = require('source/cli/commands/game')
-local commands_info = require('source/cli/commands/info')
+local commands_halt = require('source/cli/commands/halt')
+local commands_info = require('source/cli/commands/extra/info')
 local commands_fs = require('source/cli/commands/extra/fs')
 local commands_cli = require('source/cli/commands/extra/cli')
 local commands_love = require('source/cli/commands/extra/love')
 local commands_hazard = require('source/cli/commands/extra/hazard')
 
 local command = cli.argparse(arg)
-    .add_subcommand('init', {})
+    .add_subcommand('init', commands_halt)
     .add_next_value('project', {required=true})
-    .add_option_get('template', {alias='@samples/{{template}}/game.lua', default='samples/helloworld/game.lua'})
+    .add_option_get('outdir', {default='.', hidden=true})
+    .add_option_get('template', {alias='@samples/{{template}}/game.lua', default='samples/helloworld/game.lua', hidden=true})
     --
-    .add_subcommand('build', commands_build)
+    .add_subcommand('build', commands_halt)
     .add_next_value('src', {alias='@samples/{{src}}/game.lua'})
     .add_option_get('core', {})
     .add_option_get('outdir', {default='./dist/'})
@@ -30,7 +30,7 @@ local command = cli.argparse(arg)
     .add_option_has('bundler')
     .add_option_has('run')
     --
-    .add_subcommand('build-html', commands_build)
+    .add_subcommand('build-html', commands_halt)
     .add_next_value('src', {alias='@samples/{{src}}/game.lua'})
     .add_option_get('core', {default='html5', hidden=true})
     .add_option_get('engine', {alias='@source/engine/core/{{engine}}/main.lua', default='source/engine/core/native/main.lua', hidden=true})
@@ -45,21 +45,25 @@ local command = cli.argparse(arg)
     .add_option_has('videofake', {hidden=true})
     .add_option_has('enginecdn', {hidden=true})
     --
-    .add_subcommand('run', commands_game)
+    .add_subcommand('run', commands_halt)
     .add_next_value('src', {required=true, alias='@samples/{{game}}/game.lua'})
     .add_option_get('screen', {})
     --
-    .add_subcommand('meta', commands_game)
+    .add_subcommand('meta', commands_halt)
     .add_next_value('src', {required=true, alias='@samples/{{src}}/game.lua'})
-    .add_option_get('format', {default='{{& meta.title }} {{& meta.version }}', alias=commands_game.meta_alias})
+    .add_option_get('format', {default='{{& meta.title }} {{& meta.version }}'})
     .add_option_get('infile', {hidden=true})
     .add_option_get('outfile', {hidden=true})
     --
-    .add_subcommand('bundler', commands_build)
+    .add_subcommand('test', commands_halt)
+    .add_option_get('luabin', {default='lua'})
+    .add_option_has('coverage')
+    --
+    .add_subcommand('bundler', commands_halt)
     .add_next_value('src', {required=true})
     .add_option_get('outfile', {default='./dist/main.lua'})
     --
-    .add_subcommand('compile', commands_build)
+    .add_subcommand('compile', commands_halt)
     .add_next_value('src', {required=true})
     .add_option_get('outfile', {default='a.out'})
     --
@@ -115,9 +119,6 @@ local command = cli.argparse(arg)
     --
     .add_subcommand('cli-build', commands_cli)
     .add_option_get('dist', {default='./dist/'})
-    --
-    .add_subcommand('cli-test', commands_cli)
-    .add_option_has('coverage')
     --
     .add_subcommand('cli-dump', commands_cli)
     --

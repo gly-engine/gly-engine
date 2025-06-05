@@ -24,7 +24,7 @@ function test_bug_103_bundler_repeats_packages_with_different_variables()
 end
 
 function test_bug_104_builder_includes_commented_libs()
-    zeebo_buildsystem.from({core='bug', bundler=true, dist='./dist/'})
+    zeebo_buildsystem.from({core='bug', bundler=true, outdir='./dist/'})
         :add_core('bug', {src='src/main104.lua'})
         :run()
 

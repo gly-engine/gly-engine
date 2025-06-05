@@ -1,4 +1,5 @@
 local os = require('os')
+local str_fs = require('source/shared/string/schema/fs')
 local str_cmd = require('source/shared/string/schema/cmd')
 
 local ok = true
@@ -15,7 +16,7 @@ local function create_file(filepath, content)
 end
 
 local function create_directory(path)
-    local success = os.execute(str_cmd.mkdir()..path)
+    local success = os.execute(str_cmd.mkdir()..' '..path)
     if not success then
         print("Error while creating directory: " .. path)
         ok = false
@@ -23,6 +24,7 @@ local function create_directory(path)
 end
 
 local function init_project(args)
+    local project_dir = str_fs.path(args.outdir).get_fullfilepath()
     local project_name = args.project
     local project_template = args.template
     local project_gamefile = io.open(project_template, 'r')
@@ -35,20 +37,17 @@ local function init_project(args)
 
     local game_lua_content = project_gamefile:read('*a')
 
-    if project_name ~= '.' then
-        create_directory(project_name)
+    if #project_dir > 0 and project_dir ~= '.' then
+        create_directory(project_dir)
     end
 
-    create_file(project_name .. "/.gitignore", ".DS_Store\nThumbs.db\nvendor\ndist\ncli.lua")
+    create_directory(project_dir.."dist")
+    create_directory(project_dir.."vendor")
+    create_directory(project_dir.."src")
     
-    create_directory(project_name .. "/dist")
-    create_directory(project_name .. "/vendor")
-    
-    create_file(project_name .. "/README.md", "# " .. project_name .. "\n\n * **use:** `lua cli.lua build src/game.lua`\n")
-    
-    create_directory(project_name .. "/src")
-    
-    create_file(project_name .. "/src/game.lua", game_lua_content)
+    create_file(project_dir.."README.md", "# " .. project_name .. "\n\n * **use:** `lua cli.lua build src/game.lua`\n")
+    create_file(project_dir.."src/game.lua", game_lua_content)
+    create_file(project_dir..".gitignore", ".DS_Store\nThumbs.db\nvendor\ndist\ncli.lua")
 
     return ok, ok and "Project " .. project_name .. " created with success!"
 end
