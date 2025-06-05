@@ -16,7 +16,6 @@ end
 
 if ('asteroids pong'):find(core) then
     cmd('./cli.sh bundler samples/'..core..'/game.lua')
-    cmd('mv dist/game.lua dist/main.lua')
     return
 end
 
