@@ -17,7 +17,7 @@ local function run(args)
     end
     local love = 'love'
     local screen = args['screen'] and ('-'..'-screen '..args.screen) or ''
-    local command = love..' source/engine/core/love '..screen..' '..args.game
+    local command = love..' source/engine/core/love '..screen..' '..args.src
     if not os or not os.execute then
         return false, 'cannot can execute'
     end

@@ -46,7 +46,7 @@ local command = cli.argparse(arg)
     .add_option_has('enginecdn', {hidden=true})
     --
     .add_subcommand('run', commands_halt)
-    .add_next_value('src', {required=true, alias='@samples/{{game}}/game.lua'})
+    .add_next_value('src', {required=true, alias='@samples/{{src}}/game.lua'})
     .add_option_get('screen', {})
     --
     .add_subcommand('meta', commands_halt)
