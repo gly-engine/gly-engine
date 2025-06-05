@@ -16,13 +16,9 @@ local function djb2(digest)
     local hash = 5381
     while index <= #digest do
         local char = string.byte(digest, index)
-        hash = (hash * 33) + char
+        hash = (hash * 33 + char) % 4294967296
         index = index + 1
     end
-
-    hash = string.format('%08x', hash)
-    hash = tonumber(hash:sub(#hash - 7), 16)
-
     return hash
 end
 

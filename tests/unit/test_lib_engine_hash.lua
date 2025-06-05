@@ -17,9 +17,6 @@ function test_diff_hash_foo_bar()
 end
 
 function test_collision_stylist_subgenera()
-    if _VERSION == 'Lua 5.1' then
-       return
-    end
     local stylist = std.hash.djb2('stylist')
     local subgenera = std.hash.djb2('subgenera')
     assert(stylist == subgenera)
