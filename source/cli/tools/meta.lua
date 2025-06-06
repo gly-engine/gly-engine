@@ -147,9 +147,11 @@ local function vars(args)
 end
 
 local function render(infile, content, args, optional)
-    local game = normalize_table(
-        try_table(infile) or try_lua(infile) or try_decode(infile, json) or try_decode(infile, env) or 
-        try_tic80(infile)
+    local game = normalize_table(try_table(infile)
+        or try_lua(infile)
+        or try_decode(infile, json)
+        or try_decode(infile, env)
+        or try_tic80(infile)
     ) or (optional and {})
 
     if not game then 
