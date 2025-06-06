@@ -15,7 +15,7 @@ on:
       - develop
     paths:
       - 'samples/**'
-      - 'src/**'
+      - 'source/**'
 
 jobs:
   doxygen:

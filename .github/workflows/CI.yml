@@ -6,13 +6,13 @@ on:
     branches:
       - main
     paths:
-      - 'src/**'
+      - 'source/**'
   pull_request:
     branches:
       - main
       - develop
     paths:
-      - 'src/**'
+      - 'source/**'
 
 jobs:
   test:
@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        lua_version: ['5.1', '5.3', '5.4']
+        lua_version: ['5.1', '5.2', '5.3', '5.4']
     steps:
     -
       uses: actions/checkout@master
@@ -30,13 +30,20 @@ jobs:
       with:
         luaVersion: ${{ matrix.lua_version }}
     -
+      if: (matrix.lua_version == '5.4')
       uses: leafo/gh-actions-luarocks@v4
     -
+      if: (matrix.lua_version == '5.4')
       run: |
         luarocks install luacov
     -
+      if: (matrix.lua_version == '5.4')
       run: |
-        ./cli.sh cli-test --coverage
+        ./cli.sh test --coverage
+    -
+      if: (matrix.lua_version != '5.4')
+      run: |
+        ./cli.sh test
     - 
       if: (matrix.lua_version == '5.4') && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
       run: |
@@ -93,7 +100,7 @@ jobs:
       fail-fast: false
       matrix:
         core: [
-          'cli', 'repl', 'lite', 'micro', 'native', 'love', 'ginga',
+          'cli', 'lite', 'micro', 'native', 'love', 'ginga',
           'pong', 'asteroids'
         ]
     steps:

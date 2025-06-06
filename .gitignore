@@ -1,11 +1,14 @@
 luacov.*
 carousel/
+balatro/
 vendor/
 dist/
 html/
 rtf/
 latex/
 doxygen/
+ccws
 crt0.lua
-.out
+*.out
 *.xml
+*.db

@@ -1,4 +1,4 @@
-local bases = {'src'}
+local bases = {'source'}
 local found_error = false
 
 for _, base in ipairs(bases) do

@@ -1,40 +1,40 @@
-local zeebo_module = require('src/lib/common/module')
+local zeebo_module = require('source/shared/module')
 --
 local core_draw = require('ee/engine/core/ginga/draw')
 local core_text = require('ee/engine/core/ginga/text')
 local core_keys = require('ee/engine/core/ginga/keys')
 --
-local engine_encoder = require('src/lib/engine/api/encoder')
-local engine_game = require('src/lib/engine/api/app')
-local engine_hash = require('src/lib/engine/api/hash')
-local engine_http = require('src/lib/engine/api/http')
-local engine_i18n = require('src/lib/engine/api/i18n')
-local engine_keys = require('src/lib/engine/api/key')
-local engine_log = require('src/lib/engine/api/log')
-local engine_math = require('src/lib/engine/api/math')
-local engine_media = require('src/lib/engine/api/media')
-local engine_array = require('src/lib/engine/api/array')
-local engine_getenv = require('src/lib/engine/api/getenv')
-local engine_storage = require('src/lib/engine/api/storage')
-local engine_draw_ui = require('src/lib/engine/draw/ui')
-local engine_draw_fps = require('src/lib/engine/draw/fps')
-local engine_draw_text = require('src/lib/engine/draw/text')
-local engine_draw_poly = require('src/lib/engine/draw/poly')
-local engine_bus = require('src/lib/engine/raw/bus')
-local engine_fps = require('src/lib/engine/raw/fps')
-local engine_node = require('src/lib/engine/raw/node')
-local engine_memory = require('src/lib/engine/raw/memory')
+local engine_encoder = require('source/engine/api/data/encoder')
+local engine_game = require('source/engine/api/system/app')
+local engine_hash = require('source/engine/api/data/hash')
+local engine_http = require('source/engine/api/io/http')
+local engine_i18n = require('source/engine/api/data/i18n')
+local engine_keys = require('source/engine/api/system/key')
+local engine_log = require('source/engine/api/debug/log')
+local engine_math = require('source/engine/api/system/math')
+local engine_media = require('source/engine/api/io/media')
+local engine_array = require('source/engine/api/data/array')
+local engine_getenv = require('source/engine/api/system/getenv')
+local engine_storage = require('source/engine/api/io/storage')
+local engine_api_draw_ui = require('source/engine/api/draw/ui')
+local engine_api_draw_fps = require('source/engine/api/draw/fps')
+local engine_api_draw_text = require('source/engine/api/draw/text')
+local engine_api_draw_poly = require('source/engine/api/draw/poly')
+local engine_bus = require('source/engine/api/raw/bus')
+local engine_fps = require('source/engine/api/raw/fps')
+local engine_node = require('source/engine/api/raw/node')
+local engine_memory = require('source/engine/api/raw/memory')
 --
-local cfg_json_rxi = require('third_party/json/rxi')
-local cfg_logsystem = require('src/lib/protocol/logsystem_print')
-local cfg_http_ginga = require('ee/lib/protocol/http_fsb09')
-local cfg_persistent = require('ee/lib/protocol/storage_fsd09')
-local cfg_mediaplayer = require('ee/lib/protocol/media_fsd09')
---local cfg_http_ginga2 = require('ee/lib/protocol/http_fsc09')
+local cfg_json_rxi = require('source/third_party/rxi_json')
+local cfg_logsystem = require('source/engine/protocol/logsystem_print')
+local cfg_http_ginga = require('ee/engine/protocol/http_fsb09')
+local cfg_persistent = require('ee/engine/protocol/storage_fsd09')
+local cfg_mediaplayer = require('ee/engine/protocol/media_fsd09')
+local cfg_http_ginga2 = require('ee/engine/protocol/http_fsc09')
 --
-local application_default = require('src/lib/object/root')
-local color = require('src/lib/object/color')
-local std = require('src/lib/object/std')
+local application_default = require('source/shared/var/object/root')
+local color = require('source/engine/api/system/color')
+local std = require('source/shared/var/object/std')
 --
 local application = application_default
 
@@ -58,10 +58,6 @@ local engine = {
     delay = 1,
     fps = 0
 }
-
---! @short clear ENV
---! @brief GINGA?
-_ENV = nil
 
 local cfg_system = {
     get_language = function() return 'pt-BR' end
@@ -121,10 +117,10 @@ local function main(evt, gamefile)
         :package('@keys2', core_keys)
         :package('@draw', core_draw)
         :package('@draw.text', core_text)
-        :package('@draw.text2', engine_draw_text, cfg_text)
-        :package('@draw.ui', engine_draw_ui)
-        :package('@draw.fps', engine_draw_fps)
-        :package('@draw.poly', engine_draw_poly, cfg_poly)
+        :package('@draw.text2', engine_api_draw_text, cfg_text)
+        :package('@draw.ui', engine_api_draw_ui)
+        :package('@draw.fps', engine_api_draw_fps)
+        :package('@draw.poly', engine_api_draw_poly, cfg_poly)
         :package('@color', color)
         :package('@log', engine_log, cfg_logsystem)
         :package('@getenv', engine_getenv, engine)
@@ -135,7 +131,7 @@ local function main(evt, gamefile)
         :package('media.video', engine_media, cfg_mediaplayer)
         --:package('media.audio', engine_media, {})
         :package('json', engine_encoder, cfg_json_rxi)
-        --:package('http', engine_http, cfg_http_ginga2)
+        :package('http', engine_http, cfg_http_ginga2)
         :package('http', engine_http, cfg_http_ginga)
         :package('storage', engine_storage, cfg_persistent)
         :package('i18n', engine_i18n, cfg_system)
@@ -164,7 +160,7 @@ end
 --! @{ @note for enterprise features contact bizdev@zedia.com.br @}
 local ok, crt0 = pcall(require, 'crt0') 
 if ok then
-    crt0(main, cfg_json_rxi, cfg_http_ginga.http_util)
+    crt0(main, cfg_json_rxi)
 else
     event.register(main)
 end

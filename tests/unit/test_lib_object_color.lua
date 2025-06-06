@@ -1,5 +1,5 @@
-local test = require('src/lib/util/test')
-local zeebo_color = require('src/lib/object/color')
+local test = require('tests/framework/microtest')
+local zeebo_color = require('source/engine/api/system/color')
 
 local std = {}
 zeebo_color.install(std)

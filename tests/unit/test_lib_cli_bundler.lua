@@ -1,6 +1,6 @@
-local test = require('src/lib/util/test')
-local zeebo_bundler = require('src/lib/cli/bundler')
-local mock_io = require('mock/io')
+local test = require('tests/framework/microtest')
+local zeebo_bundler = require('source/cli/build/bundler')
+local mock_io = require('tests/mock/io')
 
 io.open = mock_io.open({
     ['src/lovemath.lua'] = 'l = true',

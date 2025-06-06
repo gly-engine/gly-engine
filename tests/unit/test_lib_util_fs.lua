@@ -1,9 +1,9 @@
-local util_fs = require('src/lib/util/fs')
-local test = require('src/lib/util/test')
+local str_fs = require('source/shared/string/schema/fs')
+local test = require('tests/framework/microtest')
 
 
 function test_path_with_src2()
-    local path = util_fs.path('foo/bar', 'extra.txt')
+    local path = str_fs.path('foo/bar', 'extra.txt')
 
     assert(path.get_file() == 'extra.txt')
     assert(path.get_filename() == 'extra')
@@ -14,7 +14,7 @@ end
 
 
 function test_unix_foo_bar_z_txt()
-    local file = util_fs.file('foo/bar/z.txt')
+    local file = str_fs.file('foo/bar/z.txt')
 
     assert(file.get_file() == 'z.txt')
     assert(file.get_filename() == 'z')
@@ -24,7 +24,7 @@ function test_unix_foo_bar_z_txt()
 end
 
 function test_win_baz_bar_y_txt()
-    local file = util_fs.file('baz\\bar\\y.exe')
+    local file = str_fs.file('baz\\bar\\y.exe')
 
     assert(file.get_file() == 'y.exe')
     assert(file.get_filename() == 'y')
@@ -35,7 +35,7 @@ end
 
 
 function test_unix_absolute()
-    local file = util_fs.file('/etc/hosts')
+    local file = str_fs.file('/etc/hosts')
 	
     assert(file.get_file() == 'hosts')
     assert(file.get_filename() == 'hosts')
@@ -46,7 +46,7 @@ end
 
 
 function test_win_absolute()
-    local file = util_fs.file('\\Windows\\System32\\drivers\\etc\\hosts')
+    local file = str_fs.file('\\Windows\\System32\\drivers\\etc\\hosts')
 
     assert(file.get_file() == 'hosts')
     assert(file.get_filename() == 'hosts')
@@ -56,7 +56,7 @@ function test_win_absolute()
 end
 
 function test_win_absolute_with_driver()
-    local file = util_fs.file('D:\\Windows\\System32\\drivers\\etc\\hosts')
+    local file = str_fs.file('D:\\Windows\\System32\\drivers\\etc\\hosts')
 
     assert(file.get_file() == 'hosts')
     assert(file.get_filename() == 'hosts')
@@ -66,7 +66,7 @@ function test_win_absolute_with_driver()
 end
 
 function test_unix_path()
-    local file = util_fs.path('/etc/bin')
+    local file = str_fs.path('/etc/bin')
 
     assert(file.get_file() == '')
     assert(file.get_filename() == '')
@@ -76,7 +76,7 @@ function test_unix_path()
 end
 
 function test_win_path()
-    local file = util_fs.path('C:/win32/program files')
+    local file = str_fs.path('C:/win32/program files')
 
     assert(file.get_file() == '')
     assert(file.get_filename() == '')
@@ -87,9 +87,9 @@ end
 
 function test_detect_separator()
     mock_separator = '\\'
-    local file_win = util_fs.path('/user')
+    local file_win = str_fs.path('/user')
     mock_separator = '/'
-    local file_unix = util_fs.path('/home')
+    local file_unix = str_fs.path('/home')
 
     assert(file_win.get_fullfilepath() == 'C:\\user\\')
     assert(file_unix.get_fullfilepath() == '/home/')
@@ -97,10 +97,10 @@ function test_detect_separator()
 end
 
 function test_empty_protect()
-    assert(util_fs.file(nil) == nil)
-    assert(util_fs.file('') == nil)
-    assert(util_fs.file(' ') == nil)
-    assert(util_fs.file('\n') == nil)
+    assert(str_fs.file(nil) == nil)
+    assert(str_fs.file('') == nil)
+    assert(str_fs.file(' ') == nil)
+    assert(str_fs.file('\n') == nil)
 end
 
 test.unit(_G)

@@ -10,6 +10,7 @@
     "BOOTSTRAP_DIRS",
     "BOOTSTRAP_LIST",
     "canvas",
+    "dofile",
     "event",
     "io",
     "jit",

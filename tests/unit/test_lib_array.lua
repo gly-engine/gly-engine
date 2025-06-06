@@ -1,5 +1,5 @@
-local test = require('src/lib/util/test')
-local arraylib = require('src/lib/engine/api/array')
+local test = require('tests/framework/microtest')
+local arraylib = require('source/engine/api/data/array')
 
 local std = {}
 arraylib.install(std, nil, nil, 'JorgeAjudaComNomePf')

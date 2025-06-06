@@ -1,5 +1,5 @@
 local math = require('math')
-local util_decorator = require('src/lib/util/decorator')
+local util_decorator = require('source/shared/functional/decorator')
 
 local function color(std, engine, canvas, tint)
     local c = tint

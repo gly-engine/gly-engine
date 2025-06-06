@@ -1,7 +1,7 @@
-local test = require('src/lib/util/test')
-local zeebo_bundler = require('src/lib/cli/bundler')
-local zeebo_buildsystem = require('src/cli/tools/buildsystem')
-local mock_io = require('mock/io')
+local test = require('tests/framework/microtest')
+local zeebo_bundler = require('source/cli/build/bundler')
+local zeebo_buildsystem = require('source/cli/tools/buildsystem')
+local mock_io = require('tests/mock/io')
 
 io.open = mock_io.open({
     ['src/lib/object/application.lua'] = 'local math = require(\'math\')',
@@ -24,7 +24,7 @@ function test_bug_103_bundler_repeats_packages_with_different_variables()
 end
 
 function test_bug_104_builder_includes_commented_libs()
-    zeebo_buildsystem.from({core='bug', bundler=true, dist='./dist/'})
+    zeebo_buildsystem.from({core='bug', bundler=true, outdir='./dist/'})
         :add_core('bug', {src='src/main104.lua'})
         :run()
 

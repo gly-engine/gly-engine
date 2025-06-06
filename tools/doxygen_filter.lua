@@ -13,7 +13,7 @@ function support()
 end
 
 function commands()
-    local name = 'src/cli/main.lua'
+    local name = 'source/cli/main.lua'
     local file = io.open(name)
     local src = file:read('*a')
     local content = ''
@@ -38,7 +38,7 @@ end
 
 function gingaenvs()
     local content, index1, index2 = '', 1, 1
-    local obj_ncl = require('src/lib/object/ncl')
+    local obj_ncl = require('source/shared/var/build/ncl')
 
     while index1 <= #obj_ncl.settings do
         content = content..'| '..obj_ncl.settings[index1].env..' |'
@@ -57,7 +57,7 @@ end
 function listlibmath()
     local content = ''
     local started = false
-    for line in io.lines('src/lib/engine/api/math.lua') do
+    for line in io.lines('source/engine/api/system/math.lua') do
         if line:find('std.math.acos') then
             started = true
         end
@@ -98,7 +98,7 @@ function color()
         return (0.2126 * ((hex >> 24) & 0xFF) + 0.7152 * ((hex >> 16) & 0xFF) + 0.0722 * ((hex >> 8) & 0xFF)) < 128
     end
     
-    for line in io.lines('src/lib/object/color.lua') do
+    for line in io.lines('source/engine/api/system/color.lua') do
         local var, hex = line:match("std.color.([%w_]+)%s*=%s*(0x[0-9A-Fa-f]+)")
         if var and hex then
             local hex_value = tonumber(hex)
