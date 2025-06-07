@@ -10,7 +10,7 @@ variables that refer to strings when the type is string can be the name itself, 
 
 ```lua
 local function write_helloworld(outfile)
-    local outfile_p = util_fs.file(outfile)
+    local outfile_p = str_fs.file(outfile)
     local outfile_f, outfile_err = io.open(outfile_p.get_fullfilepath(), 'w')
 
     if outfile_f then

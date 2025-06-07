@@ -1,6 +1,6 @@
-local test = require('src/lib/util/test')
-local mock_io = require('mock/io')
-local protocol_http = require('src/lib/protocol/http_curl')
+local test = require('tests/framework/microtest')
+local mock_io = require('tests/mock/io')
+local protocol_http = require('source/engine/protocol/http_curl')
 
 local mock_popen = mock_io.popen({
     ['curl -L --silent --insecure -w "\n%{http_code}" -X GET pudim.com.br'] = {

@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>{{ meta.title }} - {{ meta.version }}</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <meta name="theme-color" content="#000000"/>
+    <meta name="description" content="{{ meta.description }}"/>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="{{ meta.title }}" />
+    <meta property="og:description" content="{{ meta.description }}"/>
+    <meta property="twitter:title" content="{{ meta.title }}" />
+    <meta property="twitter:description" content="{{ meta.description }}" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+{{# assets.fonts }}
+    <link rel="preload" href="{{& fn.colon.to }}" as="font" type="font/ttf"/>
+{{/ assets.fonts }}
+    <style>
+        *, *::after, *::before {
+            touch-action: none;
+            box-sizing: border-box;
+            border: 0;
+            padding: 0;
+            margin: 0;
+        }
+        body {
+            height: 99.998vh;
+            display: flex;
+            overflow: hidden;
+            justify-content: center;
+            align-items: start;
+        }
+        main {
+          position: relative;
+          width: 100%;
+          height: 100%;
+        }
+        video {
+          position: absolute;
+        }
+        canvas {
+          position: absolute;
+          image-rendering: pixelated;
+        }
+    </style>
+    {{# var.build.screen.has_flag }}
+    <style>#gameCanvas { width: 100%; }</style>
+    {{/ var.build.screen.has_flag }}
+    {{^ var.build.core.ginga }}
+    <style>body { background-color: gray; }</style>
+    {{/ var.build.core.ginga }}
+    {{# args.gamepadzilla }}
+    <style>
+      .gpz-btn4{
+        right: 0;
+        bottom: 0;
+      }
+      .gpz-joy {
+        left: 0;
+        bottom: 0;
+      }
+    </style>
+    {{/ args.gamepadzilla }}
+    {{# assets.fonts }}
+    <style>
+      @font-face {
+        font-family: "{{ fn.colon.from }}";
+        src: url("{{& fn.colon.to }}");
+      }
+    </style>
+    {{/ assets.fonts }}
+  </head>
+  <body>
+    <main>
+      <canvas id="gameCanvas" {{& var.build.screen.wh_attributes }}></canvas>
+      {{# args.gamepadzilla }}
+      <canvas width="150" height="150"
+        class="gpz-joy"
+        data-gpz-bind="ArrowUp ArrowLeft ArrowDown ArrowRight">
+      </canvas>
+      <canvas width="150" height="150"
+        class="gpz-btn4"
+        data-gpz-bind="KeyC KeyV KeyZ KeyX">
+      </canvas>
+      {{/ args.gamepadzilla }}
+    </main>
+    {{# args.videofake }}
+    <script>window.videofake=100</script>
+    {{/ args.videofake }}
+    {{# var.build.html5.atobify }}
+    <script src="index.js" defer></script>
+    {{/ var.build.html5.atobify }}
+    {{# args.gamepadzilla }}
+    <script src="https://cdn.jsdelivr.net/npm/gamepadzilla@1" defer></script>
+    {{/ args.gamepadzilla }}
+    {{# args.videojs }}
+    <script src="https://cdn.jsdelivr.net/npm/video.js@8.22.0/dist/video.min.js" defer></script>
+    {{/ args.videojs }}
+    {{# args.fengari }}
+    <script src="https://cdn.jsdelivr.net/npm/fengari-web@latest/dist/fengari-web.js" defer></script>
+    {{/ args.fengari }}
+    {{^ args.fengari }}
+    <script type="module">
+    import { LuaFactory, LuaMultiReturn } from 'https://cdn.jsdelivr.net/npm/wasmoon@1.16.0/+esm'
+    window.LuaFactory = LuaFactory
+    window.LuaMultiReturn = LuaMultiReturn
+    </script>
+    {{/ args.fengari }}
+    <script src="https://cdn.jsdelivr.net/npm/@gamely/core-native-html5@0.1.4" defer></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', async () => {
+        window.gly = await core_native_html5()
+          .set_el_root('main')
+          .set_el_canvas('#gameCanvas')
+          .set_library('wasmoon', window.LuaFactory, window.LuaMultiReturn)
+          .set_library('fengari', window.fengari)
+          .set_library('fengari-jsonrxi', 'https://cdn.jsdelivr.net/gh/rxi/json.lua/json.lua')
+          .set_library('fengari-or-wasmoon-check')
+          .set_library('runtime', {unfocus_pause: true})
+          .set_library('gamepad')
+          .set_library('keyboard')
+          .set_library('{{ var.build.html5.lib_resize }}')
+          .set_library('player-html5')
+          .set_library('player-youtube')
+          .set_library('player-fake', window.videofake)
+          .set_library('player-videojs', window.videojs)
+          .set_engine(`{{& var.build.html5.src_engine }}`)
+          .set_game(`{{& var.build.html5.src_game }}`)
+          .build()
+      })
+    </script>
+  </body>
+</html>

@@ -1,11 +1,11 @@
 local cmd = function(c) assert(require('os').execute(c), c) end
-local version = io.open('src/version.lua'):read('*a'):match('(%d+%.%d+%.%d+)')
+local version = io.open('source/version.lua'):read('*a'):match('(%d+%.%d+%.%d+)')
 
 cmd('npm install -g demoon > /dev/null 2>/dev/null')
 cmd('rm -Rf ./dist')
 cmd('./cli.sh cli-build')
 cmd('mkdir -p ./dist/bin')
-cmd('npx demoon ./dist/cli.lua compiler ./dist/cli.lua --dist ./dist/cli.out')
+cmd('npx demoon ./dist/cli.lua compile ./dist/cli.lua --outfile ./dist/cli.out')
 cmd('echo "#!/usr/bin/env -S npx demoon" > ./dist/header.txt')
 cmd('cat ./dist/header.txt ./dist/cli.out > dist/bin/gly-cli')
 cmd('chmod +x ./dist/bin/gly-cli')

@@ -1,7 +1,7 @@
-local test = require('src/lib/util/test')
-local zeebo_http = require('src/lib/engine/api/http')
-local mock_http = require('mock/protocol_http')
-local zeebo_pipeline = require('src/lib/util/pipeline')
+local test = require('tests/framework/microtest')
+local zeebo_http = require('source/engine/api/io/http')
+local mock_http = require('tests/mock/protocol_http')
+local zeebo_pipeline = require('source/shared/functional/pipeline')
 local std = {node={emit=function()end}}
 local engine = {current={callbacks={}}}
 
@@ -181,7 +181,7 @@ function test_protocol_with_install()
     local std = {}
     local engine = {}
     
-    local http_module = require('src/lib/engine/api/http')
+    local http_module = require('source/engine/api/io/http')
     http_module.install(std, engine, protocol)
     assert(install_called == true)
 end
