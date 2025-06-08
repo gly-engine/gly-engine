@@ -129,7 +129,8 @@ end
 
 local P = {
     move=move,
-    build=build
+    build=build,
+    optmizer=optmizer
 }
 
 return P
