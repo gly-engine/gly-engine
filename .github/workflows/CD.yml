@@ -15,8 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # @todo re-add 'gly-cli', temp fix for breakchange 0.1 not published engines
-        package: ['gly-engine', 'gly-engine-lite', 'gly-engine-micro']
+        package: ['gly-cli', 'gly-engine', 'gly-engine-lite', 'gly-engine-micro']
     steps:
       -
         uses: actions/checkout@master
