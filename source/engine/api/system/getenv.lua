@@ -5,6 +5,7 @@ local os = require('os')
 --! @{
 
 --! @todo getenv build variables
+--! @hideparam engine
 local function getenv(engine, varname)
     local game_envs = engine.root and engine.root.envs
     local core_envs = engine.envs

@@ -49,9 +49,20 @@ and older video games like @ref nintendo_gba "gba" and @ref nintendo_ds "nds" ar
 @par Example
 ```java
 local spaceship = {-2,3, 0,-2, 2,3}
-std.draw.poly(0, game.player_x, game.player_y, 1, player_angle)
+std.draw.poly(0, spaceship, game.player_x, game.player_y, 1, player_angle)
 ```
-@fakefunc poly(mode, pos_x, pos_y, scale, angle, origin_x, origin_y)
+@param mode 
+@li 0 fill-closed
+@li 1 frame-closed
+@li 2 frame-opened
+@param verts array of @c x and @c y
+@param pos_x @a (optional)
+@param pos_y @a (optional)
+@param scale @a (optional)
+@param angle @a (optional)
+@param origin_x @a (optional)
+@param origin_y @a (optional)
+@fakefunc poly(mode, verts, pos_x, pos_y, scale, angle, origin_x, origin_y)
 
 @}
 @}
