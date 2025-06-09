@@ -1,4 +1,5 @@
 local zeebo_module = require('source/shared/module')
+local loadgame = require('source/shared/engine/loadgame')
 --
 local core_draw = require('ee/engine/core/ginga/draw')
 local core_text = require('ee/engine/core/ginga/text')
@@ -103,7 +104,7 @@ local function main(evt, gamefile)
     if evt.class and evt.class ~= 'ncl' or evt.action ~= 'start' and evt.type ~= 'presentation' then return end
 
     engine.envs = evt
-    application = zeebo_module.loadgame(gamefile)
+    application = loadgame.script(gamefile, application_default)
 
     zeebo_module.require(std, application, engine)
         :package('@bus', engine_bus)

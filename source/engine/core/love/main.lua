@@ -1,5 +1,6 @@
 local os = require('os')
 --
+local loadgame = require('source/shared/engine/loadgame')
 local zeebo_module = require('source/shared/module')
 --
 local core_text = require('source/engine/core/love/text')
@@ -30,6 +31,7 @@ local cfg_logsystem = require('source/engine/protocol/logsystem_print')
 local util_arg = require('source/shared/string/parse/args')
 local util_envruntime = require('source/shared/var/runtime/lang')
 --
+local application_default = require('source/shared/var/object/root')
 local color = require('source/engine/api/system/color')
 local std = require('source/shared/var/object/std')
 
@@ -69,7 +71,7 @@ function love.load(args)
     local screen = util_arg.get(args, 'screen')
     local fullscreen = util_arg.has(args, 'fullscreen')
     local game_title = util_arg.param(arg, {'screen'}, 2)
-    local application = zeebo_module.loadgame(game_title)
+    local application = loadgame.script(game_title, application_default)
     local engine = {offset_x=0,offset_y=0}
     
     if screen then

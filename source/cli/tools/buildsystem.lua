@@ -55,8 +55,8 @@ local function add_core(self, core_name, options)
 
     if options.assets then
         self.pipeline[#self.pipeline + 1] = function()
-            local game = zeebo_module.loadgame(self.args.outdir..'game.lua')
-            assert(zeebo_assets.build(game and game.assets or {}, self.args.outdir))
+            local var = cli_meta.metadata(self.args.outdir..'game.lua')
+            if var then assert(zeebo_assets.build(var.assets.list, self.args.outdir)) end
         end
     end
 

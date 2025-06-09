@@ -9,7 +9,7 @@
 --!
 --! <b>Do not use the standard @c require() from Lua in Gly-Engine games or apps.</b>
 --! Gly-Engine provides an advanced include system that handles module loading in the best way for you.
---! In addition, core modules are automatically imported via @ref load "std.node.load".
+--! In addition, user modules are automatically imported via @ref load "std.node.load".
 --!
 --! @par Backus-Naur Form
 --! @startebnf

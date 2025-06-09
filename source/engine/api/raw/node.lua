@@ -1,4 +1,4 @@
-local zeebo_module = require('source/shared/module')
+local loadgame = require('source/shared/engine/loadgame')
 local node_default = require('source/shared/var/object/node')
 
 local buses = {
@@ -99,7 +99,7 @@ end
 --! print(game.meta.title)
 --! @endcode
 local function load(application)
-    return zeebo_module.loadgame(application, node_default)
+    return loadgame.script(application, node_default)
 end
 
 --! @short register node to event bus
@@ -122,6 +122,7 @@ local function spawn(engine, application)
         depth = (engine.current.config.depth or 0) + 1
     end
     application.config.depth = depth
+    return application
 end
 
 --! @short unregister node from event bus
@@ -183,7 +184,6 @@ local function clear_bus()
     end
 end
 
---! note no remove
 local function event_bus(std, engine, key, a, b, c, d, e, f)
     local index = 1
     local count = 0

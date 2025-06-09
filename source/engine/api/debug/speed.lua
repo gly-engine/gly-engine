@@ -43,19 +43,15 @@ local function real_keyup(std, game, application, key)
     real_key(std, game, application, key, 0)
 end
 
-local function event_bus(std, game)
+local function install(std, game, application, key_binding)
+    keybindings = key_binding
     std.bus.listen_std('loop', loop)
     std.bus.listen_std('rkey', real_key)
     std.bus.listen_std('rkey1', real_keydown)
     std.bus.listen_std('rkey0', real_keyup)
 end
 
-local function install(std, game, application, key_binding)
-    keybindings = key_binding
-end
-
 local P = {
-    event_bus = event_bus,
     install = install
 }
 

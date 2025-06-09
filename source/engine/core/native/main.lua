@@ -1,6 +1,7 @@
 local version = require('source/version')
 local util_decorator = require('source/shared/functional/decorator')
 local zeebo_module = require('source/shared/module')
+local loadgame = require('source/shared/engine/loadgame')
 --
 local engine_draw_fps = require('source/engine/api/draw/fps')
 local engine_draw_poly = require('source/engine/api/draw/poly')
@@ -146,11 +147,7 @@ function native_callback_http(id, key, data)
 end
 
 function native_callback_init(width, height, game_lua)
-    if std.bus then
-        std.bus.emit('clear_all')
-    end
-
-    application = zeebo_module.loadgame(game_lua)
+    application = loadgame.script(game_lua, application_default)
 
     if application then
         application.data.width = width

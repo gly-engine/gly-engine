@@ -58,7 +58,12 @@ local function image(std, engine, src, pos_x, pos_y)
     love.graphics.setColor(r, g, b, a) 
 end
 
-local function event_bus(std, engine)
+local function install(std, engine)
+    std.draw.image = util_decorator.prefix2(std, engine, image)
+    std.draw.clear = util_decorator.prefix2(std, engine, clear)
+    std.draw.color = util_decorator.prefix2(std, engine, color)
+    std.draw.rect = util_decorator.prefix2(std, engine, rect)
+    std.draw.line = util_decorator.prefix2(std, engine, line)
     std.bus.listen('resize', function(w, h)
         engine.root.data.width = w
         engine.root.data.height = h
@@ -67,17 +72,8 @@ local function event_bus(std, engine)
     end)
 end
 
-local function install(std, engine)
-    std.draw.image = util_decorator.prefix2(std, engine, image)
-    std.draw.clear = util_decorator.prefix2(std, engine, clear)
-    std.draw.color = util_decorator.prefix2(std, engine, color)
-    std.draw.rect = util_decorator.prefix2(std, engine, rect)
-    std.draw.line = util_decorator.prefix2(std, engine, line)
-end
-
 local P = {
     install = install,
-    event_bus = event_bus,
     triangle = triangle
 }
 

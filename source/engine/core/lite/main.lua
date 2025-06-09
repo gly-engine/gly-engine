@@ -1,5 +1,6 @@
 local version = require('source/version')
 local zeebo_module = require('source/shared/module')
+local loadgame = require('source/shared/engine/loadgame')
 --
 local engine_encoder = require('source/engine/api/data/encoder')
 local engine_game = require('source/engine/api/system/app')
@@ -127,7 +128,7 @@ function native_callback_http(id, key, data)
 end
 
 function native_callback_init(width, height, game_lua)
-    application = zeebo_module.loadgame(game_lua)
+    application = loadgame.script(game_lua, application_default)
 
     if application then
         application.data.width = width
