@@ -85,7 +85,7 @@ local function build(args)
         :add_common_func(atobify.builder('engine_code', args.outdir..'main.lua', args.outdir..'index.js'), {when=atob and not args.enginecdn})
         :add_common_func(atobify.builder('game_code', args.outdir..'game.lua', args.outdir..'index.js'), {when=atob})
         :add_common_func(cli_fs.lazy_del(args.outdir..'main.lua'), {when=atob or args.enginecdn})
-        :add_common_func(cli_fs.lazy_del(args.outdir..'gasrc/me.lua'), {when=atob})
+        :add_common_func(cli_fs.lazy_del(args.outdir..'game.lua'), {when=atob})
 
     local ok, message = build_game:run()
 
