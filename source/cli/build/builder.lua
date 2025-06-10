@@ -12,8 +12,7 @@ local function optmizer(content, srcname, args)
     if args.bundler and srcname == 'eeenginecoregingamainlua' then
         content = content:gsub('_ENV=nil', '')
     end
-    if content:find('_hx') and not content:find('_hx_gly_') then
-        local hxid = '_hx_gly_'..tostring({}):gsub('0x', ''):match('^table: (%w+)$')
+    if content:find('_hx_') and not content:find('_hx_gly') then
         local haxe_pattern_std = 'std%.(%w+):(%w+)'
         local haxe_replace_std = 'std.%1.%2'
         local haxe_pattern_utf8 = '_G%.require%("lua%-utf8"%)'
@@ -22,7 +21,7 @@ local function optmizer(content, srcname, args)
             ..' or _G.utf8 or _G.string'
         local haxe_pattern_metatable = '(local _hx_string_mt = _G%.getmetatable.-\n\n)'
         local haxe_content_metatable = content:match(haxe_pattern_metatable) or ''
-        local haxe_replace_metatable = 'if not '..hxid..' then\n'..haxe_content_metatable..'\n'..hxid..'=true\nend\n'
+        local haxe_replace_metatable = 'if not _hx_gly then\n'..haxe_content_metatable..'\n_hx_gly=true\nend\n'
         content = content:gsub(haxe_pattern_metatable, haxe_replace_metatable)
         content = content:gsub(haxe_pattern_utf8, haxe_replace_utf8)
         content = content:gsub(haxe_pattern_std, haxe_replace_std)
