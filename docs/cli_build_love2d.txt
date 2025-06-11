@@ -36,7 +36,7 @@ it is just a utility to correctly zip your game and distribute it easily.
 @li https://love2d.org/wiki/Game_Distribution
 
 ```sql
-lua cli.lua tool-love-zip ./dist/
+lua cli.lua love-zip balatro --outfile ./dist/balatro.love
 ```
 
 @page love_exe Generating .exe file from Love2D
@@ -46,7 +46,9 @@ lua cli.lua tool-love-zip ./dist/
 
 @page love_dump Unpacking .lua files from Love2D
 
-@todo coming soon tool-love-unzip
+```sql
+lua cli.lua love-unzip Balatro.exe --outdir balatro
+```
 
 @}
 @}
