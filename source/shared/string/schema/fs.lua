@@ -1,3 +1,5 @@
+--! @todo parent folder not working!
+
 local function get_ext(self)
     return function()
         return self.extension
@@ -49,8 +51,8 @@ local function luapath(func)
             return func(src
                 :gsub('^%./', '')
                 :gsub('^%.\\', '')
-                :gsub('%.', '/')
                 :gsub('%.lua$', '')
+                :gsub('%.', '/')
                 ..'.lua'
             )
         end
@@ -61,7 +63,7 @@ end
 local function scan(type_file)
     return function(src, src2)
         src = (src or ''):gsub('%s*$', '')
-        if #src == 0 then return nil end
+        if #src == 0 and not src2 then return nil end
 
         local hasfile = type_file
         local firstchar = src:sub(1,1)

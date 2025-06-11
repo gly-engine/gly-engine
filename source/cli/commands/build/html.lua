@@ -17,10 +17,10 @@ local function build(args)
     local var = cli_meta.vars(args)
     local atob = var.build.html5.atobify()
 
-    local build_game = buildsystem.from({core='game', bundler=true, outdir=args.outdir})
+    local build_game = buildsystem.from({core='game', bundler=true, outdir=args.outdir, cwd=args.cwd})
         :add_core('game', {src=args.src, as='game.lua', prefix='game_', assets=true})
 
-    local build_core = buildsystem.from(args)
+    local build_core = buildsystem.from(args, true)
         :add_rule('the middlware ginga html5 already has a streamming player', 'core=ginga', 'videojs=true')
         :add_rule('please use flag -'..'-enterprise to use commercial modules', 'core=ginga', 'enterprise=false')
         :add_rule('please use flag -'..'-gpl3 to use free software modules', 'gamepadzilla=true', 'gpl3=false')

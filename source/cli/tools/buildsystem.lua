@@ -106,7 +106,7 @@ local function add_rule(self, error_message, ...)
     return self
 end
 
-local function from(args)
+local function from(args, not_use_cwd)
     local decorator = function(func, for_all)
         return function(self, step, options)
             if not self.selected and not for_all then return self end
@@ -129,6 +129,10 @@ local function from(args)
         add_common_step=decorator(add_step, true),
         pipeline={}
     }
+
+    if not self.args.cwd or not_use_cwd then
+        self.args.cwd = '.'
+    end
 
     self.run = function()
         if not self.found then

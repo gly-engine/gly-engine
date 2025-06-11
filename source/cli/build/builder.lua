@@ -1,5 +1,6 @@
 local str_fs = require('source/shared/string/schema/fs')
 
+--! @todo move this!
 local function optmizer(content, srcname, args)
     if args.dev and srcname == 'eeenginecoregingakeyslua' then
         content = content:gsub('evt%.type == \'press\'', 'evt.type ~= \'press\'')
@@ -30,12 +31,14 @@ local function optmizer(content, srcname, args)
     return content:split('\n')
 end
 
+--! @todo rewrite all the move() and build() 
 local function move(src_filename, out_filename, prefix, args)
     local deps = {}
     local content = ''
-    local src_file = io.open(src_filename, 'r')
+    local cwd = str_fs.path(args.cwd).get_fullfilepath()
+    local src_file = io.open(cwd..src_filename, 'r')
     local out_file = src_file and io.open(out_filename, 'w')
-    local pattern_require = 'local ([%w_%-]+) = require%([\'"]([%w_/-]+)[\'"]%)'
+    local pattern_require = 'local ([%w_%-]+) = require%([\'"]([%w_/-%.]+)[\'"]%)'
     local pattern_gameload = 'std%.node%.load%([\'"](.-)[\'"]%)'
     local pattern_comment = '%-%-'
 
@@ -60,9 +63,10 @@ local function move(src_filename, out_filename, prefix, args)
                 content = 'local '..var_name..' = require(\''..prefix..module_path:gsub('/', '_')..'\')\n'..content
                 content = content..line:gsub(pattern_gameload, 'std.node.load('..var_name..')')..'\n'
             elseif line_require and #line_require > 0 and not is_comment then
-                local exist_as_file = io.open(line_require[2]..'.lua', 'r')
+                local file_require = str_fs.lua(cwd..line_require[2]).get_fullfilepath()
+                local module_path = str_fs.lua(line_require[2]).get_fullfilepath():gsub('%.lua$', '')
+                local exist_as_file = io.open(file_require, 'r')
                 local var_name = line_require[1]
-                local module_path = line_require[2]
                 local module_prefix = exist_as_file and prefix or ''
                 deps[#deps + 1] = module_path..'.lua'
                 content = content..'local '..var_name..' = require(\''..module_prefix..module_path:gsub('/', '_')..'\')\n'
