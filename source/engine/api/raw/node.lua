@@ -112,7 +112,7 @@ end
 --! std.node.spawn(game)
 --! @endcode
 local function spawn(engine, application)
-    if not application or buses.inverse_list[application] then return end
+    if not application or buses.inverse_list[application] then return application end
     local depth = 1
     local index = #buses.list + 1
     buses.list[index] = application

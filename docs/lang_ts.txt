@@ -1,0 +1,118 @@
+@defgroup Languages
+@{
+
+@defgroup typescript Typescript
+@{
+
+@short Create games and apps with typescript and jsx
+
+The `.ts` and `.tsx` support works perfectly with the gly engine, you can use it on old consoles,
+ginga and any other device supported by the gly ecosystem,
+you can also take advantage of components and libraries written in @b lua and @b typescript at the same time.
+
+@li **Official Site** https://www.typescriptlang.org
+@li **Official Wiki** https://www.typescriptlang.org/docs/handbook/intro.html
+@li **Transpiler TSTL** https://typescripttolua.github.io/docs/getting-started.html
+@li **Pong Example** https://github.com/gly-engine/game-pong-typescript
+
+@par Tutorial
+
+To build you need an auxiliary tool available via npmjs, so I recommend you use the [@gamely/gli-cli](https://www.npmjs.com/package/@gamely/gly-cli) package and nodejs as the environment for gly-engine.
+
+@li **Step 1** @n configure your tsconfig.json and package.json like this:
+ - **tsconfig.json**
+```java
+{
+  "$schema": "https://raw.githubusercontent.com/TypeScriptToLua/TypeScriptToLua/master/tsconfig-schema.json",
+  "compilerOptions": {
+    "outDir": "build"
+  },    
+  "tstl": {
+    "buildMode": "library",
+    "luaTarget": "universal",
+    "luaLibImport": "inline",
+    "noImplicitGlobalVariables": true,
+    "noImplicitSelf": true,
+    "noHeader": true
+  }
+}
+```
+ - **package.json**
+@n You don't necessarily need to build for HTML because it's in Node JS, you can use other targets:
+@n `"build": "gly-cli build --cwd build src/game.lua --core love --bundler"`
+@n `"build": "gly-cli build --cwd build src/game.lua --core ginga --bundler --enterprise"`
+```java
+{
+  "scripts": {
+    "prebuild": "tstl",
+    "build": "gly-cli build-html --cwd build src/game.lua --fengari --enginecdn"
+  },
+  "dependencies": {
+    "@gamely/gly-cli": "0.1.1",
+    "typescript-to-lua": "^1.31.2"
+  }
+}
+```
+
+@li **Step 2** @n download npmjs packages
+```
+npm install
+```
+
+@li **Step 3** @n execute build script
+```
+npm run build
+```
+
+@par Template
+
+@li modern
+
+```
+export const title = 'Your Awesome Game'
+export const author = 'IntellectualAuthor'
+export const version = '1.0.0'
+export const description = 'The best game in the world made in GlyEngine'
+
+export function init(std: any, game: any) {
+}
+
+export function loop(std: any, game: any) {
+}
+
+export function draw(std: any, game: any) {
+}
+
+export function exit(std: any, game: any) {
+}
+```
+
+@li classic
+
+```java
+export const meta = {
+    title: 'Your Awesome Game',
+    author: 'IntellectualAuthor',
+    version: '1.0.0',
+    description: 'The best game in the world made in GlyEngine'
+}
+
+function init(std: any, game: any) {
+}
+
+function loop(std: any, game: any) {
+}
+
+function draw(std: any, game: any) {
+}
+
+function exit(std: any, game: any) {
+}
+
+export const callbacks = {
+    init, loop, draw, exit
+}
+```
+
+@}
+@}

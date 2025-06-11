@@ -1,0 +1,152 @@
+@defgroup typescript Typescript
+@{
+
+@defgroup jsx JSX
+@{
+
+@short Write UI for apps with GlyEngine + TSX
+
+@brief **Gly Engine supports building applications using JSX for interfaces**, but with a few differences: 
+you cannot insert raw text directly into the DOM tree, but you can easily include @ref ui_nodes "nodes" written in @ref lua or @ref typescript.
+
+@page jsx_node Node (JSX)
+
+@par JSX.Element
+
+@li @b grid
+```xml
+<grid class="5x5"></grid>
+```
+
+@li @b offset
+```xml
+<node/>
+```
+
+@li @b node
+```xml
+<node
+    name='Alan'
+    draw={(std: GlyStd, props: {}) => {
+        std.text.print('Ola, '..props.name)
+    }}
+/>
+```
+
+@par JSX.Component
+
+@li node (creating/using)
+```java
+const Btn = (props: {}, std: GlyStd) => <node draw={() => {
+    std.draw.color(std.color.white)
+    std.draw.rect(1, 0, 0, props.width, props.height)
+    std.text.print_ex(props.width/2, props.height/2, props.label, 0, 0)
+}}>
+```
+```xml
+<Btn label="OK"/>
+```
+
+@par UI
+
+@li @b node
+```xml
+{{
+    name: 'Zoka'
+    draw: (std: GlyStd, props: {}) => {
+        std.text.print("Ola, "..props.name)
+    }
+}}
+```
+
+@page tutorial Tutorial Gly+JSX
+
+@li **Step 1** @n configure your tsconfig.json and package.json like this:
+ - **tsconfig.json**
+@n You can omit JSX fragment if you don't want the possibility of using `<></>`, but there are also special options:
+@n `"jsxFragmentFactory": "std.ui"` fragment is allowed everywhere.
+@n `"jsxFragmentFactory": "std.h"` fragment is allow only in root.
+@n `"jsxFragmentFactory": "std"` fragment is allow only in root. (strict)
+```java
+{
+  "$schema": "https://raw.githubusercontent.com/TypeScriptToLua/TypeScriptToLua/master/tsconfig-schema.json",
+  "compilerOptions": {
+    "outDir": "build",
+    "jsx": "react",
+    "jsxFactory": "std.h",
+    "jsxFragmentFactory": "std.h"
+  },
+  "tstl": {
+    "buildMode": "library",
+    "luaTarget": "universal",
+    "luaLibImport": "inline",
+    "noImplicitGlobalVariables": true,
+    "noImplicitSelf": true,
+    "noHeader": true
+  }
+}
+
+```
+ - **package.json**
+@n You don't necessarily need to build for HTML because it's in Node JS, you can use other targets:
+@n `"build": "gly-cli build --cwd build src/game.lua --core love --bundler"`
+@n `"build": "gly-cli build --cwd build src/game.lua --core ginga --bundler --enterprise"`
+```java
+{
+  "scripts": {
+    "prebuild": "tstl",
+    "build": "gly-cli build-html --cwd build src/game.lua --fengari --enginecdn"
+  },
+  "dependencies": {
+    "@gamely/gly-cli": "0.1.1",
+    "typescript-to-lua": "^1.31.2"
+  }
+}
+```
+
+@li **Step 2** @n download npmjs packages
+```
+npm install
+```
+
+@li **Step 3** @n execute build script
+```
+npm run build
+```
+
+@page template Template (JSX)
+
+```java
+import { GlyStd } from '@gamely/gly-types'
+
+export const meta = {
+    title: 'Your Awesome Game',
+    author: 'IntellectualAuthor',
+    version: '1.0.0',
+    description: 'The best game in the world made in GlyEngine'
+}
+
+function Foo(props: {bar:string}, std: GlyStd) {
+    console.log(props.bar)
+    return <node/>
+}
+
+function load(std: GlyStd, props: any) {
+    const Bar = <node load={() => console.log('Y')}/>;
+    const Baz = {load: () => {console.log('W')}};
+
+    <grid class="2x2">
+        <Foo bar="z"/>
+        <node />
+        {Bar}
+        {Baz}
+    </grid>
+}
+
+export const callbacks = {
+    load
+}
+```
+
+@}
+@}

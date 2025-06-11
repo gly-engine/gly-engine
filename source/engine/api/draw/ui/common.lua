@@ -5,13 +5,13 @@
 
 --! @hideparam self
 local function gap(self, space_between_items)
-    self.px_gap = space_between_items
+    self.px_gap = space_between_items or 0
     return self
 end
 
 --! @hideparam self
 local function margin(self, space_container)
-    self.px_margin = space_container
+    self.px_margin = space_container or 0
     return self
 end
 
@@ -44,7 +44,7 @@ end
 --! @param [in,out] list of application columns
 local function add_items(std, engine, self, applications)
     local index = 1
-    while applications and index < #applications do
+    while applications and index <= #applications do
         add(std, engine, self, applications[index])
         index = index + 1
     end

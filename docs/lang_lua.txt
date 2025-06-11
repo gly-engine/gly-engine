@@ -13,7 +13,7 @@
 
 @par Template
 
-@li class
+@li modern
 ```java
 local Game = {
     title = 'Your Awesome Game',
@@ -37,7 +37,7 @@ end
 return Game
 ```
 
-@li function
+@li classic
 ```java
 local function init(std, data)
 end
