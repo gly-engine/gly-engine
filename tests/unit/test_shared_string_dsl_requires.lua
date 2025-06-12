@@ -30,12 +30,12 @@ end
 
 function test_missing_required()
     local spec = dsl.encode("a b? c d?")
-    local imported = { "a", "d" }
+    local imported = {['a'] = true, ['d'] = true }
     local missing = dsl.missing(spec, imported)
     assert(#missing == 1)
     assert(missing[1] == "c")
 
-    local imported2 = { "a", "c" }
+    local imported2 = {['a'] = true, ['c'] = true }
     local missing2 = dsl.missing(spec, imported2)
     assert(#missing2 == 0)
 end
