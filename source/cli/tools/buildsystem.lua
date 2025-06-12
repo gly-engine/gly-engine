@@ -1,5 +1,4 @@
 local os = require('os')
-local zeebo_module = require('source/shared/module')
 local zeebo_bundler = require('source/cli/build/bundler')
 local zeebo_builder = require('source/cli/build/builder')
 local zeebo_assets = require('source/cli/tools/assets')
