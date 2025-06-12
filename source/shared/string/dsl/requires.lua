@@ -56,17 +56,8 @@ local function encode(dsl_string)
   return spec
 end
 
-local function missing(spec, imported_list)
+local function missing(spec, imported)
   local result = {}
-  local imported = {}
-
-  do
-    local index = 1
-    while imported_list[index] do
-      imported[imported_list[index]] = true
-      index = index + 1
-    end
-  end
 
   do
     local index = 1

@@ -1,5 +1,5 @@
 local version = require('source/version')
-local zeebo_module = require('source/shared/module')
+local loadcore = require('source/shared/engine/loadcore')
 local loadgame = require('source/shared/engine/loadgame')
 --
 local engine_encoder = require('source/engine/api/data/encoder')
@@ -161,7 +161,7 @@ function native_callback_init(width, height, game_lua)
     end
 
     engine.root = application
-    zeebo_module.require(std, application, engine)
+    loadcore.setup(std, application, engine)
         :package('@memory', engine_raw_memory)
         :package('@game', engine_game, cfg_system)
         :package('@math', engine_math)

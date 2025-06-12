@@ -1,6 +1,6 @@
 local version = require('source/version')
 local util_decorator = require('source/shared/functional/decorator')
-local zeebo_module = require('source/shared/module')
+local loadcore = require('source/shared/engine/loadcore')
 local loadgame = require('source/shared/engine/loadgame')
 --
 local engine_draw_fps = require('source/engine/api/draw/fps')
@@ -169,7 +169,7 @@ function native_callback_init(width, height, game_lua)
     std.text.font_name=native_text_font_name
     std.text.font_default=native_text_font_default
 
-    zeebo_module.require(std, application, engine)
+    loadcore.setup(std, application, engine)
         :package('@bus', engine_raw_bus)
         :package('@node', engine_raw_node)
         :package('@memory', engine_raw_memory)

@@ -68,7 +68,7 @@ local P = {
         version='1.0.0'
     },
     config={
-        require='http math.random math json i18n'
+        require='http json *'
     },
     callbacks={
         load=load,

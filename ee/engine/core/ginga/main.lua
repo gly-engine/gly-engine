@@ -1,4 +1,4 @@
-local zeebo_module = require('source/shared/module')
+local loadcore = require('source/shared/engine/loadcore')
 local loadgame = require('source/shared/engine/loadgame')
 --
 local core_draw = require('ee/engine/core/ginga/draw')
@@ -106,7 +106,7 @@ local function main(evt, gamefile)
     engine.envs = evt
     application = loadgame.script(gamefile, application_default)
 
-    zeebo_module.require(std, application, engine)
+    loadcore.setup(std, application, engine)
         :package('@bus', engine_bus)
         :package('@node', engine_node)
         :package('@fps', engine_fps, cfg_fps_control)

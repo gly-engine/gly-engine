@@ -1,7 +1,7 @@
 local os = require('os')
 --
 local loadgame = require('source/shared/engine/loadgame')
-local zeebo_module = require('source/shared/module')
+local loadcore = require('source/shared/engine/loadcore')
 --
 local core_text = require('source/engine/core/love/text')
 local core_draw = require('source/engine/core/love/draw')
@@ -89,7 +89,7 @@ function love.load(args)
         })
     end
 
-    zeebo_module.require(std, application, engine)
+    loadcore.setup(std, application, engine)
         :package('@bus', lib_raw_bus)
         :package('@node', lib_raw_node)
         :package('@memory', lib_raw_memory)
