@@ -45,15 +45,10 @@ local function script(src, base)
         return normalize(src, base)
     end
 
-    local cwd = '.'
     local application = type(src) == 'function' and src
     
     if not src or #src == 0 then
         src = 'game'
-    end
-
-    if has_love_fs then
-        cwd = love.filesystem.getSource()
     end
 
     if not application and src and src:find('\n') then
