@@ -10,8 +10,8 @@ local function script(src)
         ok, app = pcall(loadfile, src)
     end
 
-    if type(chunk) == 'function' then
-        ok, app = pcall(chunk)
+    if type(app) == 'function' then
+        ok, app = pcall(app)
     end
 
     if not ok then

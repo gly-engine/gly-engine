@@ -1,7 +1,5 @@
 local eval_file = require('source/shared/string/eval/file')
 local eval_code = require('source/shared/string/eval/code')
-
-local has_love_fs = love and love.filesystem and love.filesystem.getSource
 local has_io_open = io and io.open
 
 local function normalize(app, base)
