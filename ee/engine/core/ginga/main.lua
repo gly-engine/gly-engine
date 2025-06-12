@@ -61,6 +61,7 @@ local engine = {
 }
 
 local cfg_system = {
+    quit = function() event.post({class = 'ncl', type = 'presentation', action = 'stop'}) end,
     get_language = function() return 'pt-BR' end
 }
 
