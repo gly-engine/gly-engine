@@ -206,7 +206,8 @@ local function metadata(infile, args, optional)
 end
 
 local function render(infile, content, args, optional)
-    return lustache:render(content, metadata(infile, args, optional))
+    local data = metadata(infile, args, optional)
+    return data and lustache:render(content, data)
 end
 
 local P = {
