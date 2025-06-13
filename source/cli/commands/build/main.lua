@@ -29,10 +29,10 @@ local function build(args)
     local var = cli_meta.vars(args)
     local atob = var.build.html5.atobify()
 
-    local build_game = buildsystem.from({core='game', bundler=true, outdir=args.outdir})
+    local build_game = buildsystem.from({core='game', bundler=true, outdir=args.outdir, cwd=args.cwd})
         :add_core('game', {src=args.src, as='game.lua', prefix='game_', assets=true})
 
-    local build_core = buildsystem.from(args)
+    local build_core = buildsystem.from(args, true)
         :add_rule('the middlware ginga html5 already has a streamming player', 'core=html5_ginga', 'videojs=true')
         :add_rule('please use flag -'..'-enterprise to use commercial modules', 'core=html5_ginga', 'enterprise=false')
         :add_rule('please use flag -'..'-enterprise to use commercial modules', 'core=ginga', 'enterprise=false')
@@ -85,7 +85,7 @@ local function build(args)
         :add_common_func(atobify.builder('engine_code', args.outdir..'main.lua', args.outdir..'index.js'), {when=atob and not args.enginecdn})
         :add_common_func(atobify.builder('game_code', args.outdir..'game.lua', args.outdir..'index.js'), {when=atob})
         :add_common_func(cli_fs.lazy_del(args.outdir..'main.lua'), {when=atob or args.enginecdn})
-        :add_common_func(cli_fs.lazy_del(args.outdir..'gasrc/me.lua'), {when=atob})
+        :add_common_func(cli_fs.lazy_del(args.outdir..'game.lua'), {when=atob})
 
     local ok, message = build_game:run()
 

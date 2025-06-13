@@ -1,12 +1,12 @@
 local agent = require('source/agent')
 local version = require('source/version')
-local env = require('source/shared/string/dsl/env')
+local env = require('source/shared/string/parse/env')
 local base64 = require('source/shared/string/encode/base64')
 local json = require('source/third_party/rxi_json')
 local lustache = require('source/third_party/olivinelabs_lustache')
 local util_decorator = require('source/shared/functional/decorator')
 local cli_buildder = require('source/cli/build/builder')
-local str_lua = require('source/shared/string/parse/lua')
+local eval_code = require('source/shared/string/eval/code')
 local build_ncl = require('source/shared/var/build/ncl')
 local build_html = require('source/shared/var/build/html')
 local build_screen = require('source/shared/var/build/screen')
@@ -105,7 +105,7 @@ local function try_lua(infile)
     local ok, lua = pcall(dofile, infile)
     local ok2, lua2 = pcall(function()
         local lua_code = cli_buildder.optmizer(io.open(infile, 'r'):read('*a'), 'gamelua', {})
-        local ok, lua_evaluated = str_lua.eval(table.concat(lua_code, '\n'))
+        local ok, lua_evaluated = eval_code.script(table.concat(lua_code, '\n'))
         return (ok and lua_evaluated)
     end)
     local data = (ok and lua) or (ok2 and lua2) or {}
@@ -154,7 +154,7 @@ local function vars(args)
     }
 end
 
-local function render(infile, content, args, optional)
+local function metadata(infile, args, optional)
     local game = normalize_table(try_table(infile)
         or try_lua(infile)
         or try_decode(infile, json)
@@ -202,12 +202,18 @@ local function render(infile, content, args, optional)
         data.var = vars(args)
     end
 
-    return lustache:render(content, data)
+    return data
+end
+
+local function render(infile, content, args, optional)
+    local data = metadata(infile, args, optional)
+    return data and lustache:render(content, data)
 end
 
 local P = {
     vars = vars,
-    render = render
+    render = render,
+    metadata = metadata
 }
 
 return P

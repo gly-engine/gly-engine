@@ -1,5 +1,4 @@
 local os = require('os')
-local zeebo_module = require('source/shared/module')
 local zeebo_bundler = require('source/cli/build/bundler')
 local zeebo_builder = require('source/cli/build/builder')
 local zeebo_assets = require('source/cli/tools/assets')
@@ -55,8 +54,8 @@ local function add_core(self, core_name, options)
 
     if options.assets then
         self.pipeline[#self.pipeline + 1] = function()
-            local game = zeebo_module.loadgame(self.args.outdir..'game.lua')
-            assert(zeebo_assets.build(game and game.assets or {}, self.args.outdir))
+            local var = cli_meta.metadata(self.args.outdir..'game.lua')
+            if var then assert(zeebo_assets.build(var.assets.list, self.args.outdir)) end
         end
     end
 
@@ -106,7 +105,7 @@ local function add_rule(self, error_message, ...)
     return self
 end
 
-local function from(args)
+local function from(args, not_use_cwd)
     local decorator = function(func, for_all)
         return function(self, step, options)
             if not self.selected and not for_all then return self end
@@ -129,6 +128,10 @@ local function from(args)
         add_common_step=decorator(add_step, true),
         pipeline={}
     }
+
+    if not self.args.cwd or not_use_cwd then
+        self.args.cwd = '.'
+    end
 
     self.run = function()
         if not self.found then

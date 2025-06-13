@@ -1,11 +1,13 @@
 local version = require('source/version')
 
 local function atobify(args, text, render)
+    local falsy = render and '' or false 
     local result = render and render(text) or text or true
     local in_html5 = args.core:match('html5') ~= nil
     local in_legacy = ('webos tizen ginga offline'):match(args.core:gsub('html5_', '')) ~= nil
     local by_core = in_html5 and in_legacy
-    return by_core and result
+    local by_flag = args.atob or args.atobify
+    return (by_core or by_flag) and result or falsy
 end
 
 local function src_engine(args)

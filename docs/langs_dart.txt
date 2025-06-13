@@ -6,7 +6,7 @@
 
 @short Create games and apps with Dart
 
-@pre Dart is only supported with @b WebAssembly (wasmoon), it cannot be build with @c --fengari flag.
+@pre Dart is only supported in HTML5 platfoms exclusively with @b WebAssembly (wasmoon), it cannot be build with @c --fengari flag.
 
 @brief Applications made in @b Dart with gly engine @ref std "API" can be used on @ref html5 platforms like @ref webos and @ref tizen.
 

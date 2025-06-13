@@ -1,4 +1,5 @@
-local zeebo_module = require('source/shared/module')
+local loadcore = require('source/shared/engine/loadcore')
+local loadgame = require('source/shared/engine/loadgame')
 --
 local core_draw = require('ee/engine/core/ginga/draw')
 local core_text = require('ee/engine/core/ginga/text')
@@ -60,6 +61,7 @@ local engine = {
 }
 
 local cfg_system = {
+    quit = function() event.post({class = 'ncl', type = 'presentation', action = 'stop'}) end,
     get_language = function() return 'pt-BR' end
 }
 
@@ -103,9 +105,9 @@ local function main(evt, gamefile)
     if evt.class and evt.class ~= 'ncl' or evt.action ~= 'start' and evt.type ~= 'presentation' then return end
 
     engine.envs = evt
-    application = zeebo_module.loadgame(gamefile)
+    application = loadgame.script(gamefile, application_default)
 
-    zeebo_module.require(std, application, engine)
+    loadcore.setup(std, application, engine)
         :package('@bus', engine_bus)
         :package('@node', engine_node)
         :package('@fps', engine_fps, cfg_fps_control)

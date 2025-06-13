@@ -22,6 +22,17 @@ local util_decorator = require('source/shared/functional/decorator')
 --! end
 --! @endcode
 --!
+--! @par Slide
+--! also known as carousel, it has similar behavior to grid but with visual selection of items.
+--! but it only accepts one-dimensional grids such as @c 1x1 @c 2x1 or @c 1x2 .
+--! @par Example
+--! @code{.java}
+--! std.ui.slide('6x1')
+--!     :add_items(my_items)
+--!     :apply()
+--! @endcode
+--!
+--!
 --! @par Breakpoints
 --! @todo comming soon breakpoints
 --!
@@ -49,9 +60,9 @@ local util_decorator = require('source/shared/functional/decorator')
 --!     :apply()
 --! @endcode
 --!
---! @par Columns
+--! @page ui_nodes Node (UI)
 --!
---! You can add several different items to your grid: classes, nodes, offsets, entire applications and even another grid.
+--! You can add several different column types to your grid: classes, nodes, medias, offsets, entire applications and even another grid.
 --!
 --! @li @b media
 --! @code{.java}
@@ -100,6 +111,11 @@ local util_decorator = require('source/shared/functional/decorator')
 --!         :add(btn)
 --!      )
 --!     :apply()
+--! @endcode
+--!
+--! @li **@ref jsx**
+--! @code{.xml}
+--! <grid class="1x1"><node/></grid>
 --! @endcode
 --! @}
 --! @}

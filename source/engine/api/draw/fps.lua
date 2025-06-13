@@ -53,22 +53,18 @@ end
 --! @}
 --! @}
 
-local function event_bus(std, engine)
+local function install(std, engine)
+    std.app = std.app or {}
+    std.app.fps_show = function(show)
+        engine.root.config.fps_show = show
+    end
     std.bus.listen('post_draw', function()
         engine.current = engine.root
         draw_fps(std, engine, engine.root.config.fps_show, 8, 8)
     end)
 end
 
-local function install(std, engine)
-    std.app = std.app or {}
-    std.app.fps_show = function(show)
-        engine.root.config.fps_show = show
-    end
-end
-
 local P = {
-    event_bus=event_bus,
     install=install
 }
 

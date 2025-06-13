@@ -5,17 +5,6 @@ local util_decorator = require('source/shared/functional/decorator')
 --! @{
 --! @defgroup ui
 --! @{
---!
---! @page ui_slide Slide System
---! @details
---! also known as carousel, it has similar behavior to grid but with visual selection of items.
---! but it only accepts one-dimensional grids such as @c 1x1 @c 2x1 or @c 1x2 .
---! @par Example
---! @code{.java}
---! std.ui.slide('6x1')
---!     :add_items(my_items)
---!     :apply()
---! @endcode
 
 --! @renamefunc next
 --! @hideparam self

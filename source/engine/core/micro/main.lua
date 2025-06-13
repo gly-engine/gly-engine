@@ -11,7 +11,7 @@ local engine_raw_memory=require('source/engine/api/raw/memory')
 local color=require('source/engine/api/system/color')
 local std=require('source/shared/var/object/std')
 --
-local util_lua=require('source/shared/string/parse/lua')
+local eval_code=require('source/shared/string/eval/code')
 --
 local f=function(a,b)end
 local engine={keyboard=f}
@@ -76,7 +76,7 @@ function native_callback_init(width, height, game_lua)
     local ok, script=true, game_lua
 
     if type(script) == 'string' then
-        ok, script=util_lua.eval(script)
+        ok, script=eval_code.script(script)
     end
 
     if not script then

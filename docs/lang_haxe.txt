@@ -17,11 +17,6 @@
 haxe Game.hx --lua game.lua
 ```
 
-@li convert to gly engine format
-```
-lua cli.lua tool-haxe-build game.lua
-```
-
 @li build to html5 or another core
 ```
 lua cli.lua build game.lua --core html5

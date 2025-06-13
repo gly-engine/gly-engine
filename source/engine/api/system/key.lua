@@ -27,19 +27,15 @@ local function real_keyup(std, engine, key)
     real_key(std, engine, key, 0)
 end
 
-local function event_bus(std, engine)
+local function install(std, engine, key_bindings)
+    engine.key_bindings = key_bindings or {}
+    engine.keyboard = real_key
     std.bus.listen_std_engine('rkey', real_key)
     std.bus.listen_std_engine('rkey1', real_keydown)
     std.bus.listen_std_engine('rkey0', real_keyup)
 end
 
-local function install(std, engine, key_bindings)
-    engine.key_bindings = key_bindings or {}
-    engine.keyboard = real_key
-end
-
 local P = {
-    event_bus = event_bus,
     install = install
 }
 

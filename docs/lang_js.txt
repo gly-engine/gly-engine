@@ -6,9 +6,9 @@
 
 @brief Create games and apps with javascript
 
-@pre javascript/typescript is only supported with @b WebAssembly (wasmoon), it cannot be build with @c --fengari flag.
+@pre Javascript is only supported in HTML5 platfoms exclusively with @b WebAssembly (wasmoon), it cannot be build with @c --fengari flag.
 
-@todo explain better about JS
+@warning **Is not recommended using the classic TSC (and similar) compiler from typescript to javascript**, you can get better profits using TSTL which works with target lua, more information on the @ref typescript page.
 
 @li **Pong Example** https://github.com/gly-engine/game-pong-javascript
 
