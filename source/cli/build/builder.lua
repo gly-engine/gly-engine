@@ -28,14 +28,19 @@ local function optmizer(content, srcname, args)
         content = content:gsub(haxe_pattern_std, haxe_replace_std)
     end
 
-    return content:split('\n')
+    local lines = {}
+    for line in content:gmatch("[^\n]+") do
+        lines[#lines + 1] = line
+    end
+    return lines
 end
 
 --! @todo rewrite all the move() and build() 
-local function move(src_filename, out_filename, prefix, args)
+local function move(src_filename, out_filename, options, args)
     local deps = {}
     local content = ''
-    local cwd = str_fs.path(args.cwd).get_fullfilepath()
+    local prefix = options.prefix
+    local cwd = str_fs.path(options.cwd).get_fullfilepath()
     local src_file = io.open(cwd..src_filename, 'r')
     local out_file = src_file and io.open(out_filename, 'w')
     local pattern_require = 'local ([%w_%-]+) = require%([\'"]([%w%._/-]+)[\'"]%)'
@@ -91,8 +96,9 @@ local function move(src_filename, out_filename, prefix, args)
     return deps
 end
 
-local function build(path_in, src_in, path_out, src_out, prefix, args)
+local function build(path_in, src_in, path_out, src_out, options, args)
     local main = true
+    local prefix = options.prefix
     local deps = {}
     local deps_builded = {}
 
@@ -109,7 +115,7 @@ local function build(path_in, src_in, path_out, src_out, prefix, args)
             end
             local srcfile = src.get_fullfilepath()
             local outfile = str_fs.path(path_out, out).get_fullfilepath()
-            local new_deps = move(srcfile, outfile, prefix, args)
+            local new_deps = move(srcfile, outfile, options, args)
             while index <= #new_deps do
                 deps[index_deps + index] = new_deps[index]
                 index = index + 1
