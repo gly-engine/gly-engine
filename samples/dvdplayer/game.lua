@@ -19,7 +19,7 @@ end
 
 local function draw(std, game)
     std.draw.clear(std.color.black)
-    std.draw.image('icon80x80.png', game.x, game.y)
+    std.image.draw('icon80x80.png', game.x, game.y)
 end
 
 local function exit(std, game)
