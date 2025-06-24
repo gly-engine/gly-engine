@@ -10,7 +10,7 @@ const ROOT_VENDOR = join('node_modules');
 
 try {
   if (!existsSync(GLY_VENDOR) && !existsSync(ROOT_VENDOR)) {
-    execFileSync('npm', ['--prefix', GLY_PATH, 'install'], { stdio: 'inherit' });
+    execFileSync('npm', ['--prefix', GLY_PATH, 'install', '--no-package-lock'], { stdio: 'inherit' });
     renameSync(GLY_VENDOR, ROOT_VENDOR);
   }
   execFileSync('npx', ['--prefix', GLY_PATH, 'bun', GLY_CLI, ...process.argv.slice(2)], { stdio: 'inherit' });
