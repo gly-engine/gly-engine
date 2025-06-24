@@ -1,4 +1,5 @@
 luacov.*
+node_modules/
 carousel/
 balatro/
 vendor/
@@ -9,6 +10,8 @@ latex/
 doxygen/
 ccws
 crt0.lua
+*-lock.*
+*.lock
 *.out
 *.xml
 *.db

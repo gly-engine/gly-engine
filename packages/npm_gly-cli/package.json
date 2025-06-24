@@ -20,9 +20,13 @@
         "webassembly"
     ],
     "bin": {
-        "gly-cli": "bin/gly-cli"
+        "gly-cli": "bin/cli.js"
     },
-    "dependencies": {
-        "demoon": "0.0.9"
+    "script": {
+    },
+    "devDependencies": {
+        "bun": "^1.2.17",
+        "@types/node": "^24.0.4",
+        "fengari": "github:fengari-lua/fengari#6a8908380a9b5fc3a8f0fe1e9c1b79ce5dba9312"
     }
 }

@@ -1,6 +1,7 @@
 *.html linguist-generated
 *.css linguist-generated
 *.sh linguist-generated
+*.js linguist-generated
 *.bat linguist-generated
 *.txt linguist-language=Dox
 *.xml linguist-language=Mustache

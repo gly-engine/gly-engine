@@ -4,7 +4,7 @@ local function file_reader(self, mode, size, func)
         self.content = func()
     end
 
-    if self.pointer >= #self.content then
+    if self.pointer > #self.content then
         return nil
     elseif size == '*a' then
         return self.content
