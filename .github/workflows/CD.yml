@@ -18,22 +18,19 @@ jobs:
         package: ['gly-cli', 'gly-engine', 'gly-engine-lite', 'gly-engine-micro']
     steps:
       -
-        uses: actions/checkout@master
-      - 
-        uses: leafo/gh-actions-lua@v10
-        with:
-          luaVersion: "5.4"
+        uses: actions/checkout@v4
       -
         uses: actions/setup-node@v2
         with:
           node-version: '20.x'
           registry-url: 'https://registry.npmjs.org'
       -
+        working-directory: ./npm/${{ matrix.package }}
         run: |
-          lua tools/cd_npm_${{ matrix.package }}.lua
+          npm run build
       - 
         working-directory: ./dist
         run: |
-          npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          npm publish --provenance --access public --dry-run
+        #env:
+          #NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
