@@ -28,7 +28,9 @@ local function add_core(self, core_name, options)
         return self
     end
     options = options or {}
+    options.prefix = options.prefix or ''
     options.src = (options.src and #options.src > 0) and options.src or nil
+    options.cwd = (options.cwd and #options.cwd > 0) and options.cwd or '.'
 
     self.found = true
     self.selected = true
@@ -42,7 +44,7 @@ local function add_core(self, core_name, options)
         if not options.src then return end
         local from = str_fs.file(options.src)
         local to = str_fs.path(self.args.outdir..self.bundler, options.as or from.get_file())
-        assert(zeebo_builder.build(from.get_unix_path(), from.get_file(), to.get_unix_path(), to.get_file(), options.prefix or '', self.args))
+        assert(zeebo_builder.build(from.get_unix_path(), from.get_file(), to.get_unix_path(), to.get_file(), options, self.args))
     end
 
     if #self.bundler > 0 and options.src then 
@@ -105,7 +107,7 @@ local function add_rule(self, error_message, ...)
     return self
 end
 
-local function from(args, not_use_cwd)
+local function from(args)
     local decorator = function(func, for_all)
         return function(self, step, options)
             if not self.selected and not for_all then return self end
@@ -128,10 +130,6 @@ local function from(args, not_use_cwd)
         add_common_step=decorator(add_step, true),
         pipeline={}
     }
-
-    if not self.args.cwd or not_use_cwd then
-        self.args.cwd = '.'
-    end
 
     self.run = function()
         if not self.found then

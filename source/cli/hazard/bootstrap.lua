@@ -40,7 +40,7 @@ local function map_files(files, prefix_len)
         local file_real_content = file_real and file_real:read('*a')
         local file_name = file_real_path:sub(prefix_len)
         
-        if file_real_content then
+        if file_real_content and file_real_content ~= 'DIR' then
             list_files[#list_files + 1] = file_name
             dict_files[file_name] = string_to_hex(file_real_content)
         else 
@@ -95,8 +95,8 @@ local function build(input_name, output_name, input_paths)
             if not f then 
                 return false, 'directory not found'
             end
-            local can_read = f:read(1)
-            if can_read then
+            local can_read = f:read(3)
+            if can_read and can_read ~= 'DIR' then
                 return false, 'path src must be a directory'
             end
             f:close()

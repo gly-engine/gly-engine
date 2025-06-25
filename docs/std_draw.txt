@@ -4,13 +4,6 @@
 @defgroup draw
 @{
 
-@warning There is no support for 
-@ref ps1 "ps1",
-@ref gba "gba" 
-and @ref nds "nds" to draw images,
-as they use a specific bitmap and it is necessary to implement a
-[sprite conversion tool](https://github.com/RodrigoDornelles/ultimate-sprite-sheet-replacer/).
-
 @par Design Decision
 
 There is no @b std.draw.pixel or @b std.draw.circle, nor plans to add them, due to frontend design decisions.
@@ -38,11 +31,6 @@ and older video games like @ref nintendo_gba "gba" and @ref nintendo_ds "nds" ar
 @call divcpp
 @short std.draw.line
 @fakefunc line(x1, y1, y2, y1, y2)
-
-@call divcpp
-@deprecated @c std.draw.image is moving to @c std.image.draw
-@short std.draw.image
-@fakefunc image(src, pos_x, pos_y)
 
 @call divcpp
 @short std.draw.poly

@@ -1,0 +1,19 @@
+@defgroup std
+@{
+
+@defgroup image image
+@{
+
+@warning There is no support for 
+@ref ps1 "ps1",
+@ref gba "gba" 
+and @ref nds "nds" to draw images,
+as they use a specific bitmap and it is necessary to implement a
+[sprite conversion tool](https://github.com/RodrigoDornelles/ultimate-sprite-sheet-replacer/).
+
+@fakefunc draw(src, pos_x, pos_y)
+
+@fakefunc load(src)
+
+@}
+@}

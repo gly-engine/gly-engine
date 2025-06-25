@@ -1,0 +1,26 @@
+{
+    "name": "@gamely/gly-engine",
+    "version": "{{ meta.version }}",
+    "author": "RodrigoDornelles",
+    "license": "Apache-2.0",
+    "homepage": "https://docs.gamely.com.br",
+    "repository": "https://github.com/gly-engine/gly-engine",
+    "funding": "https://github.com/sponsors/RodrigoDornelles",
+    "bugs": "https://github.com/gly-engine/gly-engine/issues",
+    "description": "Game Engine written in 100% lua that runs in a vacuum.",
+    "main": "dist/main.lua",
+    "browser": "dist/main.lua",
+    "types": "types/main.d.ts",
+    "keywords": [
+        "game engine",
+        "game",
+        "engine"
+    ],
+    "scripts": {
+        "step1": "cd ../.. && rm -Rf dist && mkdir -p ./dist/types && touch dist/ginga.txt",
+        "step2": "cd ../.. && node cli.js build --core native --bundler --outdir dist/dist",
+        "step3": "cd ../.. && node cli.js meta source/cli/main.lua --infile npm/gly-engine/package.json --outfile dist/package.json",
+        "step4": "cd ../.. && echo \"declare module '@gamely/gly-engine' {\n const content: string;\n export default content;\n}\" > dist/types/main.d.ts",
+        "build": "npm run step1 && npm run step2 && npm run step3 && npm run step4"
+    }
+}

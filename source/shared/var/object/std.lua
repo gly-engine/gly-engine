@@ -7,6 +7,9 @@ local P = {
     math = {
 
     },
+    media = {
+
+    },
     draw = {
         image = function() end,
         clear = function () end,

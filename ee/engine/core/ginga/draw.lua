@@ -50,9 +50,7 @@ local function image(std, engine, canvas, src, pos_x, pos_y)
 end
 
 local function install(std, engine)
-    std.draw = std.draw or {}
-
-    std.draw.image = util_decorator.prefix3(std, engine, engine.canvas, image)
+    std.image.draw = util_decorator.prefix3(std, engine, engine.canvas, image)
     std.draw.clear = util_decorator.prefix3(std, engine, engine.canvas, clear)
     std.draw.color = util_decorator.prefix3(std, engine, engine.canvas, color)
     std.draw.rect = util_decorator.prefix3(std, engine, engine.canvas, rect)

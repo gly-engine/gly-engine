@@ -59,7 +59,7 @@ local function image(std, engine, src, pos_x, pos_y)
 end
 
 local function install(std, engine)
-    std.draw.image = util_decorator.prefix2(std, engine, image)
+    std.image.draw = util_decorator.prefix2(std, engine, image)
     std.draw.clear = util_decorator.prefix2(std, engine, clear)
     std.draw.color = util_decorator.prefix2(std, engine, color)
     std.draw.rect = util_decorator.prefix2(std, engine, rect)

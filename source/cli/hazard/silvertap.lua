@@ -37,7 +37,8 @@ local function javascript_io_open(filename, mode)
         content = '',
         read = function(self, size)
             return file_reader(self, mode, size, function()
-                return javascript_fs.readFileSync(filename, 'utf8')
+                local encoding = (not (mode or ''):find('b')) and 'utf8' or nil
+                return javascript_fs.readFileSync(filename, encoding)
             end)
         end,
         write = function(self, content)
@@ -61,7 +62,7 @@ local function javascript_io_open(filename, mode)
 end
 
 io.open = function(filename, mode)
-    local file = real_io_open(filename, mode)
+    local file = real_io_open and real_io_open(filename, mode)
     
     filename = filename or ''
     if javascript_fs then
@@ -80,11 +81,12 @@ if jsRequire then
     os.execute = function(cmd)
         return pcall(javascript_ps.execSync, cmd)
     end
-    os.popen = function(cmd)
+    io.popen = function(cmd)
         local ok, stdout = pcall(javascript_ps.execSync, cmd, {encoding='utf8'})
         return {
+            pointer = 1,
             read = function(self, size)
-                return file_reader(self, mode, size, function()
+                return file_reader(self, 'r', size, function()
                     return stdout
                 end)
             end,

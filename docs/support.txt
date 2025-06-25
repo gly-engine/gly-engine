@@ -45,4 +45,5 @@
 | Tier 2 | NodeJS CLI          | support
 | Tier 3 | HTML5 IDE           | support
 | Tier 4 | Windows             | support
-| Tier 5 | HTML5 CLI           | comming soon
+| Tier 5 | Windows Node CLI    | in testing
+| Tier 6 | HTML5 CLI           | comming soon
