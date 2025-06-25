@@ -31,6 +31,6 @@ jobs:
       - 
         working-directory: ./dist
         run: |
-          npm publish --provenance --access public --dry-run
-        #env:
-          #NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
