@@ -1,60 +1,24 @@
 @page install How to Install
 
-@li @ref cli_download "download a unique lua file using wget"
-@li @ref cli_download "download a unique lua file using curl"
-@li @ref npm_install "install as system command using npm"
-@li @ref npm_install "install as project dependency using npm"
+Gly engine tries to have a simple installation with as little effort as possible, just downloading a single file command interface with the entire framework built in,
+with examples and assets.
 
-@anchor npm_install
-
-## using npm
-
-### global
+## NodeJS
 
 ```
-npm install -g demoon @gamely/gly-cli
+wget https://cdn.jsdelivr.net/npm/@gamely/gly-cli@latest/bin/cli.js
 ```
 
-now you can execute as a global command!
-
 ```
-gly-cli version
+node cli.js help
 ```
 
-### local 
+## Lua 
 
 ```
-npm install --dev @gamely/gly-cli
+wget http://get.gamely.com.br/cli.lua
 ```
 
-now you need use npx to run inside your project!
-
 ```
-npx gly-cli version
-```
-
-@htmlonly <hr/> @endhtmlonly
-
-@anchor cli_download
-
-## unique lua file
-
-@note @b Attention! that although it is a `.lua` file, @n it is obfuscating in a way, to browse the source code use `lua cli.lua cli-dump`
-
-### curl
-
-```
-wget get.gamely.com.br/cli.lua -o cli.lua
-```
-
-### wget
-
-```
-wget get.gamely.com.br/cli.lua
-```
-
-now you need a lua to execute a cli!
-
-```
-lua cli.lua version
+lua cli.lua help
 ```
