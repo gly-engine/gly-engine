@@ -3,7 +3,7 @@ const { execFileSync } = require('child_process');
 const { existsSync, renameSync } = require('fs');
 const { join } = require('path');
 
-const GLY_PATH = join('packages', 'npm_gly-cli');
+const GLY_PATH = join('npm', 'gly-cli');
 const GLY_CLI = join(GLY_PATH, 'src', 'index.ts');
 const GLY_VENDOR = join(GLY_PATH, 'node_modules');
 const ROOT_VENDOR = join('node_modules');
