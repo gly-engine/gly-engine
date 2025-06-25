@@ -74,15 +74,14 @@ function getJsModules(): Record<string, Record<string, (L) => number>> {
     fs: {
       readFileSync: (L) => {
         const filename = to_jsstring(lua.lua_tostring(L, 1));
-        const encoding = lua.lua_gettop(L) >= 2 ? to_jsstring(lua.lua_tostring(L, 2)): undefined;
-
+        const encoding = lua.lua_type(L, 2) === lua.LUA_TSTRING? to_jsstring(lua.lua_tostring(L, 2)): undefined;
         //! @todo lua if is dir is problematic interpolating with javascript
         if (fs.statSync(filename).isDirectory()) {
           lua.lua_pushstring(L, to_luastring('DIR'))
           return 1;
         }
         const data = fs.readFileSync(filename, encoding as BufferEncoding);
-        lua.lua_pushstring(L, to_luastring(data));
+        lua.lua_pushstring(L, encoding? to_luastring(data): data);
         return 1;
       },
       existsSync: (L) => {

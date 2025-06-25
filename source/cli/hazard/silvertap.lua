@@ -37,7 +37,8 @@ local function javascript_io_open(filename, mode)
         content = '',
         read = function(self, size)
             return file_reader(self, mode, size, function()
-                return javascript_fs.readFileSync(filename, 'utf8')
+                local encoding = (not (mode or ''):find('b')) and 'utf8' or nil
+                return javascript_fs.readFileSync(filename, encoding)
             end)
         end,
         write = function(self, content)
