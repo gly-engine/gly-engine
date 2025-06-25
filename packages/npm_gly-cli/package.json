@@ -25,7 +25,7 @@
     "scripts": {
         "step1": "cd ../.. && node cli.js cli-build",
         "step2": "cd ../.. && node cli.js compile dist/cli.lua --outfile dist/cli.out",
-        "step3": "cd ../.. && node -e \"require('fs').writeFileSync('dist/cli.txt', require('zlib').gzipSync(require('fs').readFileSync('dist/cli.out')).toString('base64'))\"",
+        "step3": "cd ../.. && node -e \"require('fs').writeFileSync('dist/cli.txt', require('zlib').deflateRawSync(require('fs').readFileSync('dist/cli.out'),{level:9,memLevel:9}).toString('base64'))\"",
         "step4": "cd ../.. && npx bun build --entrypoint packages/npm_gly-cli/src/cli.ts --target node --format cjs --outfile dist/cli.js --minify",
         "step5": "cd ../.. && echo '#!/usr/bin/env node' > dist/cli.header && mkdir -p dist/bin &&  cat dist/cli.header dist/cli.js > dist/bin/cli.js && rm dist/cli.*",
         "step6": "cd ../.. && node cli.js meta source/cli/main.lua --infile packages/npm_gly-cli/package.json --outfile dist/package.json",

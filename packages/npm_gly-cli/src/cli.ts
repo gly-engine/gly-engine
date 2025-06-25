@@ -7,7 +7,7 @@ import * as glue from "./glue.ts";
 
 function main() {
   const L = lauxlib.luaL_newstate();
-  const script = zlib.gunzipSync(Buffer.from(cli, 'base64')) as unknown as string
+  const script = zlib.inflateRawSync(Buffer.from(cli, 'base64')) as unknown as string
   lualib.luaL_openlibs(L);
   glue.overridePrint(L);
   glue.setLuaArgs(L, process.argv.slice(2));
