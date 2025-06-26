@@ -2,6 +2,7 @@ local agent = require('source/agent')
 local version = require('source/version')
 local env = require('source/shared/string/parse/env')
 local base64 = require('source/shared/string/encode/base64')
+local zlib = require('source/third_party/zerkman_zlib')
 local json = require('source/third_party/rxi_json')
 local lustache = require('source/third_party/olivinelabs_lustache')
 local util_decorator = require('source/shared/functional/decorator')
@@ -194,8 +195,8 @@ local function metadata(infile, args, optional)
     }
 
     data.dump.meta.tic80 = function()
-        return '-- title:  '..meta.title..'\n-- author: '..meta.author
-            ..'\n-- desc:   '..meta.description..'\n-- ver:    '..meta.version..'\n-- script: lua'
+        return '-'..'- title:  '..meta.title..'\n-'..'- author: '..meta.author
+            ..'\n-'..'- desc:   '..meta.description..'\n-'..'- ver:    '..meta.version..'\n-'..'- script: lua'
     end
 
     if game.args and not args then
