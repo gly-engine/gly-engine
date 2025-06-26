@@ -1,9 +1,9 @@
 local loadcore = require('source/shared/engine/loadcore')
 local loadgame = require('source/shared/engine/loadgame')
 --
-local core_draw = require('ee/engine/core/ginga/draw')
-local core_text = require('ee/engine/core/ginga/text')
-local core_keys = require('ee/engine/core/ginga/keys')
+local core_draw = require('ee/engine/core/bind/ginga/draw')
+local core_text = require('ee/engine/core/bind/ginga/text')
+local core_keys = require('ee/engine/core/bind/ginga/keys')
 --
 local engine_encoder = require('source/engine/api/data/encoder')
 local engine_game = require('source/engine/api/system/app')

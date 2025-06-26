@@ -40,43 +40,43 @@ local function build(args)
         --
         :add_core('none')
         --
-        :add_core('lite', {src='source/engine/core/lite/main.lua'})
+        :add_core('lite', {src='source/engine/core/vacuum/lite/main.lua'})
         --
-        :add_core('micro', {src='source/engine/core/micro/main.lua'})
+        :add_core('micro', {src='source/engine/core/vacuum/micro/main.lua'})
         --
-        :add_core('native', {src='source/engine/core/native/main.lua'})
+        :add_core('native', {src='source/engine/core/vacuum/native/main.lua'})
         --
-        :add_core('love', {src='source/engine/core/love/main.lua'})
+        :add_core('love', {src='source/engine/core/bind/love/main.lua'})
         :add_step('love '..args.outdir, {when=args.run})
         --
-        :add_core('ginga', {src='ee/engine/core/ginga/main.lua'})
+        :add_core('ginga', {src='ee/engine/core/bind/ginga/main.lua'})
         :add_meta('ee/engine/meta/ginga/ncl.mustache', {as='main.ncl'})
         :add_step('ginga dist/main.ncl '..var.run.flag.screen_ginga(), {when=args.run})
         --
-        :add_core('html5', {src='source/engine/core/native/main.lua', force_bundler=true})
+        :add_core('html5', {src='source/engine/core/vacuum/native/main.lua', force_bundler=true})
         :add_file('assets/icon80x80.png')
         :add_meta('source/engine/meta/html5/index.mustache', {as='index.html'})
         --
-        :add_core('html5_lite', {src='source/engine/core/lite/main.lua', force_bundler=true})
+        :add_core('html5_lite', {src='source/engine/core/vacuum/lite/main.lua', force_bundler=true})
         :add_file('assets/icon80x80.png')
         :add_meta('source/engine/meta/html5/index.mustache', {as='index.html'})
         --
-        :add_core('html5_micro', {src='source/engine/core/micro/main.lua', force_bundler=true})
+        :add_core('html5_micro', {src='source/engine/core/vacuum/micro/main.lua', force_bundler=true})
         :add_file('assets/icon80x80.png')
         :add_meta('source/engine/meta/html5/index.mustache', {as='index.html'})
         --
-        :add_core('html5_ginga', {src='source/engine/core/native/main.lua', force_bundler=true})
+        :add_core('html5_ginga', {src='source/engine/core/vacuum/native/main.lua', force_bundler=true})
         :add_file('assets/icon80x80.png')
         :add_meta('source/engine/meta/html5/index.mustache', {as='index.html'})
         --
-        :add_core('html5_tizen', {src='source/engine/core/native/main.lua', force_bundler=true})
+        :add_core('html5_tizen', {src='source/engine/core/vacuum/native/main.lua', force_bundler=true})
         :add_file('assets/icon80x80.png')
         :add_meta('source/engine/meta/html5/index.mustache', {as='index.html'})
         :add_meta('source/engine/meta/tizen/config.xml')
         :add_meta('source/engine/meta/tizen/.tproject')
         :add_step('cd '..args.outdir..';~/tizen-studio/tools/ide/bin/tizen.sh package -t wgt;true')
         --
-        :add_core('html5_webos', {src='source/engine/core/native/main.lua', force_bundler=true})
+        :add_core('html5_webos', {src='source/engine/core/vacuum/native/main.lua', force_bundler=true})
         :add_file('assets/icon80x80.png')
         :add_meta('source/engine/meta/html5/index.mustache', {as='index.html'})
         :add_meta('source/engine/meta/webos/appinfo.json')
