@@ -9,6 +9,14 @@ local function http_handler(self)
     local headers = self.header_dict or {}
     local body = self.body_content
 
+    if not headers['Accept-Encoding'] then 
+        headers['Accept-Encoding'] = 'deflate, gzip'
+    end
+
+    if body then
+        headers["Content-Length"] = #body
+    end
+
     local threadCode = [[
         local url, method, headers, body, channel = ...
         local meow = require
@@ -22,13 +30,11 @@ local function http_handler(self)
             source = body and ltn12.source.string(body) or nil,
             sink = ltn12.sink.table(response)
         }
-        if body and headers then
-            headers["content-length"] = #body
-        end
-        local ok, status, headers_resp = http.request(req)
+        local ok, status, h = http.request(req)
         love.thread.getChannel(channel.."ok"):push(ok)
         love.thread.getChannel(channel.."status"):push(status)
         love.thread.getChannel(channel.."body"):push(table.concat(response))
+        love.thread.getChannel(channel.."zip"):push(h and h["content-encoding"] or "")
     ]]
 
     self.promise()
@@ -38,14 +44,25 @@ local function http_handler(self)
 end
 
 local function http_callback(self)
+    local reason = nil
     local channel = tostring(self)
     local ok = love.thread.getChannel(channel.."ok"):pop()
     if ok ~= nil then
         local status = love.thread.getChannel(channel.."status"):pop()
         local body = love.thread.getChannel(channel.."body"):pop() or ''
+        local zip = love.thread.getChannel(channel.."zip"):pop()
+
+        if zip and #zip > 0 then
+            if not pcall(function()
+                body = love.data.decompress('string', zip == 'gzip' and 'gzip' or 'zlib', body)
+            end) then
+                ok, reason = false, 'Failed unzip'
+            end
+        end
+
         if not ok then
             self.set('ok', false)
-            self.set('error', 'Request failed')
+            self.set('error', reason or 'Request failed')
         else
             self.set('ok', str_status.is_ok(status))
             self.set('body', body)
