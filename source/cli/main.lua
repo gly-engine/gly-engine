@@ -31,6 +31,13 @@ local command = cli.argparse(arg)
     .add_option_has('bundler')
     .add_option_has('run')
     --
+    .add_subcommand('build-bin', commands_halt)
+    .add_next_value('src', {required=true, alias='@samples/{{src}}/game.lua'})
+    .add_option_get('cwd', {hidden=true})
+    .add_option_get('target', {required=true})
+    .add_option_get('engine', {alias='@source/engine/core/vacuum/{{engine}}/main.lua', default='source/engine/core/vacuum/native/main.lua', hidden=true})
+    .add_option_get('outdir', {default='./dist/'})
+    --
     .add_subcommand('build-html', commands_halt)
     .add_next_value('src', {alias='@samples/{{src}}/game.lua'})
     .add_option_get('cwd', {hidden=true})

@@ -127,7 +127,7 @@ local function try_tic80(infile, parser)
         for l in h:lines() do
             if done then return next(m) and {meta = m} or {} end
             local k, v = l:match("%-%-%s*(%w+)%s*:%s*(.*)")
-            if k and (k == 'title' or k == 'author' or k == 'desc' or k == 'version') then
+            if k and (k == 'title' or k == 'author' or k == 'desc' or k == 'version' or k == 'ver') then
                 m[k] = v
             elseif next(m) and not l:match("%-%-") then
                 done = true
@@ -193,6 +193,11 @@ local function metadata(infile, args, optional)
         }
     }
 
+    data.dump.meta.tic80 = function()
+        return '-- title:  '..meta.title..'\n-- author: '..meta.author
+            ..'\n-- desc:   '..meta.description..'\n-- ver:    '..meta.version..'\n-- script: lua'
+    end
+
     if game.args and not args then
         args = game.args
     end
@@ -213,7 +218,8 @@ end
 local P = {
     vars = vars,
     render = render,
-    metadata = metadata
+    metadata = metadata,
+    lazy_metada = function(a, b, c) return function() return metadata(a, b, c) end end
 }
 
 return P
