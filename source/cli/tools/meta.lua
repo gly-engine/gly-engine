@@ -140,6 +140,24 @@ local function try_tic80(infile, parser)
     return ok and next(data or {}) ~= nil and data
 end
 
+local function try_love(infile)
+    local ok, data = pcall(function ()
+        _G.love = {}
+        local love_content = io.open(infile, 'rb'):read('*a')
+        local love_start = love_content:find("PK\003\004", 1, true)
+        local love_data = love_content:sub(love_start)
+        local love_conf = zlib.unzip(love_data, 'conf.lua')
+        local love_meta = {window={},audio={},modules={},screen={}}
+        eval_code.script(love_conf)
+        if _G.love.conf then
+            _G.love.conf(love_meta)
+        end
+        _G.love = nil
+        return love_meta
+    end)
+    return ok and data
+end
+
 local function vars(args)
     return {
         build = {
@@ -161,6 +179,7 @@ local function metadata(infile, args, optional)
         or try_decode(infile, json)
         or try_decode(infile, env)
         or try_tic80(infile)
+        or try_love(infile)
     ) or (optional and {})
 
     if not game then 
