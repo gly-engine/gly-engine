@@ -109,19 +109,22 @@ function native_callback_init(width, height, game_lua)
     end
 
     engine.root=application
+    color.install(std, engine)
     engine_raw_memory.install(std, engine)
     engine_game.install(std, engine, cfg_system)
     engine_key.install(std, engine, {})
-    engine_math.install(std, engine)
-    engine_math.wave.install(std, engine)
-    engine_math.clib.install(std, engine)
-    engine_math.clib_random.install(std, engine)
     engine_array.install(std, engine, nil, 'array')
     engine_api_draw_text.install(std, engine, cfg_text)
     engine_api_draw_poly.install(std, engine, cfg_poly)
-    color.install(std, engine)
+    engine_math.install(std, engine)
+    if math then
+        engine_math.clib.install(std, engine)
+        engine_math.clib_random.install(std, engine)
+    end
 
-    std.app.title(application.meta.title..' - '..application.meta.version)
+    if application.meta and application.meta.title then
+        std.app.title(application.meta.title..' - '..(application.meta.version or ''))
+    end
     engine.current=application
     application.callbacks.init(std, application.data)
 end

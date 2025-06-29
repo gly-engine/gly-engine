@@ -1,5 +1,6 @@
 local buildsystem = require('source/cli/tools/buildsystem')
 local cartbridge = require('source/cli/tools/cartridge')
+local packager = require('source/cli/hazard/package')
 local cli_meta = require('source/cli/tools/meta')
 local cli_fs = require('source/cli/tools/fs')
 local str_fs = require('source/shared/string/schema/fs')
@@ -20,9 +21,13 @@ local function build(args)
         :add_core('engine', {src=args.engine, as='engine.lua', assets=true})
 
     local build_core = buildsystem.from(args)
+        :add_core('pico8', {src='source/engine/core/wrappers/pico8/main.lua', force_bundler=true})
+        :add_func(packager.builder_mock(args.outdir..'engine.lua', 'source/engine/core/wrappers/pico8/z8_color.lua', 'source_engine_api_system_color'))
+        :add_func(cartbridge.builder_pico8(lazy_meta, args.outdir))
+        --
         :add_core('tic80', {src='source/engine/core/wrappers/tic80/main.lua', force_bundler=true})
         :add_func(cartbridge.builder_tic80(lazy_meta, args.outdir))
-        ---
+        --
         :add_common_func(cli_fs.lazy_del(args.outdir..'main.lua'))
         :add_common_func(cli_fs.lazy_del(args.outdir..'game.lua'))
         :add_common_func(cli_fs.lazy_del(args.outdir..'engine.lua'))

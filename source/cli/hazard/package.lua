@@ -40,7 +40,8 @@ local function module_mock(src_in, mock_in, module_name)
 end
 
 local P = {
-    mock = module_mock
+    mock = module_mock,
+    builder_mock = function(a, b, c) return function() return module_mock(a, b, c) end end
 }
 
 return P
