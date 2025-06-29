@@ -1,6 +1,6 @@
 local test = require('tests/framework/microtest')
 local math = require('math')
-local engine_math = require('source/engine/api/system/math')
+local engine_math = require('source/engine/api/math/basic')
 local std = {}
 engine_math.install(std)
 local zeebo_math = std.math
@@ -64,18 +64,6 @@ function test_max()
     assert(zeebo_math.max(10, -5, 3, 0) == 10)
     assert(zeebo_math.max(-1, -2, -3) == -1)
     assert(zeebo_math.max({1, 2, 3, 4, 5}) == 5)
-end
-
-function test_install_math_clib()
-    local std = {}
-    engine_math.clib.install(std)
-    assert(type(std.math.sin) == "function")
-end
-
-function test_install_math_clib_random()
-    local std = {}
-    engine_math.clib_random.install(std)
-    assert(type(std.math.random) == "function")
 end
 
 test.unit(_G)

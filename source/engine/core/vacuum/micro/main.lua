@@ -2,7 +2,9 @@ local version=require('source/version')
 --
 local engine_game=require('source/engine/api/system/app')
 local engine_key=require('source/engine/api/system/key')
-local engine_math=require('source/engine/api/system/math')
+local engine_math=require('source/engine/api/math/basic')
+local engine_math_clib=require('source/engine/api/math/clib')
+local engine_math_random=require('source/engine/api/math/random')
 local engine_array=require('source/engine/api/data/array')
 local engine_api_draw_text=require('source/engine/api/draw/text')
 local engine_api_draw_poly=require('source/engine/api/draw/poly')
@@ -117,11 +119,8 @@ function native_callback_init(width, height, game_lua)
     engine_api_draw_text.install(std, engine, cfg_text)
     engine_api_draw_poly.install(std, engine, cfg_poly)
     engine_math.install(std, engine)
-    if math then
-        engine_math.clib.install(std, engine)
-        engine_math.clib_random.install(std, engine)
-    end
-
+    if math or flr then engine_math_clib.install(std, engine) end
+    if math then engine_math_random.install(std, engine) end
     if application.meta and application.meta.title then
         std.app.title(application.meta.title..' - '..(application.meta.version or ''))
     end

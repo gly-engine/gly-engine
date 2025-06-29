@@ -22,6 +22,7 @@ local function build(args)
 
     local build_core = buildsystem.from(args)
         :add_core('pico8', {src='source/engine/core/wrappers/pico8/main.lua', force_bundler=true})
+        :add_func(packager.builder_mock(args.outdir..'engine.lua', 'source/engine/core/wrappers/pico8/z8_math.lua', 'source_engine_api_math_clib'))
         :add_func(packager.builder_mock(args.outdir..'engine.lua', 'source/engine/core/wrappers/pico8/z8_color.lua', 'source_engine_api_system_color'))
         :add_func(cartbridge.builder_pico8(lazy_meta, args.outdir))
         --

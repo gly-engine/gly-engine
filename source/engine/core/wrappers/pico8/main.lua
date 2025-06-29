@@ -58,6 +58,8 @@ function native_text_print(x, y, t)
     print(tostring(t), x, y, current_color)
 end
 
+native_cfg_poly_repeat_0 = true
+native_cfg_poly_repeat_1 = true
 pico8engine = pico8engine()
 pico8game = pico8game()
 
