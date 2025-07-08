@@ -36,7 +36,8 @@ local screens = {
     {left=0, top=0, width=1280, height=720},
     {left=0, top=0, width=1024, height=576},
     {left=127, top=0, width=1024, height=576},
-    {left=127, top=72, width=1024, height=576}
+    {left=127, top=72, width=1024, height=576},
+    {left=20, top=482, width=388, height=218},
 }
 
 local P = {
