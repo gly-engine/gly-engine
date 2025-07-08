@@ -62,3 +62,4 @@ npm install @gamely/gly-cli
 | Tier 12 | Nintendo GBA             | support, except images
 | Tier 13 | TIC-80 fantasy console   | support, except images
 | Tier 14 | Play Station 1           | support, very limited
+| Tier 15 | PICO-8 fantasy console   | support, very limited
