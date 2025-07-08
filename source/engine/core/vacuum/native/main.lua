@@ -21,9 +21,9 @@ local engine_raw_node = require('source/engine/api/raw/node')
 local engine_color = require('source/engine/api/system/color')
 local engine_game = require('source/engine/api/system/app')
 local engine_key = require('source/engine/api/system/key')
-local engine_math=require('source/engine/api/math/basic')
-local engine_math_clib=require('source/engine/api/math/clib')
-local engine_math_random=require('source/engine/api/math/random')
+local engine_math = require('source/engine/api/math/basic')
+local engine_math_clib = require('source/engine/api/math/clib')
+local engine_math_random = require('source/engine/api/math/random')
 --
 local callback_http = require('source/engine/protocol/http_callback')
 --

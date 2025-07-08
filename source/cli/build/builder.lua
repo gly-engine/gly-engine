@@ -43,7 +43,7 @@ local function move(src_filename, out_filename, options, args)
     local cwd = str_fs.path(options.cwd).get_fullfilepath()
     local src_file = io.open(cwd..src_filename, 'r')
     local out_file = src_file and io.open(out_filename, 'w')
-    local pattern_require = 'local ([%w_%-]+) = require%([\'"]([%w%._/-]+)[\'"]%)'
+    local pattern_require = 'local ([%w_%-]+)%s*=%s*require%([\'"]([%w%._/-]+)[\'"]%)'
     local pattern_gameload = 'std%.node%.load%([\'"](.-)[\'"]%)'
     local pattern_comment = '%-%-'
 
