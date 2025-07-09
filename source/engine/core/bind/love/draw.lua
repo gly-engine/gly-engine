@@ -64,12 +64,6 @@ local function install(std, engine)
     std.draw.color = util_decorator.prefix2(std, engine, color)
     std.draw.rect = util_decorator.prefix2(std, engine, rect)
     std.draw.line = util_decorator.prefix2(std, engine, line)
-    std.bus.listen('resize', function(w, h)
-        engine.root.data.width = w
-        engine.root.data.height = h
-        std.app.width = w
-        std.app.height = h
-    end)
 end
 
 local P = {

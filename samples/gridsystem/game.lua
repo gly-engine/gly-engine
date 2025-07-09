@@ -49,7 +49,6 @@ function App.load(std, data)
         )
         :add(TestTv, 3)
         :add(ClimaTV)
-        :apply()
 end
 
 return App
