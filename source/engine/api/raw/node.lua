@@ -1,11 +1,6 @@
+local three = require('source/shared/engine/three')
 local loadgame = require('source/shared/engine/loadgame')
 local node_default = require('source/shared/var/object/node')
-
-local buses = {
-    list = {},
-    inverse_list = {},
-    pause = {},
-}
 
 --! @defgroup std
 --! @{
@@ -82,11 +77,6 @@ local buses = {
 --! @li @b std.node.emit_root send event to first node.
 --! @li @b std.node.emit_parent send event to the node that registered current.
 local function emit(std, application, key, a, b, c, d, e, f)
-    local callback = application.callbacks[key]
-    if not buses.pause[key..tostring(application)] and callback then
-        return callback(std, application.data, a, b, c, d, e, f)
-    end
-    return nil
 end
 
 --! @short create new node
@@ -112,17 +102,7 @@ end
 --! std.node.spawn(game)
 --! @endcode
 local function spawn(engine, application)
-    if not application or buses.inverse_list[application] then return application end
-    local depth = 1
-    local index = #buses.list + 1
-    buses.list[index] = application
-    buses.inverse_list[application] = index
-    if engine.current then
-        application.config.parent = engine.current
-        depth = (engine.current.config.depth or 0) + 1
-    end
-    application.config.depth = depth
-    return application
+    return three.node_add(engine.dom, application, {parent=engine.current})
 end
 
 --! @short unregister node from event bus
@@ -133,18 +113,7 @@ end
 --! end
 --! @endcode
 local function kill(application)
-    local index = application and buses.inverse_list[application]
-    local last_item = #buses.list
-
-    while index and index <= last_item do
-        buses.list[index] = buses.list[index + 1]
-        index = index + 1
-    end
-    
-    if application then
-        buses.inverse_list[application] = nil
-        application.config.parent = nil
-    end
+    three.node_del(engine.dom, application)
 end
 
 --! @short disable node callback
@@ -156,7 +125,7 @@ end
 --! end
 --! @endcode
 local function pause(application, key)
-    buses.pause[key..tostring(application)] = true
+    three.node_pause(engine.dom, application, key)
 end
 
 --! @short enable node callback
@@ -168,62 +137,10 @@ end
 --! end
 --! @endcode
 local function resume(application, key)
-    buses.pause[key..tostring(application)] = false
+    three.node_resume(engine.dom, application, key)
 end
 --! @}
 --! @}
-
-local function clear_bus()
-    local index = 1
-    while index <= #buses.list do
-        local application = buses.list[index]
-        buses.inverse_list[application] = nil
-        application.config.parent = nil
-        buses.list[index] = nil
-        index = index + 1
-    end
-end
-
-local function event_bus(std, engine, key, a, b, c, d, e, f)
-    local index = 1
-    local count = 0
-    local depth = 0
-
-    repeat
-        index = 1
-        count = 0
-        depth = depth + 1
-        while index <= #buses.list do
-            local application = buses.list[index]
-            if application.config.depth == depth then
-                count = count + 1
-                if engine.current ~= application then
-                    local node = application
-                    local safe_depth = 0
-                    engine.current = application
-                    engine.offset_x = 0
-                    engine.offset_y = 0
-                    while node and safe_depth < 100 do
-                        if safe_depth > 50 then
-                            error('fatal error parent three')
-                        end
-                        engine.offset_x = engine.offset_x + node.config.offset_x
-                        engine.offset_y = engine.offset_y + node.config.offset_y
-                        node = node.config.parent
-                        safe_depth = safe_depth + 1
-                    end
-                end
-        
-                local ret = emit(std, application, key, a, b, c, d, e, f)
-                
-                if ret ~= nil then
-                    engine.bus_emit_ret(key, ret)
-                end
-            end
-            index = index + 1
-        end
-    until count == 0
-end
 
 local function install(std, engine)
     std.node = std.node or {}
@@ -233,27 +150,24 @@ local function install(std, engine)
     std.node.resume = resume
     std.node.load = load
 
-    std.bus.listen('clear_all', clear_bus)
-
     std.node.spawn = function (application)
         spawn(engine, application)
     end
-
-    std.bus.listen_all(function(key, a, b, c, d, e, f)
-        event_bus(std, engine, key, a, b, c, d, e, f)
-    end)
 
     std.node.emit = function(application, key, a, b, c, d, e, f)
         return emit(std, application, key, a, b, c, e, f)
     end
 
-    std.node.emit_root = function(key, a, b, c, d, e, f)
-        return emit(std, engine.root, key, a, b, c, e, f)
-    end
-
-    std.node.emit_parent = function(key, a, b, c, d, e, f)
-        return emit(std, engine.current.config.parent, key, a, b, c, e, f)
-    end
+    std.bus.listen_all(function(key, a, b, c, d, e, f)
+        three.bus(engine.dom, function(node)
+            engine.current = node
+            engine.offset_x = node.config.offset_x
+            engine.offset_y = node.config.offset_y
+            if node.callbacks[key] then
+                node.callbacks[key](std, node.data, a, b, c, d, e, f)
+            end
+        end)
+    end)
 end
 
 local P = {
