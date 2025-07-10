@@ -1,10 +1,23 @@
+local function cells(node)
+    local cfg = node.config
+    local dat = node.data
+
+    if cfg.type == 'grid' then
+        local cols, rows = cfg.cols, cfg.rows
+        local w = dat.width / rows
+        local h = dat.height / cols
+        return w, h
+    end
+    return dat.width, dat.height
+end
+
 local function node_begin(node, width, height)
     local self = {}
     self.width = width
     self.height = height
     self.root = node
     self.node_list = { node }
-    self.flag_reorder = false
+    self.flag_reparent = false
     self.flag_reposition = true
     node.config.type = 'root'
     return self
@@ -12,12 +25,19 @@ end
 
 local function node_add(self, node, options)
     local parent = options.parent
+    local dat = node.data
     local cfg = node.config
+    if not parent.childs then
+        parent.childs = {}
+    end
     if not cfg.parent then
         self.node_list[#self.node_list + 1] = node
     end
+    dat.width, dat.height = cells(parent)
     cfg.parent = parent
     cfg.size = options.size or 1
+    parent.childs[#parent.childs + 1] = node
+    self.flag_reparent = true
     self.flag_reposition = true
 end
 
@@ -45,7 +65,6 @@ local function rebuild_tree_from_parents(self)
             parent.childs[#parent.childs + 1] = node
         end
     end
-    self.flag_reposition = false
 end
 
 local function dom(node, parent_x, parent_y, parent_w, parent_h)
@@ -57,13 +76,11 @@ local function dom(node, parent_x, parent_y, parent_w, parent_h)
     dat.width = parent_w
     dat.height = parent_h
 
-
     if cfg.type == "grid" then
         local cols, rows, dir = cfg.cols, cfg.rows, cfg.dir
-        local cell_w = math.floor(dat.width / rows)
-        local cell_h = math.floor(dat.height / cols)
-
+        local cell_w, cell_h = cells(node)
         local x, y = 0, 0
+
         for _, child in ipairs(node.childs) do
             local size = child.config.size or 1
             local cx, cy = parent_x + x * cell_w, parent_y + y * cell_h
@@ -80,7 +97,7 @@ local function dom(node, parent_x, parent_y, parent_w, parent_h)
                 if x >= rows then x, y = 0, y + 1 end
             end
         end
-    else 
+    elseif node.childs then
         for _, child in ipairs(node.childs) do
             dom(child, parent_x, parent_y, parent_w, parent_h)
         end
@@ -88,9 +105,13 @@ local function dom(node, parent_x, parent_y, parent_w, parent_h)
 end
 
 local function bus(self, handler_func)
-    if self.flag_reposition then
+    if self.flag_reparent then
         rebuild_tree_from_parents(self)
+        self.flag_reparent = false
+    end
+    if self.flag_reposition then
         dom(self.root, 0, 0, self.width, self.height)
+        self.flag_reposition = false
     end
     do
         local index = 1

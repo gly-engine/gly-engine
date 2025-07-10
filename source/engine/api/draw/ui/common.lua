@@ -37,7 +37,7 @@ end
 --! @param [in] id item index
 --! @return node
 local function get_item(self, id)
-    return self.items_node[id]
+    return self.node.childs[id]
 end
 
 --! @hideparam classkey

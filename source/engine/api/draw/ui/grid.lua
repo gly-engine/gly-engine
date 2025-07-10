@@ -144,6 +144,9 @@ local function component(std, engine, layout)
 
     local self = {
         node=node,
+        apply=function(s) return s end,
+        gap=function(s) return s end,
+        margin=function(s) return s end,
         dir=util_decorator.prefix2(std, engine, dir),
         add=util_decorator.prefix2(std, engine, ui_common.add),
         add_items=util_decorator.prefix2(std, engine, ui_common.add_items),
