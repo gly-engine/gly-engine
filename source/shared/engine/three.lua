@@ -11,6 +11,15 @@ local function cells(node)
     return dat.width, dat.height
 end
 
+local function walk(node, fn)
+    fn(node)
+    if node.childs then
+        for _, child in ipairs(node.childs) do
+            node_walk(child, fn)
+        end
+    end
+end
+
 local function node_begin(node, width, height)
     local self = {}
     self.width = width
@@ -34,6 +43,8 @@ local function node_add(self, node, options)
         self.node_list[#self.node_list + 1] = node
     end
     dat.width, dat.height = cells(parent)
+    cfg.pause_key = {}
+    cfg.pause_all = false
     cfg.parent = parent
     cfg.size = options.size or 1
     parent.childs[#parent.childs + 1] = node
@@ -41,12 +52,28 @@ local function node_add(self, node, options)
     self.flag_reposition = true
 end
 
-local function node_pause(self, node, key)
+local function node_del(self, node)
+end
 
+local function node_pause(self, node, key)
+    walk(node, function()
+        if key then
+            node.config.pause_key[key] = true
+        else
+            node.config.pause_all = true
+        end
+    end)
 end
 
 local function node_resume(self, node, key)
-
+    walk(node, function()
+        if key then
+            node.config.pause_key[key] = false
+        else
+            node.config.pause_key = {}
+            node.config.pause_all = false
+        end
+    end)
 end
 
 local function resize(self, width, height)
@@ -104,7 +131,7 @@ local function dom(node, parent_x, parent_y, parent_w, parent_h)
     end
 end
 
-local function bus(self, handler_func)
+local function bus(self, key, handler_func)
     if self.flag_reparent then
         rebuild_tree_from_parents(self)
         self.flag_reparent = false
@@ -117,7 +144,9 @@ local function bus(self, handler_func)
         local index = 1
         while index <= #self.node_list do
             local node = self.node_list[index]
-            handler_func(node)
+            if index == 1 or (not node.config.pause_key[key] and not node.config.pause_all) then
+                handler_func(node)
+            end
             index = index + 1
         end
     end
@@ -126,6 +155,9 @@ end
 local P = {
     node_begin = node_begin,
     node_add = node_add,
+    node_del = node_del,
+    node_resume = node_resume,
+    node_pause = node_pause,
     resize = resize,
     bus = bus
 }

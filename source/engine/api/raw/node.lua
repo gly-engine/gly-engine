@@ -1,6 +1,7 @@
 local three = require('source/shared/engine/three')
 local loadgame = require('source/shared/engine/loadgame')
 local node_default = require('source/shared/var/object/node')
+local util_decorator = require('source/shared/functional/decorator')
 
 --! @defgroup std
 --! @{
@@ -93,7 +94,6 @@ local function load(application)
 end
 
 --! @short register node to event bus
---! @hideparam std
 --! @hideparam engine
 --! @param [in/out] application
 --! @par Example
@@ -106,17 +106,19 @@ local function spawn(engine, application)
 end
 
 --! @short unregister node from event bus
+--! @hideparam engine
 --! @par Example
 --! @code{.java}
 --! if std.milis > minigame_limit_time then
 --!    std.node.kill(minigame)
 --! end
 --! @endcode
-local function kill(application)
+local function kill(engine, application)
     three.node_del(engine.dom, application)
 end
 
 --! @short disable node callback
+--! @hideparam engine
 --! @brief stop receive specific event int the application
 --! @par Example
 --! @code{.java}
@@ -124,11 +126,12 @@ end
 --!     std.node.pause(minigame, 'loop')
 --! end
 --! @endcode
-local function pause(application, key)
+local function pause(engine, application, key)
     three.node_pause(engine.dom, application, key)
 end
 
 --! @short enable node callback
+--! @hideparam engine
 --! @brief return to receiving specific event in the application
 --! @par Example
 --! @code{.java}
@@ -136,7 +139,7 @@ end
 --!     std.node.resume(minigame, 'loop')
 --! end
 --! @endcode
-local function resume(application, key)
+local function resume(engine, application, key)
     three.node_resume(engine.dom, application, key)
 end
 --! @}
@@ -145,9 +148,9 @@ end
 local function install(std, engine)
     std.node = std.node or {}
 
-    std.node.kill = kill
-    std.node.pause = pause
-    std.node.resume = resume
+    std.node.kill = util_decorator.prefix1(engine, kill)
+    std.node.pause = util_decorator.prefix1(engine, pause)
+    std.node.resume = util_decorator.prefix1(engine, resume)
     std.node.load = load
 
     std.node.spawn = function (application)
@@ -159,7 +162,7 @@ local function install(std, engine)
     end
 
     std.bus.listen_all(function(key, a, b, c, d, e, f)
-        three.bus(engine.dom, function(node)
+        three.bus(engine.dom, key, function(node)
             engine.current = node
             engine.offset_x = node.config.offset_x
             engine.offset_y = node.config.offset_y
