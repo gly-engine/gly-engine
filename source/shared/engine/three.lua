@@ -15,7 +15,7 @@ local function walk(node, fn)
     fn(node)
     if node.childs then
         for _, child in ipairs(node.childs) do
-            node_walk(child, fn)
+            walk(child, fn)
         end
     end
 end
