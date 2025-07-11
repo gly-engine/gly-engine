@@ -28,6 +28,7 @@ local function node_begin(node, width, height)
     self.node_list = { node }
     self.flag_reparent = false
     self.flag_reposition = true
+    self.flag_to_delete = {}
     node.config.type = 'root'
     return self
 end
@@ -48,15 +49,22 @@ local function node_add(self, node, options)
     cfg.parent = parent
     cfg.size = options.size or 1
     parent.childs[#parent.childs + 1] = node
+    self.flag_relist = false
     self.flag_reparent = true
     self.flag_reposition = true
 end
 
-local function node_del(self, node)
+local function node_del(self, node_root)
+    walk(node_root, function(node)
+        node.config.parent = nil
+    end)
+    self.flag_relist = true
+    self.flag_reparent = true
+    self.flag_reposition = true
 end
 
-local function node_pause(self, node, key)
-    walk(node, function()
+local function node_pause(self, node_root, key)
+    walk(node_root, function(node)
         if key then
             node.config.pause_key[key] = true
         else
@@ -65,8 +73,8 @@ local function node_pause(self, node, key)
     end)
 end
 
-local function node_resume(self, node, key)
-    walk(node, function()
+local function node_resume(self, node_root, key)
+    walk(node_root, function(node)
         if key then
             node.config.pause_key[key] = false
         else
@@ -82,15 +90,32 @@ local function resize(self, width, height)
     self.flag_reposition = true
 end
 
-local function rebuild_tree_from_parents(self)
-    for _, node in ipairs(self.node_list) do
-        node.childs = {}
+local function rebuild_list(self)
+    local index, new_node_list = 2, { self.root }
+    while index <= #self.node_list do
+        if self.node_list[index].config.parent then
+            new_node_list[#new_node_list + 1] = self.node_list[index]
+        end
+        index = index + 1
     end
-    for _, node in ipairs(self.node_list) do
+    self.node_list = new_node_list
+end
+
+local function rebuild_tree_from_parents(self)
+    local index = 1
+    while index <= #self.node_list do
+        local node = self.node_list[index]
+        node.childs = {}
+        index = index + 1
+    end
+    index = 1
+    while index <= #self.node_list do
+        local node = self.node_list[index]
         local parent = node.config.parent
         if parent then
             parent.childs[#parent.childs + 1] = node
         end
+        index = index + 1
     end
 end
 
@@ -132,6 +157,10 @@ local function dom(node, parent_x, parent_y, parent_w, parent_h)
 end
 
 local function bus(self, key, handler_func)
+    if self.flag_relist then
+        rebuild_list(self)
+        self.flag_relist = false
+    end
     if self.flag_reparent then
         rebuild_tree_from_parents(self)
         self.flag_reparent = false

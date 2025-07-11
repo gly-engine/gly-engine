@@ -56,7 +56,6 @@ end
 local function quit(std, data)
     std.bus.abort()
     std.node.kill(data._game)
-    data._msg = 'loading angain...'
     data._game = nil
 end
 
