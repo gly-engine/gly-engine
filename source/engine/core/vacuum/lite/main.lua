@@ -123,10 +123,7 @@ function native_callback_keyboard(key, value)
 end
 
 function native_callback_http(id, key, data)
-    if cfg_http.has_callback then
-        return callback_http.func(engine['http_requests'][id], key, data)
-    end
-    return nil
+    return callback_http.func(engine['http'][id], key, data, std)
 end
 
 function native_callback_init(width, height, game_lua)

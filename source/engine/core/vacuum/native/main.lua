@@ -74,7 +74,6 @@ local cfg_http = {
     install = native_http_install,
     handler = native_http_handler,
     has_ssl = native_http_has_ssl,
-    has_callback = native_http_has_callback,
     force = native_http_force_protocol
 }
 
@@ -142,10 +141,7 @@ function native_callback_keyboard(key, value)
 end
 
 function native_callback_http(id, key, data)
-    if cfg_http.has_callback then
-        return callback_http.func(engine['http_requests'][id], key, data, std)
-    end
-    return nil
+    return callback_http.func(engine['http'][id], key, data, std)
 end
 
 function native_callback_init(width, height, game_lua)

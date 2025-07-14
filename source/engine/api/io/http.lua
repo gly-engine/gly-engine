@@ -167,18 +167,12 @@ local function request(method, std, engine, protocol)
     end
 
     return function (url)
-        if protocol.has_callback then
-            engine.http_count = engine.http_count + 1
-        end
-
         local json_encode = std.json and std.json.encode
         local json_decode = std.json and std.json.decode
         local http_body = function(self, content) return body(self, content, json_encode) end
         local game = engine.current.data
 
         local self = {
-            -- content
-            id = engine.http_count,
             url = url,
             speed = '',
             options = {},
@@ -219,12 +213,14 @@ local function request(method, std, engine, protocol)
         self.pipeline = {
             -- prepare
             function()
-                if not protocol.force or self.options['noforce'] then return end
-                self.url = url:gsub("^[^:]+://", protocol.force.."://")
+                self.id = tonumber(tostring({}):gsub('0x', ''):match('^table: (%w+)$'), 16)
+                engine.http[self.id] = self
+                if protocol.force and not self.options['noforce'] then
+                    self.url = url:gsub("^[^:]+://", protocol.force.."://")
+                end
             end,
             -- eval
             function()
-                if protocol.has_callback then engine.http_requests[self.id] = self end
                 protocol.handler(self, self.id)
             end,
             -- parse json
@@ -262,7 +258,7 @@ local function request(method, std, engine, protocol)
             end,
             -- reset request
             function()
-                if protocol.has_callback then engine.http_requests[self.id] = nil end
+                engine.http[self.id] = nil
                 zeebo_pipeline.reset(self)
             end
         }
@@ -275,11 +271,7 @@ end
 local function install(std, engine, protocol)
     assert(protocol and protocol.handler, 'missing protocol handler')
 
-    if protocol.has_callback then
-        engine.http_count = 0
-        engine.http_requests = {}
-    end
-
+    engine.http = {}
     std.http = std.http or {}
     std.http.get=request('GET', std, engine, protocol)
     std.http.head=request('HEAD', std, engine, protocol)
