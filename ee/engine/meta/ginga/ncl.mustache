@@ -42,6 +42,9 @@
       {{# var.build.ncl.screens }}
       <property name="screen_{{ left }}_{{ top }}_{{ width }}_{{ height }}"/>
       {{/ var.build.ncl.screens }}
+      {{# app.screens }}
+      <property name="screen_{{ left }}_{{ top }}_{{ width }}_{{ height }}"/>
+      {{/ app.screens  }}
       {{# var.build.ncl.settings }}
       <property name="{{ env }}"/>
       {{/ var.build.ncl.settings }}
@@ -72,6 +75,16 @@
       <bind role="resume" component="tv"/>
     </link>
     {{/ var.build.ncl.screens }}
+    {{# app.screens }}
+    <link xconnector="onEndAttributionSet">      
+      <bind component="application" interface="screen_{{ left }}_{{ top }}_{{ width }}_{{ height }}" role="onEndAttribution"/>
+      <bind role="pause" component="tv"/>
+      <bind component="tv" role="set" interface="bounds">
+        <bindParam name="valueSet" value="{{ left }}, {{ top }}, {{ width }}, {{ height }}"/> 
+      </bind>
+      <bind role="resume" component="tv"/>
+    </link>
+    {{/ app.screens }}
     {{# var.build.ncl.settings }}
     {{# ginga }}
     <link xconnector="onBeginSet">
