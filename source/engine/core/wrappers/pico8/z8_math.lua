@@ -1,4 +1,4 @@
-local PI = 3.14159
+local PI = 355/113
 
 local function z8_wrap_angle(fn, invert)
     return function(x)
