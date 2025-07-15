@@ -275,7 +275,7 @@ function infl.crc32(s,crc)
   end
   crc = b51.bnot(crc)
   if crc<0 then
-    -- in Lua < 5.2, sign extension was performed
+    -- in Lua < 52, sign extension was performed
     crc = crc + 4294967296
   end
   return crc
@@ -456,7 +456,7 @@ function zzlib.unzip(buf,arg1,arg2)
     -- mode 1: unpack data from specified position in zip file
     return inflate_raw(buf,arg1,arg2)
   end
-  -- mode 2: search and unpack file from zip file
+  -- mode 2: search and unpack file from zip file
   local filename = arg1
   for _,name,offset,size,packed,crc in zzlib.files(buf) do
     if name == filename then
