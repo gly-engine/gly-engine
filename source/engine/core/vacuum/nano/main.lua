@@ -34,6 +34,7 @@ local cfg_poly={
 }
 
 local cfg_text={
+    is_tui = native_text_is_tui,
     font_previous=native_text_font_previous
 }
 
