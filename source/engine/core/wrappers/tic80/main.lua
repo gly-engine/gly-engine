@@ -108,6 +108,7 @@ function native_text_font_name()
 end
 
 function native_text_font_size(n)
+    font_previous = font_size
     font_size = math.ceil(n/5)
     if font_size < 1 then
         font_size = 1
