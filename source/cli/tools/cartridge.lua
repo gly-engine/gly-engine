@@ -2,12 +2,11 @@ local b51 = require('source/bit51')
 local function tic80(metadata, workdir)
     local function writeChunk(file, bank, chunkType, data)
         local size = #data
-        local header = string.char(
-            b51.bor(b51.lshift(bank, 5), chunkType),  -- Byte 0: Bank + Type
-            size % 256,               -- Byte 1: Size LSB
-            math.floor(size / 256),   -- Byte 2: Size MSB
-            0x00                      -- Byte 3: Reserved
-        )
+        local byte_0 = b51.bor(b51.lshift(bank, 5), chunkType)
+        local byte_1 = size % 256
+        local byte_2 = math.floor(size / 256)
+        local byte_3 = 0
+        local header = string.char(byte_0, byte_1, byte_2, byte_3)
         file:write(header)
         file:write(data)
     end
@@ -58,7 +57,6 @@ local function pico8(metadata, workdir)
         return false, 'missing input or output file'
     end
 
-    local var = ''
     local metaCode = ''
     local engineCode = engineFile:read('*a') or ""
     local gameCode = gameFile:read('*a') or ""
