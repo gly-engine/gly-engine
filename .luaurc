@@ -12,6 +12,7 @@
     "canvas",
     "dofile",
     "event",
+    "flr",
     "io",
     "jit",
     "jsRequire",
