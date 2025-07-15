@@ -1,8 +1,9 @@
+local b51 = require('source/bit51')
 local function tic80(metadata, workdir)
     local function writeChunk(file, bank, chunkType, data)
         local size = #data
         local header = string.char(
-            (bank << 5) | chunkType,  -- Byte 0: Bank + Type
+            b51.bor(b51.lshift(bank, 5), chunkType),  -- Byte 0: Bank + Type
             size % 256,               -- Byte 1: Size LSB
             math.floor(size / 256),   -- Byte 2: Size MSB
             0x00                      -- Byte 3: Reserved
