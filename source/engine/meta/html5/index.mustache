@@ -39,9 +39,11 @@
         }
         canvas {
           position: absolute;
-          image-rendering: pixelated;
         }
     </style>
+    {{^ args.aa }}
+    <style>canvas { image-rendering: pixelated; }</style>
+    {{/}}
     {{# var.build.screen.has_flag }}
     <style>#gameCanvas { width: 100%; }</style>
     {{/ var.build.screen.has_flag }}
