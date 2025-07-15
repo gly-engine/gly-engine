@@ -28,7 +28,7 @@ local function tic80(metadata, workdir)
     engineCode = 'local tic80engine = function()\n' .. engineCode .. '\nend\n'
 
     if #engineCode >= 65536 then
-        return false, 'engine is too large! (prefer -'..'-engine @nano)'
+        return false, 'engine is too large! (prefer -'..'-engine @micro)'
     end
 
     if (#metaCode + #gameCode + #engineCode + #backendCode) > (65536 - 32) then
