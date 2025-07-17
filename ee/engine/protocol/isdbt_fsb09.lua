@@ -15,8 +15,8 @@ local function ccwss_resize(channel, width, height)
     ccwss_position(channel, x, y, width, height)
 end
 
-local function ccws_command()
-    return function(_cmd)
+local function ccws_command(_cmd)
+    return function()
         event.post('out', {
             class = 'ncl',
             type = 'edit',
