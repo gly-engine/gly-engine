@@ -39,32 +39,41 @@ local function normalize(app, base)
 end
 
 local function script(src, base)
+    if not src and package and package.jspath then
+        src = {}
+    end
+
     if type(src) == 'table' or type(src) == 'userdata' then
         return normalize(src, base)
     end
 
     local application = type(src) == 'function' and src
-    
-    if not src or #src == 0 then
-        src = 'game'
-    end
-
-    if not application and src and src:find('\n') then
-        local ok, app = eval_code.script(src)
-        application = ok and app
-    else
-        local ok, app = eval_file.script(src)
-        application = ok and app
-    end
-
-    if not application and has_io_open then
-        local app_file = io.open(src)
-        if app_file then
-            local app_src = app_file:read('*a')
-            local ok, app = eval_code.script(app_src)
-            application = ok and app
-            app_file:close()
+    if not application then
+        if type(application) ~= 'string' or #src == 0 then
+            src = 'game'
         end
+
+        if src:find('\n') then
+            local ok, app = eval_code.script(src)
+            application = ok and app
+        else
+            local ok, app = eval_file.script(src)
+            application = ok and app
+        end
+
+        if not application and has_io_open then
+            local app_file = io.open(src)
+            if app_file then
+                local app_src = app_file:read('*a')
+                local ok, app = eval_code.script(app_src)
+                application = ok and app
+                app_file:close()
+            end
+        end
+    end     
+
+    while type(application) == 'function' do
+        application = application()
     end
 
     return normalize(application, base)
