@@ -483,14 +483,15 @@ local function draw(std, game)
     end
     -- draw gui
     local w, h = std.text.mensure('a')
+    local t = (game.width < 400 and not std.text.is_tui()) and (h*2) or 2
     w = game.width/6
     std.draw.color(std.color.black)
     std.draw.rect(0, 0, 0, game.width, h)
     std.draw.color(std.color.white)
     std.text.print_ex(w*1, 2, 'lifes: '..tostring(game.lifes), 0)
-    std.text.print_ex(w*2, 2, 'level: '..tostring(game.level), 0)
+    std.text.print_ex(w*2, t, 'level: '..tostring(game.level), 0)
     std.text.print_ex(w*3, 2, 'asteroids: '..tostring(game.asteroids_count), 0)
-    std.text.print_ex(w*4, 2, 'score: '..tostring(game.score), 0)
+    std.text.print_ex(w*4, t, 'score: '..tostring(game.score), 0)
     std.text.print_ex(w*5, 2, 'highscore: '..tostring(game.highscore), 0)
 end
 

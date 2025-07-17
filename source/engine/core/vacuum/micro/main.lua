@@ -1,17 +1,19 @@
-local version=require('source/version')
+local version = require('source/version')
 --
-local engine_game=require('source/engine/api/system/app')
-local engine_key=require('source/engine/api/system/key')
-local engine_math=require('source/engine/api/system/math')
-local engine_array=require('source/engine/api/data/array')
-local engine_api_draw_text=require('source/engine/api/draw/text')
-local engine_api_draw_poly=require('source/engine/api/draw/poly')
-local engine_raw_memory=require('source/engine/api/raw/memory')
+local engine_game = require('source/engine/api/system/app')
+local engine_key = require('source/engine/api/system/key')
+local engine_math = require('source/engine/api/math/basic')
+local engine_math_clib = require('source/engine/api/math/clib')
+local engine_math_random = require('source/engine/api/math/random')
+local engine_array = require('source/engine/api/data/array')
+local engine_api_draw_text = require('source/engine/api/draw/text')
+local engine_api_draw_poly = require('source/engine/api/draw/poly')
+local engine_raw_memory = require('source/engine/api/raw/memory')
 --
-local color=require('source/engine/api/system/color')
-local std=require('source/shared/var/object/std')
+local color = require('source/engine/api/system/color')
+local std = require('source/shared/var/object/std')
 --
-local eval_code=require('source/shared/string/eval/code')
+local eval_code = require('source/shared/string/eval/code')
 --
 local f=function(a,b)end
 local engine={keyboard=f}
@@ -47,6 +49,7 @@ local cfg_poly={
 }
 
 local cfg_text={
+    is_tui = native_text_is_tui,
     font_previous=native_text_font_previous
 }
 
@@ -109,19 +112,19 @@ function native_callback_init(width, height, game_lua)
     end
 
     engine.root=application
+    color.install(std, engine)
     engine_raw_memory.install(std, engine)
     engine_game.install(std, engine, cfg_system)
     engine_key.install(std, engine, {})
-    engine_math.install(std, engine)
-    engine_math.wave.install(std, engine)
-    engine_math.clib.install(std, engine)
-    engine_math.clib_random.install(std, engine)
     engine_array.install(std, engine, nil, 'array')
     engine_api_draw_text.install(std, engine, cfg_text)
     engine_api_draw_poly.install(std, engine, cfg_poly)
-    color.install(std, engine)
-
-    std.app.title(application.meta.title..' - '..application.meta.version)
+    engine_math.install(std, engine)
+    if math or flr then engine_math_clib.install(std, engine) end
+    if math then engine_math_random.install(std, engine) end
+    if application.meta and application.meta.title then
+        std.app.title(application.meta.title..' - '..(application.meta.version or ''))
+    end
     engine.current=application
     application.callbacks.init(std, application.data)
 end

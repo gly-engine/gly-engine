@@ -2,6 +2,7 @@ local agent = require('source/agent')
 local version = require('source/version')
 local env = require('source/shared/string/parse/env')
 local base64 = require('source/shared/string/encode/base64')
+local zlib = require('source/third_party/zerkman_zlib')
 local json = require('source/third_party/rxi_json')
 local lustache = require('source/third_party/olivinelabs_lustache')
 local util_decorator = require('source/shared/functional/decorator')
@@ -127,7 +128,7 @@ local function try_tic80(infile, parser)
         for l in h:lines() do
             if done then return next(m) and {meta = m} or {} end
             local k, v = l:match("%-%-%s*(%w+)%s*:%s*(.*)")
-            if k and (k == 'title' or k == 'author' or k == 'desc' or k == 'version') then
+            if k and (k == 'title' or k == 'author' or k == 'desc' or k == 'version' or k == 'ver') then
                 m[k] = v
             elseif next(m) and not l:match("%-%-") then
                 done = true
@@ -137,6 +138,24 @@ local function try_tic80(infile, parser)
         return next(m) and {meta = m}
     end)
     return ok and next(data or {}) ~= nil and data
+end
+
+local function try_love(infile)
+    local ok, data = pcall(function ()
+        _G.love = {}
+        local love_content = io.open(infile, 'rb'):read('*a')
+        local love_start = love_content:find("PK\003\004", 1, true)
+        local love_data = love_content:sub(love_start)
+        local love_conf = zlib.unzip(love_data, 'conf.lua')
+        local love_meta = {window={},audio={},modules={},screen={}}
+        eval_code.script(love_conf)
+        if _G.love.conf then
+            _G.love.conf(love_meta)
+        end
+        _G.love = nil
+        return love_meta
+    end)
+    return ok and data
 end
 
 local function vars(args)
@@ -160,6 +179,7 @@ local function metadata(infile, args, optional)
         or try_decode(infile, json)
         or try_decode(infile, env)
         or try_tic80(infile)
+        or try_love(infile)
     ) or (optional and {})
 
     if not game then 
@@ -193,6 +213,11 @@ local function metadata(infile, args, optional)
         }
     }
 
+    data.dump.meta.tic80 = function()
+        return '-'..'- title:  '..meta.title..'\n-'..'- author: '..meta.author
+            ..'\n-'..'- desc:   '..meta.description..'\n-'..'- ver:    '..meta.version..'\n-'..'- script: lua'
+    end
+
     if game.args and not args then
         args = game.args
     end
@@ -213,7 +238,8 @@ end
 local P = {
     vars = vars,
     render = render,
-    metadata = metadata
+    metadata = metadata,
+    lazy_metada = function(a, b, c) return function() return metadata(a, b, c) end end
 }
 
 return P

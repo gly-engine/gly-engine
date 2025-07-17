@@ -53,7 +53,7 @@ npm install @gamely/gly-cli
 | Tier 3 | Tizen 8                   | support
 | Tier 4 | WebOS 6                   | support
 | Tier 5 | Native Core Desktop       | support being reworked
-| Tier 6 | Native Core Arduino       | coming soon
+| Tier 6 | Native Core Arduino       | support
 | Tier 7 | Ginga                     | support
 | Tier 8 | Console TUI (ASCII)       | support
 | Tier 9 | Play Station 2            | coming soon
@@ -62,3 +62,4 @@ npm install @gamely/gly-cli
 | Tier 12 | Nintendo GBA             | support, except images
 | Tier 13 | TIC-80 fantasy console   | support, except images
 | Tier 14 | Play Station 1           | support, very limited
+| Tier 15 | PICO-8 fantasy console   | support, very limited

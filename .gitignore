@@ -6,6 +6,7 @@ vendor/
 dist/
 html/
 rtf/
+src/
 latex/
 doxygen/
 ccws

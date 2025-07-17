@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        package: ['gly-cli', 'gly-engine', 'gly-engine-lite', 'gly-engine-micro']
+        package: ['gly-cli', 'gly-engine', 'gly-engine-lite', 'gly-engine-micro', 'gly-engine-nano']
     steps:
       -
         uses: actions/checkout@v4

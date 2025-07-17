@@ -2,15 +2,15 @@ local str_fs = require('source/shared/string/schema/fs')
 
 --! @todo move this!
 local function optmizer(content, srcname, args)
-    if args.dev and srcname == 'eeenginecoregingakeyslua' then
+    if args.dev and srcname == 'eeenginecorebindgingakeyslua' then
         content = content:gsub('evt%.type == \'press\'', 'evt.type ~= \'press\'')
     end
-    if args.dev and srcname == 'eeenginecoregingamainlua' then
+    if args.dev and srcname == 'eeenginecorebindgingamainlua' then
         content = content:gsub('pcall%(draw%)', 'draw()')
         content = content:gsub('pcall%(loop%)', 'loop()')
         content = content:gsub('event%.register%(%s*function%b()%s*.-end%s*%)', 'event.register(std.bus.trigger(\'ginga\'))')
     end
-    if args.bundler and srcname == 'eeenginecoregingamainlua' then
+    if args.bundler and srcname == 'eeenginecorebindgingamainlua' then
         content = content:gsub('_ENV=nil', '')
     end
     if content:find('_hx_') and not content:find('_hx_gly') then
@@ -43,7 +43,7 @@ local function move(src_filename, out_filename, options, args)
     local cwd = str_fs.path(options.cwd).get_fullfilepath()
     local src_file = io.open(cwd..src_filename, 'r')
     local out_file = src_file and io.open(out_filename, 'w')
-    local pattern_require = 'local ([%w_%-]+) = require%([\'"]([%w%._/-]+)[\'"]%)'
+    local pattern_require = 'local ([%w_%-]+)%s*=%s*require%([\'"]([%w%._/-]+)[\'"]%)'
     local pattern_gameload = 'std%.node%.load%([\'"](.-)[\'"]%)'
     local pattern_comment = '%-%-'
 

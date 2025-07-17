@@ -89,6 +89,8 @@ end
 --! @}
 
 local function install(std, engine, config)
+    std.text.font_previous = config.font_previous
+    std.text.is_tui = config.is_tui or function() return false end
     std.text.print_ex = util_decorator.prefix2(std, engine, text_print_ex)
     std.text.put = util_decorator.prefix3(std, engine, config.font_previous, text_put)
 end

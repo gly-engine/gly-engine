@@ -1,4 +1,5 @@
 local build = require('source/cli/commands/build/main')
+local build_bin = require('source/cli/commands/build/bin')
 local build_html = require('source/cli/commands/build/html')
 local zeebo_compiler = require('source/cli/build/compiler')
 local zeebo_bundler = require('source/cli/build/bundler')
@@ -17,7 +18,7 @@ local function run(args)
     end
     local love = 'love'
     local screen = args['screen'] and ('-'..'-screen '..args.screen) or ''
-    local command = love..' source/engine/core/love '..screen..' '..args.src
+    local command = love..' source/engine/core/bind/love '..screen..' '..args.src
     if not os or not os.execute then
         return false, 'cannot can execute'
     end
@@ -90,6 +91,7 @@ local P = {
     bundler = bundler,
     compile = compile,
     build = build.build,
+    ['build-bin'] = build_bin.build,
     ['build-html'] = build_html.build
 }
 

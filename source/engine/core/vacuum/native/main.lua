@@ -21,7 +21,9 @@ local engine_raw_node = require('source/engine/api/raw/node')
 local engine_color = require('source/engine/api/system/color')
 local engine_game = require('source/engine/api/system/app')
 local engine_key = require('source/engine/api/system/key')
-local engine_math = require('source/engine/api/system/math')
+local engine_math = require('source/engine/api/math/basic')
+local engine_math_clib = require('source/engine/api/math/clib')
+local engine_math_random = require('source/engine/api/math/random')
 --
 local callback_http = require('source/engine/protocol/http_callback')
 --
@@ -72,7 +74,6 @@ local cfg_http = {
     install = native_http_install,
     handler = native_http_handler,
     has_ssl = native_http_has_ssl,
-    has_callback = native_http_has_callback,
     force = native_http_force_protocol
 }
 
@@ -100,6 +101,7 @@ local cfg_xml = {
 }
 
 local cfg_text = {
+    is_tui = native_text_is_tui,
     font_previous = native_text_font_previous
 }
 
@@ -140,10 +142,7 @@ function native_callback_keyboard(key, value)
 end
 
 function native_callback_http(id, key, data)
-    if cfg_http.has_callback then
-        return callback_http.func(engine['http_requests'][id], key, data, std)
-    end
-    return nil
+    return callback_http.func(engine['http'][id], key, data, std)
 end
 
 function native_callback_init(width, height, game_lua)
@@ -183,9 +182,8 @@ function native_callback_init(width, height, game_lua)
         :package('@draw.poly', engine_draw_poly, cfg_poly)
         :package('@color', engine_color)
         :package('@log', engine_log, cfg_log)
-        :package('math', engine_math.clib)
-        :package('math.wave', engine_math.wave)
-        :package('math.random', engine_math.clib_random)
+        :package('math', engine_math_clib)
+        :package('math.random', engine_math_random)
         :package('http', engine_http, cfg_http)
         :package('base64', engine_encoder, cfg_base64)
         :package('json', engine_encoder, cfg_json)

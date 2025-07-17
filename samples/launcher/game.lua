@@ -1,7 +1,7 @@
 local function load(std, data)
     data._menu = 1
     data._msg = 'loading...'
-    std.http.get('http://t.gamely.com.br/games.json')
+    std.http.get('http://games.gamely.com.br/games.json')
         :error(function()
             data._msg = std.http.error
         end)
@@ -25,6 +25,7 @@ local function keys(std, data)
         data._game = {}
         std.http.get(data._list[data._menu].raw_url)
             :success(function()
+                std.app.title(data._list[data._menu].title)
                 data._game = std.node.load(std.http.body)
                 std.node.spawn(data._game)
                 std.bus.emit('init')
@@ -50,13 +51,12 @@ local function draw(std, data)
         index = index + 1
     end
     std.draw.color(std.color.red)
-    std.text.put(1, data._menu, '>', 1)
+    std.text.put(1, data._menu, '>')
 end
 
 local function quit(std, data)
     std.bus.abort()
     std.node.kill(data._game)
-    data._msg = 'loading angain...'
     data._game = nil
 end
 

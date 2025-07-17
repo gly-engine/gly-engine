@@ -11,6 +11,7 @@ if core == 'cli' then
     cmd(replace..' --format "arg = nil" --replace ""')    
     cmd('./cli.sh hazard-package-mock tests/mock/json.lua dist/main.lua source_third_party_rxi_json')
     cmd('./cli.sh hazard-package-mock tests/mock/lustache.lua dist/main.lua source_third_party_olivinelabs_lustache')
+    cmd('./cli.sh hazard-package-mock tests/mock/zlib.lua dist/main.lua source_third_party_zerkman_zlib')
     return
 end
 
