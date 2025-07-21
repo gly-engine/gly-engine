@@ -44,6 +44,8 @@ local function build(args)
         --
         :add_core('micro', {src='source/engine/core/vacuum/micro/main.lua'})
         --
+        :add_core('nano', {src='source/engine/core/vacuum/nano/main.lua'})
+        --
         :add_core('native', {src='source/engine/core/vacuum/native/main.lua'})
         --
         :add_core('love', {src='source/engine/core/bind/love/main.lua'})
