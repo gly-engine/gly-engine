@@ -1,3 +1,4 @@
+local version = require('source/version')
 local loadcore = require('source/shared/engine/loadcore')
 local loadgame = require('source/shared/engine/loadgame')
 --
@@ -70,14 +71,14 @@ local cfg_system = {
 
 local cfg_poly = {
     repeats={true, true},
-    line=canvas.drawLine,
+    line=canvas and canvas.drawLine,
     object=canvas
 }
 
 local cfg_fps_control = {
     list={60, 30, 20, 15, 10},
     time={10, 30, 40, 60, 90},
-    uptime=event.uptime
+    uptime=event and event.uptime
 }
 
 local cfg_text = {
@@ -161,10 +162,22 @@ local function main(evt, gamefile)
     end
 end
 
+local P = {
+    callbacks = {},
+    meta = {
+        title = 'gly-engine-ginga',
+        author = 'RodrigoDornelles',
+        description = 'Enterprise Edition GLY Engine for Interactive Digital TV',
+        version = version,
+    }
+}
+
 --! @defgroup ginga
 --! @{ @note for enterprise features contact bizdev@zedia.com.br @}
 local ok, crt0 = pcall(require, 'crt0') 
-if ok then
+if not event then
+    return P
+elseif ok then
     crt0(main, cfg_json_rxi)
 else
     event.register(main)
