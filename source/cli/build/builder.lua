@@ -38,6 +38,7 @@ end
 --! @todo rewrite all the move() and build() 
 local function move(src_filename, out_filename, options, args)
     local deps = {}
+    local imported = {}
     local content = ''
     local prefix = options.prefix
     local cwd = str_fs.path(options.cwd).get_fullfilepath()
@@ -64,8 +65,12 @@ local function move(src_filename, out_filename, options, args)
                 local mod = str_fs.file(node_require[1])
                 local module_path = (mod.get_unix_path()..mod.get_filename()):gsub('%./', '')
                 local var_name = 'node_'..module_path:gsub('/', '_')
+                local var_import = prefix..module_path:gsub('/', '_')
+                if not imported[var_name..var_import] then
+                    content = 'local '..var_name..' = require(\''..var_import..'\')\n'..content
+                    imported[var_name..var_import] = true
+                end
                 deps[#deps + 1] = module_path..'.lua'
-                content = 'local '..var_name..' = require(\''..prefix..module_path:gsub('/', '_')..'\')\n'..content
                 content = content..line:gsub(pattern_gameload, 'std.node.load('..var_name..')')..'\n'
             elseif line_require and #line_require > 0 and not is_comment then
                 local file_require = str_fs.lua(cwd..line_require[2]).get_fullfilepath()

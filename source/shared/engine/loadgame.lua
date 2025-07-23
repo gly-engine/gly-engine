@@ -49,7 +49,7 @@ local function script(src, base)
 
     local application = type(src) == 'function' and src
     if not application then
-        if type(application) ~= 'string' or #src == 0 then
+        if type(src) ~= 'string' or #src == 0 then
             src = 'game'
         end
 
