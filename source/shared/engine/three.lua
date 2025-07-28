@@ -21,39 +21,84 @@ local function walk(node, fn)
 end
 
 local function stylesheet(self, name, options)
-    local css = self.stylesheet[name] or {}
-    self.stylesheet[name] = css
+    local css = self.stylesheet_dict[name] or {}
+    local exe = self.stylesheet_func[name]
+
     if options then
+        self.flag_reposition = true
         css.left = options.left or options.margin or nil
         css.right = options.right or options.margin or nil
         css.top = options.top or options.margin or nil
         css.bottom = options.bottom or options.margin or nil
     end
-    return function(x, y, width, height)
-        if css.width then
 
-        else
-            if css.left then 
-                x = x + css.left
-                width = width - css.left
-            end
-            if css.right then
-                width = width - css.right
-            end
-        end
-        if css.height then
+    if not exe then
+        exe = function(x, y, width, height)
+            if css.width then
 
-        else
-            if css.top then
-                y = y + css.top
-                height = height - css.top
+            else
+                if css.left then 
+                    x = x + css.left
+                    width = width - css.left
+                end
+                if css.right then
+                    width = width - css.right
+                end
             end
-            if css.bottom then 
-                height = height - css.bottom
+            if css.height then
+
+            else
+                if css.top then
+                    y = y + css.top
+                    height = height - css.top
+                end
+                if css.bottom then 
+                    height = height - css.bottom
+                end
             end
+            return x, y, width, height
         end
-        return x, y, width, height
     end
+
+    self.stylesheet_dict[name] = css
+    self.stylesheet_func[name] = exe
+
+    return exe
+end
+
+local function css_add(self, func, node)
+    local styles, found, index = node.config.css, false, 1 
+
+    while index <= #styles do
+        if styles[index] == func then found = true end
+        index = index + 1
+    end
+
+    if not found then
+        styles[#styles + 1] = func
+    end
+
+    self.flag_reposition = true
+end
+
+local function css_del(self, func, node)
+    local styles, src, dst = node.config.css, 1, 1
+
+    while src <= #styles do
+        local item = styles[src]
+        if item ~= func then
+            styles[dst] = item
+            dst = dst + 1
+        end
+        src = src + 1
+    end
+
+    while dst <= #styles do
+        styles[dst] = nil
+        dst = dst + 1
+    end
+
+    self.flag_reposition = true
 end
 
 local function node_begin(node, width, height)
@@ -62,7 +107,8 @@ local function node_begin(node, width, height)
     self.height = height
     self.root = node
     self.node_list = { node }
-    self.stylesheet = {}
+    self.stylesheet_dict = {}
+    self.stylesheet_func = {}
     self.flag_reparent = false
     self.flag_reposition = true
     self.flag_to_delete = {}
@@ -91,13 +137,6 @@ local function node_add(self, node, options)
     self.flag_relist = false
     self.flag_reparent = true
     self.flag_reposition = true
-    do
-        local index = 1
-        while options.classlist and index <= #options.classlist do
-            cfg.css[#cfg.css + 1] = stylesheet(self, options.classlist[index])
-            index = index + 1
-        end
-    end
 end
 
 local function node_del(self, node_root)
@@ -242,6 +281,9 @@ local P = {
     node_del = node_del,
     node_resume = node_resume,
     node_pause = node_pause,
+    stylesheet = stylesheet,
+    css_add = css_add,
+    css_del = css_del,
     resize = resize,
     bus = bus
 }

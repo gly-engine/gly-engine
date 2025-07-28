@@ -128,7 +128,7 @@ local util_decorator = require('source/shared/functional/decorator')
 --! @li @c 0 left to right / up to down
 --! @li @c 1 up to down / left to right
 local function dir(std, engine, self, mode)
-    --self.direction = mode
+    self.config.dir = mode
     return self
 end
 
@@ -144,13 +144,11 @@ local function component(std, engine, layout)
 
     local self = {
         node=node,
-        apply=function(s) return s end,
-        gap=function(s) return s end,
-        margin=function(s) return s end,
-        dir=util_decorator.prefix2(std, engine, dir),
         add=util_decorator.prefix2(std, engine, ui_common.add),
         add_items=util_decorator.prefix2(std, engine, ui_common.add_items),
-        get_item=ui_common.get_item
+        get_items=ui_common.get_items,
+        get_item=ui_common.get_item,
+        dir=dir
     }
 
     return self

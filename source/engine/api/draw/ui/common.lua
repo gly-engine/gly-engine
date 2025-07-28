@@ -40,11 +40,8 @@ local function get_item(self, id)
     return self.node.childs[id]
 end
 
---! @hideparam classkey
---! @hideparam self
-local function style(classkey, self, classlist)
-    self[classkey] = classlist
-    return self
+local function get_items(self)
+    return self.node.childs
 end
 
 --! @}
@@ -52,8 +49,8 @@ end
 
 local P = {
     add=add,
-    style=style,
     get_item=get_item,
+    get_items=get_items,
     add_items=add_items,
 }
 
