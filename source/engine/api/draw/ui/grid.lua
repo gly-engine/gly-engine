@@ -127,8 +127,8 @@ local util_decorator = require('source/shared/functional/decorator')
 --! @param mode direction items
 --! @li @c 0 left to right / up to down
 --! @li @c 1 up to down / left to right
-local function dir(std, engine, self, mode)
-    self.config.dir = mode
+local function dir(self, mode)
+    self.node.config.dir = mode
     return self
 end
 
