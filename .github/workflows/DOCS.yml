@@ -49,8 +49,10 @@ jobs:
       fail-fast: false
       matrix:
         game: [
-          'asteroids', 'dvdplayer', 'launcher', '2games', 'helloworld', 'gridsystem', 'pong',
-          'capybird', 'maze3d', 'videostream', 'fakestream', 'rickstream'
+          'asteroids', 'dvdplayer', '2games', 'helloworld', 'gridsystem', 'pong',
+          'capybird', 'maze3d', 'videostream', 'fakestream', 'rickstream',
+          # @todo: temporarily removed 'launcher' until third-party games are migrated to 0.2.X
+          # 'launcher'
         ]
     steps:
       - 

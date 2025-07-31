@@ -55,12 +55,12 @@ local cfg_text={
 
 function native_callback_loop(dt)
     std.milis, std.delta=std.milis + dt, dt
-    application.callbacks.loop(std, application.data)
+    application.callbacks.loop(application.data, std)
 end
 
 function native_callback_draw()
     native_draw_start()
-    application.callbacks.draw(std, application.data)
+    application.callbacks.draw(application.data, std)
     native_draw_flush()
 end
 
@@ -126,7 +126,7 @@ function native_callback_init(width, height, game_lua)
         std.app.title(application.meta.title..' - '..(application.meta.version or ''))
     end
     engine.current=application
-    application.callbacks.init(std, application.data)
+    application.callbacks.init(application.data, std)
 end
 
 local P={

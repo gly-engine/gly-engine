@@ -167,7 +167,7 @@ local function install(std, engine)
             engine.offset_x = node.config.offset_x
             engine.offset_y = node.config.offset_y
             if node.callbacks[key] then
-                node.callbacks[key](std, node.data, a, b, c, d, e, f)
+                node.callbacks[key](node.data, std, a, b, c, d, e, f)
             end
         end)
     end)

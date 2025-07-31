@@ -1,16 +1,16 @@
-local function init(std, game)
+local function init(self, std)
 end
 
-local function loop(std, game)
+local function loop(self, std)
 end
 
-local function draw(std, game)
+local function draw(self, std)
     std.draw.clear(std.color.black)
     std.draw.color(std.color.white)
     std.text.put(1, 1, 'Hello world!')
 end
 
-local function exit(std, game)
+local function exit(self, std)
 end
 
 local P = {
