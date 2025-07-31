@@ -1,5 +1,7 @@
 local version = require('source/version')
 local util_decorator = require('source/shared/functional/decorator')
+--
+local three = require('source/shared/engine/three')
 local loadcore = require('source/shared/engine/loadcore')
 local loadgame = require('source/shared/engine/loadgame')
 --
@@ -200,11 +202,10 @@ function native_callback_init(width, height, game_lua)
     application.data.width, std.app.width = width, width
     application.data.height, std.app.height = height, height
 
-    std.node.spawn(application)
     std.app.title(application.meta.title..' - '..application.meta.version)
 
-    engine.root = application
-    engine.current = application
+    engine.dom = three.node_begin(application, std.app.width, std.app.height)
+    engine.root, engine.current = application, application
 
     std.bus.emit_next('load')
     std.bus.emit_next('init')

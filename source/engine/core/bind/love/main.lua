@@ -121,8 +121,7 @@ function love.load(args)
 
     std.bus.listen('resize', function(w, h) three.resize(engine.dom, w, h) end)
     engine.dom = three.node_begin(application, std.app.width, std.app.height)
-    engine.root = application
-    engine.current = application
+    engine.root, engine.current = application, application
 
     std.app.title(application.meta.title..' - '..application.meta.version)
 
