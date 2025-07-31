@@ -77,6 +77,7 @@ local command = cli.argparse(arg)
     .add_subcommand('test', commands_halt)
     .add_option_get('luabin', {default='lua'})
     .add_option_has('coverage')
+    .add_option_has('bundler')
     --
     .add_subcommand('bundler', commands_halt)
     .add_next_value('src', {required=true})
