@@ -1,6 +1,7 @@
 local build = require('source/cli/commands/build/main')
 local build_bin = require('source/cli/commands/build/bin')
 local build_html = require('source/cli/commands/build/html')
+local build_ginga = require('source/cli/commands/build/ginga')
 local zeebo_compiler = require('source/cli/build/compiler')
 local zeebo_bundler = require('source/cli/build/bundler')
 local str_fs = require('source/shared/string/schema/fs')
@@ -92,7 +93,9 @@ local P = {
     compile = compile,
     build = build.build,
     ['build-bin'] = build_bin.build,
-    ['build-html'] = build_html.build
+    ['build-html'] = build_html.build,
+    ['build-ginga'] = build_ginga.build,
+    ['build-engine'] = build.build_engine
 }
 
 return P
