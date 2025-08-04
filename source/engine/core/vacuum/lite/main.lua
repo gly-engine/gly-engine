@@ -103,12 +103,12 @@ local cfg_xml = {
 function native_callback_loop(dt)
     std.milis = std.milis + dt
     std.delta = dt
-    application.callbacks.loop(std, application.data)
+    application.callbacks.loop(application.data, std)
 end
 
 function native_callback_draw()
     native_draw_start()
-    application.callbacks.draw(std, application.data)
+    application.callbacks.draw(application.data, std)
     native_draw_flush()
 end
 
@@ -150,6 +150,7 @@ function native_callback_init(width, height, game_lua)
     std.draw.line=native_draw_line
     std.image.load=native_image_load
     std.image.draw=native_image_draw
+    std.image.mensure=native_image_mensure
     std.text.print=native_text_print
     std.text.mensure=native_text_mensure
     std.text.font_size=native_text_font_size
@@ -190,7 +191,7 @@ function native_callback_init(width, height, game_lua)
     std.app.title(application.meta.title..' - '..application.meta.version)
     engine.current = application
 
-    application.callbacks.init(std, application.data)
+    application.callbacks.init(application.data, std)
 end
 
 local P = {

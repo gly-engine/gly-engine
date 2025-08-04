@@ -1,3 +1,4 @@
+local three = require('source/shared/engine/three')
 local ui_common = require('source/engine/api/draw/ui/common')
 local util_decorator = require('source/shared/functional/decorator')
 
@@ -126,128 +127,30 @@ local util_decorator = require('source/shared/functional/decorator')
 --! @param mode direction items
 --! @li @c 0 left to right / up to down
 --! @li @c 1 up to down / left to right
-local function dir(std, engine, self, mode)
-    self.direction = mode
-    return self
-end
-
---! @hideparam std
---! @hideparam engine
---! @hideparam self
-local function apply(std, engine, self)
-    local index = 1
-    local x, y = 0, 0
-
-    local index2 = 1
-    local pipeline = std.ui.style(self.classlist).pipeline
-
-    while index2 <= #pipeline do
-        pipeline[index2](std, self.node, self.node.config.parent, engine.root)
-        index2 = index2 + 1
-    end
-    
-    local gap_x, gap_y = self.px_gap, self.px_gap
-    local offset_x, offset_y = (self.px_margin/2) + (gap_x/2), (self.px_margin/2) + (gap_y/2)
-    local width = self.node.data.width - self.px_margin
-    local height = self.node.data.height - self.px_margin
-    local hem = (width / self.rows) - gap_x
-    local vem = (height / self.cols) - gap_y
-
-    while self.direction == 1 and index <= #self.items_node do
-        local node = self.items_node[index]
-        local size = self.items_size[index]
-        local ui = self.items_ui[node]
-    
-        node.config.offset_x = offset_x + (x * (hem + gap_x))
-        node.config.offset_y = offset_y + (y * (vem + gap_y))
-        node.data.width = hem
-        node.data.height = size * vem
-    
-        y = y + size
-        if y >= self.cols then
-            x = x + 1
-            y = 0
-        end
-    
-        if ui then
-            ui:apply()
-        end
-    
-        index = index + 1
-    end    
-
-    while self.direction == 0 and index <= #self.items_node do
-        local node = self.items_node[index]
-        local size = self.items_size[index]
-        local ui = self.items_ui[node]
-
-        node.config.offset_x = offset_x + (x * (hem + gap_x))
-        node.config.offset_y = offset_y + (y * (vem + gap_y))
-        node.data.width = size * hem
-        node.data.height = vem
-
-        x = x + size
-        if x >= self.rows then
-            y = y + 1
-            x = 0
-        end
-
-        if ui then
-            ui:apply()
-        end
-       
-        index = index + 1
-    end
-
+local function dir(self, mode)
+    self.node.config.dir = mode
     return self
 end
 
 local function component(std, engine, layout)
     local rows, cols = layout:match('(%d+)x(%d+)')
-    local node = std.node.load({
-        width = engine.current.data.width,
-        height = engine.current.data.height
-    })
-    
+    local node = std.node.load({})
+
+    three.node_add(engine.dom, node, {parent=engine.current})
+    node.config.type = 'grid'
+    node.config.rows = tonumber(rows)
+    node.config.cols = tonumber(cols)
+    node.config.dir = (node.config.rows == 1 and node.config.cols > 1) and 1 or 0
+
     local self = {
-        direction=0,
-        rows=tonumber(rows),
-        cols=tonumber(cols),
-        items_node = {},
-        items_size = {},
-        items_ui = {},
         node=node,
-        px_gap=0,
-        px_margin=0,
-        classlist='',
-        gap=ui_common.gap,
-        margin=ui_common.margin,
-        dir=util_decorator.prefix2(std, engine, dir),
         add=util_decorator.prefix2(std, engine, ui_common.add),
         add_items=util_decorator.prefix2(std, engine, ui_common.add_items),
-        style=ui_common.style,
-        apply=util_decorator.prefix2(std, engine, apply),
-        get_item=ui_common.get_item
+        get_items=ui_common.get_items,
+        get_item=ui_common.get_item,
+        dir=dir
     }
 
-    if self.rows == 1 and self.cols > 1 then
-        self.direction = 1
-    end
-
-    if engine.root == engine.current then
-        node.callbacks.resize = function()
-            if node.config.parent ~= engine.root then
-                node.callbacks.resize = nil
-                return
-            end
-            node.data.height = engine.root.data.height
-            node.data.width = engine.root.data.width
-            self:apply()
-        end
-    end
-
-    std.node.spawn(node)
-    node.config.depth = engine.current.depht
     return self
 end
 

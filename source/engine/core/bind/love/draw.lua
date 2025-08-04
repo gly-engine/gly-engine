@@ -46,11 +46,15 @@ local function triangle(mode, x1, y1, x2, y2, x3, y3)
     end
 end
 
-local function image(std, engine, src, pos_x, pos_y)
-    local r, g, b, a = love.graphics.getColor()
-    local image = std.mem.cache('image'..src, function()
+local function image_load(std, engine, src)
+    return std.mem.cache('image'..src, function()
         return love.graphics.newImage(src)
     end)
+end
+
+local function image_draw(std, engine, src, pos_x, pos_y)
+    local r, g, b, a = love.graphics.getColor()
+    local image = image_load(std, engine, src)
     local x = engine.offset_x + (pos_x or 0)
     local y = engine.offset_y + (pos_y or 0)
     love.graphics.setColor(0xFF, 0xFF, 0xFF, 0xFF)
@@ -58,18 +62,23 @@ local function image(std, engine, src, pos_x, pos_y)
     love.graphics.setColor(r, g, b, a) 
 end
 
+local function image_mensure(std, engine, src)
+    local image = image_load(std, engine, src)
+    if image then
+        local w, h = image:getWidth(), image:getHeight()
+        return w, h
+    end
+    return nil
+end
+
 local function install(std, engine)
-    std.image.draw = util_decorator.prefix2(std, engine, image)
+    std.image.load = util_decorator.prefix2(std, engine, image_load)
+    std.image.draw = util_decorator.prefix2(std, engine, image_draw)
+    std.image.mensure = util_decorator.prefix2(std, engine, image_mensure)
     std.draw.clear = util_decorator.prefix2(std, engine, clear)
     std.draw.color = util_decorator.prefix2(std, engine, color)
     std.draw.rect = util_decorator.prefix2(std, engine, rect)
     std.draw.line = util_decorator.prefix2(std, engine, line)
-    std.bus.listen('resize', function(w, h)
-        engine.root.data.width = w
-        engine.root.data.height = h
-        std.app.width = w
-        std.app.height = h
-    end)
 end
 
 local P = {

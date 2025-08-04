@@ -9,7 +9,7 @@ local function install(std, engine, application)
     std.h = util_decorator.prefix2(std, engine, ui_jsx.h)
     std.ui.grid = util_decorator.prefix2(std, engine, ui_grid.component)
     std.ui.slide = util_decorator.prefix2(std, engine, ui_slide.component)
-    std.ui.style = util_decorator.prefix2(std, engine, ui_style.component)
+    std.ui.style = util_decorator.prefix1(engine, ui_style.component)
 end
 
 local P = {
