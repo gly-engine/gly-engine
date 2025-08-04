@@ -1,6 +1,6 @@
 local version = require('source/version')
 --
-local three = require('source/shared/engine/three')
+local tree = require('source/shared/engine/tree')
 local loadcore = require('source/shared/engine/loadcore')
 local loadgame = require('source/shared/engine/loadgame')
 --
@@ -148,7 +148,7 @@ local function main(evt, gamefile)
     application.data.width, application.data.height = canvas:attrSize()
     std.app.width, std.app.height = application.data.width, application.data.height
 
-    engine.dom = three.node_begin(application, std.app.width, std.app.height)
+    engine.dom = tree.node_begin(application, std.app.width, std.app.height)
     engine.root, engine.current = application, application
 
     register_event_loop()

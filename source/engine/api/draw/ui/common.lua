@@ -1,4 +1,4 @@
-local three = require('source/shared/engine/three')
+local tree = require('source/shared/engine/tree')
 
 --! @defgroup std
 --! @{
@@ -13,7 +13,7 @@ local three = require('source/shared/engine/three')
 local function add(std, engine, self, application, size)
     if not application then return self end
     local node = application.node or std.node.load(application)
-    three.node_add(engine.dom, node, {
+    tree.node_add(engine.dom, node, {
         parent = self.node,
         size = size
     })

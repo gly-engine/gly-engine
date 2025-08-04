@@ -1,4 +1,4 @@
-local three = require('source/shared/engine/three')
+local tree = require('source/shared/engine/tree')
 
 --! @defgroup std
 --! @{
@@ -43,7 +43,7 @@ local three = require('source/shared/engine/three')
 --! @}
 
 local function add(engine, self, node)
-    three.css_add(engine.dom, self.func, node)
+    tree.css_add(engine.dom, self.func, node)
     return self
 end
 
@@ -57,13 +57,13 @@ local function add_items(engine, self, nodes)
 end
 
 local function remove(engine, self, node)
-    three.css_del(engine.dom, self.func, node)
+    tree.css_del(engine.dom, self.func, node)
     return self
 end
 
 local function component(engine, name, options)
     local self = {
-        func = three.stylesheet(engine.dom, name, options),
+        func = tree.stylesheet(engine.dom, name, options),
         add = function(a, b) return add(engine, a, b) end,
         add_items = function(a, b) return add_items(engine, a, b) end,
         remove = function(a, b) return remove(engine, a, b) end

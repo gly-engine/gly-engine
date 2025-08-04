@@ -1,4 +1,4 @@
-local three = require('source/shared/engine/three')
+local tree = require('source/shared/engine/tree')
 local loadgame = require('source/shared/engine/loadgame')
 local node_default = require('source/shared/var/object/node')
 local util_decorator = require('source/shared/functional/decorator')
@@ -102,7 +102,7 @@ end
 --! std.node.spawn(game)
 --! @endcode
 local function spawn(engine, application)
-    return three.node_add(engine.dom, application, {parent=engine.current})
+    return tree.node_add(engine.dom, application, {parent=engine.current})
 end
 
 --! @short unregister node from event bus
@@ -114,7 +114,7 @@ end
 --! end
 --! @endcode
 local function kill(engine, application)
-    three.node_del(engine.dom, application)
+    tree.node_del(engine.dom, application)
 end
 
 --! @short disable node callback
@@ -127,7 +127,7 @@ end
 --! end
 --! @endcode
 local function pause(engine, application, key)
-    three.node_pause(engine.dom, application, key)
+    tree.node_pause(engine.dom, application, key)
 end
 
 --! @short enable node callback
@@ -140,7 +140,7 @@ end
 --! end
 --! @endcode
 local function resume(engine, application, key)
-    three.node_resume(engine.dom, application, key)
+    tree.node_resume(engine.dom, application, key)
 end
 --! @}
 --! @}
@@ -162,7 +162,7 @@ local function install(std, engine)
     end
 
     std.bus.listen_all(function(key, a, b, c, d, e, f)
-        three.bus(engine.dom, key, function(node)
+        tree.bus(engine.dom, key, function(node)
             engine.current = node
             engine.offset_x = node.config.offset_x
             engine.offset_y = node.config.offset_y

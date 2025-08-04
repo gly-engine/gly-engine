@@ -1,6 +1,6 @@
 local os = require('os')
 --
-local three = require('source/shared/engine/three')
+local tree = require('source/shared/engine/tree')
 local loadgame = require('source/shared/engine/loadgame')
 local loadcore = require('source/shared/engine/loadcore')
 --
@@ -119,8 +119,8 @@ function love.load(args)
         :package('hash', lib_api_hash, cfg_system)
         :run()
 
-    std.bus.listen('resize', function(w, h) three.resize(engine.dom, w, h) end)
-    engine.dom = three.node_begin(application, std.app.width, std.app.height)
+    std.bus.listen('resize', function(w, h) tree.resize(engine.dom, w, h) end)
+    engine.dom = tree.node_begin(application, std.app.width, std.app.height)
     engine.root, engine.current = application, application
 
     std.app.title(application.meta.title..' - '..application.meta.version)
