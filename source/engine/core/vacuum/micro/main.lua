@@ -102,6 +102,7 @@ function native_callback_init(width, height, game_lua)
     std.draw.line=native_draw_line
     std.image.load=native_image_load
     std.image.draw=native_image_draw
+    std.image.mensure=native_image_mensure
     std.text.print=native_text_print
     std.text.mensure=native_text_mensure
     std.text.font_size=native_text_font_size

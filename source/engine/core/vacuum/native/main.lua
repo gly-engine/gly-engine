@@ -161,8 +161,8 @@ function native_callback_init(width, height, game_lua)
     std.draw.clear=clear
     std.draw.rect=util_decorator.offset_xy2(engine, native_draw_rect)
     std.draw.line=util_decorator.offset_xyxy1(engine, native_draw_line)
-    std.draw.image=util_decorator.offset_xy2(engine, native_image_draw)
     std.image.load=native_image_load
+    std.image.mensure=native_image_mensure
     std.image.draw=util_decorator.offset_xy2(engine, native_image_draw)
     std.text.print = util_decorator.offset_xy1(engine, native_text_print)
     std.text.mensure=native_text_mensure
