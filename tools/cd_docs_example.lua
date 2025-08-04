@@ -11,7 +11,7 @@ if game == 'launcher' then
 elseif game == 'gridsystem' or game == 'maze3d' or game == 'two_games' then
     cmd('./cli.sh build-html @'..game..' --engine @native --outdir ./html/ --enginecdn --fengari')
 elseif game == 'pong' then
-    cmd('./cli.sh build-html @'..game..' --engine @micro--outdir ./html/ --fengari --enginecdn')
+    cmd('./cli.sh build-html @'..game..' --engine @micro --outdir ./html/ --fengari --enginecdn')
 elseif game == 'fakestream' then
     cmd('./cli.sh build-html @stream --engine @native --outdir ./html/ --enterprise --enginecdn --videofake')
 elseif game == 'rickstream' then
