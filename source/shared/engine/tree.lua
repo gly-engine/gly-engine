@@ -242,7 +242,7 @@ local function dom(node, parent_x, parent_y, parent_w, parent_h)
     elseif node.childs then
         for _, child in ipairs(node.childs) do
             local x, y, w, h = parent_x, parent_y, parent_w, parent_h
-            for _, css in ipairs(node.config.css) do
+            for _, css in ipairs(child.config.css) do
                 x, y, w, h = css(x, y, w, h)
             end
             dom(child, x, y, w, h)

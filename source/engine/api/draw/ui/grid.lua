@@ -1,4 +1,4 @@
-local three = require('source/shared/engine/three')
+local tree = require('source/shared/engine/tree')
 local ui_common = require('source/engine/api/draw/ui/common')
 local util_decorator = require('source/shared/functional/decorator')
 
@@ -136,7 +136,7 @@ local function component(std, engine, layout)
     local rows, cols = layout:match('(%d+)x(%d+)')
     local node = std.node.load({})
 
-    three.node_add(engine.dom, node, {parent=engine.current})
+    tree.node_add(engine.dom, node, {parent=engine.current})
     node.config.type = 'grid'
     node.config.rows = tonumber(rows)
     node.config.cols = tonumber(cols)

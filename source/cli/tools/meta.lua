@@ -17,7 +17,6 @@ local runtime_flag = require('source/shared/var/runtime/flag')
 local function filter(array, fn)
     local result, index = {}, 1
     while index <= #array do
-        print(array[index], fn(array[index], index))
         if fn(array[index], index) then
             result[#result + 1] = array[index] 
         end
