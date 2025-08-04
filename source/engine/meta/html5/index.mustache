@@ -84,6 +84,9 @@
         data-gpz-bind="KeyC KeyV KeyZ KeyX">
       </canvas>
       {{/ args.gamepadzilla }}
+      {{# assets.png }}
+      <img src="{{& fn.colon.to }}" alt="{{# fn.case.msdos }}{{& fn.colon.from }}{{/ fn.case.msdos }}" style="display:none;"/>
+      {{/ assets.fonts }}
     </main>
     {{# args.videofake }}
     <script>window.videofake=100</script>
