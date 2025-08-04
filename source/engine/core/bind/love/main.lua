@@ -75,7 +75,7 @@ function love.load(args)
     local fullscreen = util_arg.has(args, 'fullscreen')
     local game_title = util_arg.param(arg, {'screen'}, 2)
     local application = loadgame.script(game_title, application_default)
-    local engine = {offset_x=0,offset_y=0}
+    local engine = {offset_x=0,offset_y=0,dom={}}
     
     if screen then
         local w, h = screen:match('(%d+)x(%d+)')
