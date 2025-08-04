@@ -1,6 +1,4 @@
 local buildsystem = require('source/cli/tools/buildsystem')
-local atobify = require('source/cli/tools/atobify')
-local cli_meta = require('source/cli/tools/meta')
 local cli_fs = require('source/cli/tools/fs')
 local str_fs = require('source/shared/string/schema/fs')
 
@@ -14,8 +12,6 @@ local function build(args)
 
     cli_fs.clear(args.outdir)
     cli_fs.mkdir(args.outdir..'_bundler/')
-
-    local var = cli_meta.vars(args)
 
     local build_game = buildsystem.from({core='game', bundler=true, outdir=args.outdir})
         :add_core('game', {src=args.src, as='game.lua', prefix='game_', assets=true, cwd=args.cwd})
@@ -48,5 +44,5 @@ end
 
 return {
     build = build,
-    build_engine = function(args) return build(args, true) end
+    build_engine = function(args) return build(args) end
 }
