@@ -159,6 +159,7 @@ function native_callback_init(width, height, game_lua)
 
     std.draw.color=native_draw_color
     std.draw.clear=clear
+    std.draw.rect2=util_decorator.offset_xy2(engine, native_draw_rect2 or native_draw_rect)
     std.draw.rect=util_decorator.offset_xy2(engine, native_draw_rect)
     std.draw.line=util_decorator.offset_xyxy1(engine, native_draw_line)
     std.image.load=native_image_load

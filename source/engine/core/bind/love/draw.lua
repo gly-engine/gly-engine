@@ -22,10 +22,15 @@ local function clear(std, engine, tint)
     love.graphics.rectangle(modes[0], x, y, width, height)
 end
 
-local function rect(std, engine, mode, pos_x, pos_y, width, height)
+local function rect2(std, engine, mode, pos_x, pos_y, width, height, radius)
+    local r = radius and radius/2 or nil
     local x = engine.offset_x + pos_x
     local y = engine.offset_y + pos_y
-    love.graphics.rectangle(modes[mode], x, y, width, height)
+    love.graphics.rectangle(modes[mode], x, y, width, height, r, r)
+end
+
+local function rect(std, engine, mode, pos_x, pos_y, width, height)
+    rect2(std, engine, mode, pos_x, pos_y, width, height)
 end
 
 local function line(std, engine, x1, y1, x2, y2)
@@ -77,6 +82,7 @@ local function install(std, engine)
     std.image.mensure = util_decorator.prefix2(std, engine, image_mensure)
     std.draw.clear = util_decorator.prefix2(std, engine, clear)
     std.draw.color = util_decorator.prefix2(std, engine, color)
+    std.draw.rect2 = util_decorator.prefix2(std, engine, rect2)
     std.draw.rect = util_decorator.prefix2(std, engine, rect)
     std.draw.line = util_decorator.prefix2(std, engine, line)
 end

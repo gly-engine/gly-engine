@@ -19,6 +19,18 @@ local function clear(std, engine, canvas, tint)
     canvas:drawRect('fill', x, y, width, height)
 end
 
+local function rect2(std, engine, canvas, mode, pos_x, pos_y, width, height, radius)
+    local m = mode == 0 and 'fill' or 'frame'
+    local x = engine.offset_x + pos_x
+    local y = engine.offset_y + pos_y
+    -- only supported by telemedia
+    if canvas._dump_to_file and canvas.drawRoundRect then
+        canvas:drawRoundRect(m, x, y, width, height, radius)
+    else
+        canvas:drawRect(m, x, y, width, height)
+    end
+end
+
 local function rect(std, engine, canvas, mode, pos_x, pos_y, width, height)
     local x = engine.offset_x + pos_x
     local y = engine.offset_y + pos_y
@@ -68,6 +80,7 @@ local function install(std, engine)
     std.image.mensure = util_decorator.prefix3(std, engine, engine.canvas, image_mensure)
     std.draw.clear = util_decorator.prefix3(std, engine, engine.canvas, clear)
     std.draw.color = util_decorator.prefix3(std, engine, engine.canvas, color)
+    std.draw.rect2 = util_decorator.prefix3(std, engine, engine.canvas, rect2)
     std.draw.rect = util_decorator.prefix3(std, engine, engine.canvas, rect)
     std.draw.line = util_decorator.prefix3(std, engine, engine.canvas, line)
 end

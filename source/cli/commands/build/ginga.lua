@@ -11,6 +11,8 @@ local function build(args)
     args.core = args.target
     args.screen = '1280x720'
     args.fengari = true  
+    args.atob = true
+    args.aa = true
 
     cli_fs.clear(args.outdir)
     cli_fs.mkdir(args.outdir..'_bundler/')
