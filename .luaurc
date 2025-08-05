@@ -31,6 +31,7 @@
     "native_draw_poly",
     "native_draw_poly2",
     "native_draw_rect",
+    "native_draw_rect2",
     "native_draw_start",
     "native_draw_triangle",
     "native_http_force_protocol",
