@@ -24,7 +24,7 @@ local function h(std, engine, element, attribute, ...)
         return std.node.spawn(std.node.load(attribute))
     elseif element == 'grid' then
         local index = 1
-        local grid = std.ui.grid(attribute.class)
+        local grid = std.ui.grid(attribute.class):dir(attribute.dir or 0)
         if attribute.style then
             std.ui.style(attribute.style):add(grid.node)
         end
