@@ -47,8 +47,8 @@ end
 local function draw(self, std)
     std.draw.clear(std.color.black)
     std.draw.color(std.color.white)
-    std.draw.rect(0, self.ball_size, self.player_pos, self.ball_size, self.player_size)
-    std.draw.rect(0, self.ball_pos_x, self.ball_pos_y, self.ball_size, self.ball_size)
+    std.draw.rect2(0, self.ball_size, self.player_pos, self.ball_size, self.player_size, self.ball_size)
+    std.draw.rect2(0, self.ball_pos_x, self.ball_pos_y, self.ball_size, self.ball_size, self.ball_size)
     std.text.put(20, 1, self.score)
     std.text.put(60, 1, self.highscore)
 end
