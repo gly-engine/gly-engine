@@ -23,7 +23,7 @@ local function loop(self, std)
         self.menu = std.math.clamp2(self.menu + std.key.axis.y, 1, #self.list)
         self.time = std.milis
         if std.key.press.a then
-            std.media.video():src(self.list[self.menu]):play()
+            std.media.video():src(self.list[self.menu]):position(0, 0, 1280, 720):play()
         end
         if std.key.press.b then
             std.media.video():resume()
@@ -35,10 +35,10 @@ local function loop(self, std)
             std.media.video():stop()
         end
         if std.key.press.left then
-            std.media.video():resize(640, 320)
+            std.media.video():position(0, 0, 640, 320)
         end
         if std.key.press.right then
-            std.media.video():resize(self.width, self.height)
+            std.media.video():position(0, 0, self.width, self.height)
         end
     end
 end
