@@ -52,10 +52,6 @@ local function ccwss_position(channel, x, y, w, h)
     end
 end
 
-local function ccwss_resize(channel, w, h)
-    width, height = w, h
-end
-
 local function ccws_stop()
     if ccws_mutex() then some_error = 'abort' end
     local headers = {['User-Agent'] = user_agent}
@@ -106,7 +102,6 @@ local P = {
     error = ccws_error,
     stop = ccws_stop,
     source = ccws_source,
-    resize = ccwss_resize,
     position = ccwss_position,
     bootstrap = ccws_bootstrap,
 }
