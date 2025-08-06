@@ -102,7 +102,8 @@ end
 --! std.node.spawn(game)
 --! @endcode
 local function spawn(engine, application)
-    return tree.node_add(engine.dom, application, {parent=engine.current})
+    tree.node_add(engine.dom, application, {parent=engine.current})
+    return application
 end
 
 --! @short unregister node from event bus
@@ -154,7 +155,7 @@ local function install(std, engine)
     std.node.load = load
 
     std.node.spawn = function (application)
-        spawn(engine, application)
+        return spawn(engine, application)
     end
 
     std.node.emit = function(application, key, a, b, c, d, e, f)
