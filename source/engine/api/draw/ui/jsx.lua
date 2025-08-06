@@ -16,8 +16,7 @@ end
 --! @param ... Child elements or nested content.
 --! @throw error when element is invalid type
 --! @return node, list of nodes, or nil.
-local function h(std, engine, element, attribute, ...)
-    local childs = {...}
+local function h(std, engine, element, attribute, childs)
     local el_type = type(element)
 
     if element == std then
