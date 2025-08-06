@@ -1,6 +1,12 @@
 --! @defgroup std
 --! @{
 
+local function add_style(std, node, stylesheet)
+    for style in stylesheet:gmatch("%S+") do
+        std.ui.style(style):add(node)
+    end 
+end
+
 --! @short JSX element factory
 --! @brief Core function that interprets @ref jsx and integrate with @ref ui "std.ui"
 --! @hideparam std
@@ -25,14 +31,12 @@ local function h(std, engine, element, attribute, ...)
     elseif element == 'grid' then
         local index = 1
         local grid = std.ui.grid(attribute.class):dir(attribute.dir or 0)
-        if attribute.style then
-            std.ui.style(attribute.style):add(grid.node)
-        end
+        if attribute.style then add_style(std, grid.node, attribute.style) end
         while index <= #childs do
             local item = childs[index]
             if item.node then
                 grid:add(item.node, item.span or 1)
-                if item.style then std.ui.style(item.style):add(grid:get_item(index)) end
+                if item.style then add_style(std, grid:get_item(index), item.style) end
             else
                 grid:add(item)
             end
