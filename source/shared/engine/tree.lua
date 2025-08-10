@@ -155,6 +155,7 @@ local function node_pause(self, node_root, key)
         if key then
             node.config.pause_key[key] = true
         else
+            node.config.pause_key = {}
             node.config.pause_all = true
         end
     end)
@@ -267,7 +268,14 @@ local function bus(self, key, handler_func)
         local index = 1
         while index <= #self.node_list do
             local node = self.node_list[index]
-            if index == 1 or (not node.config.pause_key[key] and not node.config.pause_all) then
+            local ignore = index ~= 1
+            if ignore then
+                local is_pause_global = node.config.pause_all
+                local is_pause_local = node.config.pause_key[key]
+                local is_resume_local = is_pause_local == false
+                ignore = is_pause_local or (is_pause_global and not is_resume_local)
+            end
+            if not ignore then
                 handler_func(node)
             end
             index = index + 1
