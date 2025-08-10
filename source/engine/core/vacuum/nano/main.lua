@@ -68,7 +68,11 @@ function native_callback_init(width, height, game_lua)
     end
 
     if not script then
-        ok, script=pcall(loadfile, 'game.lua')
+        ok, script = pcall(loadfile, 'game.lua')
+    end
+    
+    if type(script) == 'function' then
+        ok, script = pcall(script)
     end
 
     if not ok or not script then

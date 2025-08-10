@@ -79,7 +79,11 @@ function native_callback_init(width, height, game_lua)
     local ok, script=true, game_lua
 
     if type(script) == 'string' then
-        ok, script=eval_code.script(script)
+        ok, script = eval_code.script(script)
+    end
+
+    if type(script) == 'function' then
+        ok, script = pcall(script)
     end
 
     if not script then

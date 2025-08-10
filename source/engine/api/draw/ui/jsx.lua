@@ -48,6 +48,7 @@ local function h(std, engine, element, attribute, childs)
     elseif element == 'style' then
         return std.ui.style(attribute.class, attribute)
     elseif el_type == 'function' then
+        attribute.children = (childs and #childs > 1) and childs or childs[1]
         return element(attribute, std)
     elseif el_type == 'table' then
         return element
