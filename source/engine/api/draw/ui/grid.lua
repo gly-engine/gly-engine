@@ -128,7 +128,9 @@ local util_decorator = require('source/shared/functional/decorator')
 --! @li @c 0 left to right / up to down
 --! @li @c 1 up to down / left to right
 local function dir(self, mode)
-    self.node.config.dir = mode
+    if mode then
+        self.node.config.dir = mode
+    end
     return self
 end
 

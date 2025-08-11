@@ -18,6 +18,7 @@ end
 --! @return node, list of nodes, or nil.
 local function h(std, engine, element, attribute, childs)
     local el_type = type(element)
+    attribute = attribute or {}
 
     if element == std then
         return error
@@ -29,7 +30,7 @@ local function h(std, engine, element, attribute, childs)
         return std.node.spawn(std.node.load(attribute))
     elseif element == 'grid' then
         local index = 1
-        local grid = std.ui.grid(attribute.class):dir(attribute.dir or 0)
+        local grid = std.ui.grid(attribute.class):dir(attribute.dir)
         if attribute.style then add_style(std, grid.node, attribute.style) end
         while index <= #childs do
             local item = childs[index]
