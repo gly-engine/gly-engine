@@ -162,6 +162,9 @@ local function node_pause(self, node_root, key)
 end
 
 local function node_resume(self, node_root, key)
+    local parent_config = node_root.config.parent and node_root.config.parent.config
+    local parent_is_paused = parent_config and parent_config.pause_all
+    if parent_is_paused then return end
     walk(node_root, function(node)
         if key then
             node.config.pause_key[key] = false
