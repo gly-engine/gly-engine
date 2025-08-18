@@ -164,12 +164,16 @@ function native_callback_init(width, height, game_lua)
     std.draw.line=util_decorator.offset_xyxy1(engine, native_draw_line)
     std.image.load=native_image_load
     std.image.mensure=native_image_mensure
+    std.image.mensure_width=function(v) return select(1, native_image_mensure(v)) end
+    std.image.mensure_height=function(v) return select(2, native_image_mensure(v)) end
     std.image.draw=util_decorator.offset_xy2(engine, native_image_draw)
     std.text.print = util_decorator.offset_xy1(engine, native_text_print)
     std.text.mensure=native_text_mensure
     std.text.font_size=native_text_font_size
     std.text.font_name=native_text_font_name
     std.text.font_default=native_text_font_default
+    std.text.mensure_width=function(v) return select(1, native_image_mensure(v)) end
+    std.text.mensure_height=function(v) return select(2, native_image_mensure(v)) end
 
     loadcore.setup(std, application, engine)
         :package('@bus', engine_raw_bus)
