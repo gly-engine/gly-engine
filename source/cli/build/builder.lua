@@ -3,7 +3,7 @@ local str_fs = require('source/shared/string/schema/fs')
 --! @todo move this!
 local function optmizer(content, srcname, args)
     if args.dev and srcname == 'eeenginecorebindgingakeyslua' then
-        content = content:gsub('evt%.type == \'press\'', 'evt.type ~= \'press\'')
+        content = content:gsub('gly_key, pressed', 'gly_key, not pressed')
     end
     if args.dev and srcname == 'eeenginecorebindgingamainlua' then
         content = content:gsub('pcall%(draw%)', 'draw()')

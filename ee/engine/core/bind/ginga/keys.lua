@@ -30,7 +30,7 @@ local function event_ginga(std, evt)
     local is_back = raw_key == 'BACK'
     local is_back_or_red = is_back or raw_key == 'RED'
 
-    if evt.key == 'BACK' then
+    if is_back then
         event.post('out', {
             class = 'ncl',
             type = 'edit',
@@ -44,11 +44,14 @@ local function event_ginga(std, evt)
     --! @li @li https://github.com/gly-engine/gly-engine/issues/196
     --! Fix ensures at least syncing a loop when the button is pressed.
     if is_back_or_red and pressed then pressed_196_key = gly_key end
-    if is_back_or_red and not pressed and pressed_196_key == gly_key then fixture_196_key = gly_key return end
+    if is_back_or_red and not pressed and pressed_196_key == gly_key then 
+        fixture_196_key = gly_key
+        return
+    end
 
     --! @li https://github.com/TeleMidia/ginga/issues/190
     --! this condtional is inverse in ---dev building flag.
-    std.bus.emit('rkey', key_bindings[evt.key], evt.type == 'press')
+    std.bus.emit('rkey', gly_key, pressed)
 end
 
 local function event_fixed(std)
