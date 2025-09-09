@@ -16,7 +16,6 @@ local key_bindings={
     ENTER='a'
 }
 
---! @li https://github.com/TeleMidia/ginga/issues/190
 local function event_ginga(std, evt)
     if evt.class ~= 'key' then return end
     if not key_bindings[evt.key] then return end
@@ -30,8 +29,9 @@ local function event_ginga(std, evt)
             value = 'application'
         })
     end
+    --! this condtional is inverse in ---dev building flag.
+    --! @li https://github.com/TeleMidia/ginga/issues/190
     std.bus.emit('rkey', key_bindings[evt.key], evt.type == 'press')
-
 end
 
 local function install(std)
