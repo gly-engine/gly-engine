@@ -17,18 +17,18 @@ local key_bindings={
 }
 
 local fixture_196_key = ''
-local pressed_196_red = false
-local pressed_196_back = false
+local pressed_196_key = ''
 local fixture_196_looped = false
 
 local function event_ginga(std, evt)
     if evt.class ~= 'key' then return end
     if not key_bindings[evt.key] then return end
 
-    local raw_key = evt.key
-    local is_red = raw_key == 'RED'
-    local is_back = raw_key == 'BACK'
     local pressed = evt.type == 'press'
+    local raw_key = evt.key
+    local gly_key = key_bindings[evt.key]
+    local is_back = raw_key == 'BACK'
+    local is_back_or_red = is_back or raw_key == 'RED'
 
     if evt.key == 'BACK' then
         event.post('out', {
@@ -43,10 +43,8 @@ local function event_ginga(std, evt)
 
     --! @li @li https://github.com/gly-engine/gly-engine/issues/196
     --! Fix ensures at least syncing a loop when the button is pressed.
-    if pressed and is_red then pressed_196_red = true end
-    if pressed and is_back then pressed_196_back = true end
-    if not pressed and is_red and pressed_196_red then fixture_196_key = 'a' return end
-    if not pressed and is_back and pressed_196_back then fixture_196_key = 'menu' return end
+    if is_back_or_red and pressed then pressed_196_key = gly_key end
+    if is_back_or_red and not pressed and pressed_196_key == gly_key then fixture_196_key = gly_key return end
 
     --! @li https://github.com/TeleMidia/ginga/issues/190
     --! this condtional is inverse in ---dev building flag.
@@ -62,6 +60,8 @@ local function event_fixed(std)
             fixture_196_looped = false
             fixture_196_key = ''
         end
+    else
+        pressed_196_key = ''
     end
 end
 
