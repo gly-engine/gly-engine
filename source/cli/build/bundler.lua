@@ -172,6 +172,7 @@ local function build(src, dest)
                     line = '-'..'- global '
                 end
 
+                --@ todo remove lib_func??
                 local index = #deps_dict[line_package].line + 1
                 local lib_id = tostring(deps_dict[line_package]):gsub('0x', ''):match(pattern_identify)
                 local lib_func = line_package:gsub('/', '_'):gsub('%.', '_'):gsub('\\', '_')..'_'..lib_id
@@ -180,7 +181,6 @@ local function build(src, dest)
                 deps_dict[line_package].line[index] = line
                 deps_dict[line_package].var[index] = line_variable
                 deps_dict[line_package].suffix[index] = line_suffix
-                deps_dict[line_package].func = lib_func
             end
 
             if not eof and line and #line > 0 then
@@ -203,18 +203,17 @@ local function build(src, dest)
         end
 
         do
-            lib_name = nil
+            lib_index = 0
             local index = 1
-            while index <= #deps_list and not lib_name do
+            while index <= #deps_list and lib_index == 0 do
                 local lib = deps_list[index]
                 if not deps_dict[lib].imported then
                     local file1 = str_fs.lua(lib).get_fullfilepath()
                     local file2 = str_fs.lua(relative..lib).get_fullfilepath()
                     src_file = io.open(file1, 'r') or io.open(file2, 'r')
                     from = src_file and 'lib' or 'system'
-                    lib_name = src_file and deps_dict[lib].func
+                    lib_index = (src_file and index) or 0
                     deps_dict[lib].imported = from
-                    lib_index = index
                 end
                 index = index + 1
             end
@@ -230,7 +229,7 @@ local function build(src, dest)
             while index2 <= #deps_dict[lib].line do
                 local line = deps_dict[lib].line[index2]..'\n'
                 local lib_type = line:match('^-'..'- (%w+)')
-                local call_require = require_lib:gsub('{id}', id):gsub('{index}', index1):gsub('{alias}', deps_dict[lib].func)
+                local call_require = require_lib:gsub('{id}', id):gsub('{index}', index1):gsub('{alias}', lib)
     
                 if deps_dict[lib].imported == 'system' then
                     if not deps_dict[lib].header then
@@ -263,10 +262,9 @@ local function build(src, dest)
         return false, 'nothing to do!'
     end
 
-    do
+    if #deps_list > 0 then
         local index = 1
         local pre_alloc = ('local b_{id} = {'):gsub('{id}', id)
-        print('libs:', #deps_list)
         while index <= #deps_list do
             pre_alloc = pre_alloc..'0,'
             index = index + 1
