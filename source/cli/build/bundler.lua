@@ -104,11 +104,16 @@ local function build(src, dest)
     local pattern_require4 = '^%s*require%s*[\'"](.-)[\'"](.*)'
     local pattern_require5 = '^%s*([%w_%-]+)%s*=%s*require%s*[\'"](.-)[\'"](.*)'
     local pattern_require6 = '^%s*local%s*([%w_%-]+)%s*=%s*require%s*[\'"](.-)[\'"](.*)'
+    local before_lib_declaration = 'b_{id}[{index}] = function() local c = (function()\n'
+    local after_lib_declaration = 'end)() or false;b_{id}[{index}] = function() return c end return c end\n'
+    local require_lib = 'b_{id}[{index}](\'{alias}\')'
+    local id = tostring({}):gsub('0x', ''):match(pattern_identify)
     local deps_list = {}
     local deps_dict = {}
     local main_content = ''
     local main_before = ''
     local main_after = ''
+    local lib_index = 0
     local lib_name = nil
 
     if not src_file then
@@ -121,8 +126,8 @@ local function build(src, dest)
 
     while src_file do
         if from == 'lib' then
-            main_before = main_before..'local '..lib_name..' = nil\n'
-            main_after = main_after..lib_name..' = function()\n'
+            local declaration = before_lib_declaration:gsub('{id}', id):gsub('{index}', lib_index)
+            main_after = main_after..declaration
         end
         repeat
             local line = src_file and src_file:read()
@@ -188,7 +193,8 @@ local function build(src, dest)
         until eof
     
         if from == 'lib' then
-            main_after = main_after..'end\n-'..'-\n'
+            local declaration = after_lib_declaration:gsub('{id}', id):gsub('{index}', lib_index)
+            main_after = main_after..declaration
         end
 
         if src_file then
@@ -208,6 +214,7 @@ local function build(src, dest)
                     from = src_file and 'lib' or 'system'
                     lib_name = src_file and deps_dict[lib].func
                     deps_dict[lib].imported = from
+                    lib_index = index
                 end
                 index = index + 1
             end
@@ -223,6 +230,8 @@ local function build(src, dest)
             while index2 <= #deps_dict[lib].line do
                 local line = deps_dict[lib].line[index2]..'\n'
                 local lib_type = line:match('^-'..'- (%w+)')
+                local call_require = require_lib:gsub('{id}', id):gsub('{index}', index1):gsub('{alias}', deps_dict[lib].func)
+    
                 if deps_dict[lib].imported == 'system' then
                     if not deps_dict[lib].header then
                         main_before = 'local '..deps_dict[lib].var[index2]..' = ((function() local x, y = pcall(require, \''..lib
@@ -232,12 +241,12 @@ local function build(src, dest)
                     main_after = main_after:gsub(line, '')
                     main_content = main_content:gsub(line, '')                    
                 elseif lib_type == 'part' then
-                    local replacer = deps_dict[lib].func..'()'..deps_dict[lib].suffix[index2]
+                    local replacer = call_require..deps_dict[lib].suffix[index2]
                     line = line:sub(1, #line - 2)..'-'
                     main_after = main_after:gsub(line, replacer)
                     main_content = main_content:gsub(line, replacer)
                 else
-                    local replacer = deps_dict[lib].var[index2]..' = '..deps_dict[lib].func..'()'..deps_dict[lib].suffix[index2]..'\n'
+                    local replacer = deps_dict[lib].var[index2]..' = '..call_require..deps_dict[lib].suffix[index2]..'\n'
                     if lib_type == 'local' then
                         replacer = 'local '..replacer
                     end
@@ -255,7 +264,17 @@ local function build(src, dest)
     end
 
     do
-        local id = tostring(deps_dict):gsub('0x', ''):match(pattern_identify)
+        local index = 1
+        local pre_alloc = ('local b_{id} = {'):gsub('{id}', id)
+        print('libs:', #deps_list)
+        while index <= #deps_list do
+            pre_alloc = pre_alloc..'0,'
+            index = index + 1
+        end
+        main_before = pre_alloc:gsub(',$', '')..'}\n'..main_before
+    end
+
+    do
         main_content = 'local function main_'..id..'()\n'..main_content..'end\n'
         main_content = main_before..main_content..main_after..'return main_'..id..'()\n'
     end
