@@ -35,22 +35,7 @@ local function line(std, engine, canvas, x1, y1, x2, y2)
     canvas:drawLine(px1, py1, px2, py2)
 end
 
-local function image(std, engine, canvas, src, pos_x, pos_y)
-    local image = std.mem.cache('image'..src, function()
-        local file = io.open(src, 'rb')
-        if not file then return nil end
-        file:close()
-        return canvas:new(src)
-    end)
-    if image then
-        local x = engine.offset_x + (pos_x or 0)
-        local y = engine.offset_y + (pos_y or 0)
-        canvas:compose(x, y, image)
-    end
-end
-
 local function install(std, engine)
-    std.image.draw = util_decorator.prefix3(std, engine, engine.canvas, image)
     std.draw.clear = util_decorator.prefix3(std, engine, engine.canvas, clear)
     std.draw.color = util_decorator.prefix3(std, engine, engine.canvas, color)
     std.draw.rect = util_decorator.prefix3(std, engine, engine.canvas, rect)
