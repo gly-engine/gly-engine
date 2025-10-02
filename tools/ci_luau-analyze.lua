@@ -20,6 +20,10 @@ if ('asteroids pong'):find(core) then
     return
 end
 
-cmd('./cli.sh build --bundler --enterprise --core '..core)
+if core == 'ginga' then
+    cmd('./cli.sh build-ginga --bundler --enterprise @pong --target ncl')
+else
+    cmd('./cli.sh build-engine --bundler @'..core)
+end
 cmd(replace..' --format "function native_callback" --replace "local function _native_callback"')
 cmd('./cli.sh hazard-package-mock tests/mock/json.lua dist/main.lua source_third_party_rxi_json')

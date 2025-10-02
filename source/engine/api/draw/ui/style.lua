@@ -1,7 +1,4 @@
-local style = {
-    list = {},
-    dict = {}
-}
+local tree = require('source/shared/engine/tree')
 
 --! @defgroup std
 --! @{
@@ -45,32 +42,32 @@ local style = {
 --! @}
 --! @}
 
-local function decorate_style(namespace, attribute)
-    return function(self, value)
-        self.pipeline[#self.pipeline + 1] = function(std, node, parent, root)
-            local is_func = type(value) == 'function'
-            node[namespace][attribute] =  is_func and value(std, node, parent, root) or value
-        end
-        return self
-    end
+local function add(engine, self, node)
+    tree.css_add(engine.dom, self.func, node)
+    return self
 end
 
-local function component(std, engine, classname)
-    local self = style.dict[classname]
-
-    if not self then
-        self = {
-            pipeline = {},
-            width = decorate_style('data', 'width'),
-            height = decorate_style('data', 'height'),
-            pos_y = decorate_style('config', 'offset_y'),
-            pos_x = decorate_style('config', 'offset_x')
-        }
-
-        style.list[#style.list] = classname
-        style.dict[classname] = self
+local function add_items(engine, self, nodes)
+    local index = 1
+    while nodes and index <= #nodes do
+        add(engine, self, nodes[index])
+        index = index + 1
     end
+    return self
+end
 
+local function remove(engine, self, node)
+    tree.css_del(engine.dom, self.func, node)
+    return self
+end
+
+local function component(engine, name, options)
+    local self = {
+        func = tree.stylesheet(engine.dom, name, options),
+        add = function(a, b) return add(engine, a, b) end,
+        add_items = function(a, b) return add_items(engine, a, b) end,
+        remove = function(a, b) return remove(engine, a, b) end
+    }
     return self
 end
 

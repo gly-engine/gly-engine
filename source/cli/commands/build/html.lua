@@ -6,10 +6,7 @@ local str_fs = require('source/shared/string/schema/fs')
 
 local function build(args)
     args.outdir = str_fs.path(args.outdir).get_fullfilepath()
-
-    if args.core == 'ginga' then
-        args.fengari = true
-    end
+    args.core = args.target
 
     cli_fs.clear(args.outdir)
     cli_fs.mkdir(args.outdir..'_bundler/')
@@ -21,15 +18,7 @@ local function build(args)
         :add_core('game', {src=args.src, as='game.lua', prefix='game_', assets=true, cwd=args.cwd})
 
     local build_core = buildsystem.from(args)
-        :add_rule('the middlware ginga html5 already has a streamming player', 'core=ginga', 'videojs=true')
-        :add_rule('please use flag -'..'-enterprise to use commercial modules', 'core=ginga', 'enterprise=false')
-        :add_rule('please use flag -'..'-gpl3 to use free software modules', 'gamepadzilla=true', 'gpl3=false')
-        --
         :add_core('html5', {src=args.engine, force_bundler=true})
-        :add_meta('source/engine/meta/html5/index.mustache', {as='index.html'})
-        --
-        :add_core('ginga', {src=args.engine, force_bundler=true})
-        :add_file('assets/icon80x80.png')
         :add_meta('source/engine/meta/html5/index.mustache', {as='index.html'})
         --
         :add_core('tizen', {src=args.engine, force_bundler=true})

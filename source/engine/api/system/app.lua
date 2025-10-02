@@ -12,8 +12,8 @@ local function reset(std, engine)
         std.bus.emit('exit')
         std.bus.emit('init')
     else
-        engine.root.callbacks.exit(std, engine.root.data)
-        engine.root.callbacks.init(std, engine.root.data)
+        engine.root.callbacks.exit(engine.root.data, std)
+        engine.root.callbacks.init(engine.root.data, std)
     end
 end
 

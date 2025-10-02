@@ -71,7 +71,6 @@ local function media_create(node, channels, handler)
         resume = decorator(handler.resume),
         stop = decorator(handler.stop),
         position = decorator(handler.position),
-        resize = decorator(handler.resize),
         in_mutex = handler.mutex or function() return false end,
         get_error = handler.error or function() return nil end,
         -- internal

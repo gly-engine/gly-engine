@@ -78,8 +78,9 @@ local function move(src_filename, out_filename, options, args)
                 local exist_as_file = io.open(file_require, 'r')
                 local var_name = line_require[1]
                 local module_prefix = exist_as_file and prefix or ''
+                local module_alias = module_prefix..module_path:gsub('/', '_'):gsub('\\', '_')
                 deps[#deps + 1] = module_path..'.lua'
-                content = content..'local '..var_name..' = require(\''..module_prefix..module_path:gsub('/', '_')..'\')\n'
+                content = content..'local '..var_name..' = require(\''..module_alias..'\')\n'
                 if exist_as_file then
                     exist_as_file:close()
                 end

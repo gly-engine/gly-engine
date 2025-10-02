@@ -11,10 +11,6 @@ local function ccwss_position(channel, pos_x, pos_y, width, height)
     end
 end
 
-local function ccwss_resize(channel, width, height)
-    ccwss_position(channel, x, y, width, height)
-end
-
 local function ccws_command(_cmd)
     return function()
         event.post('out', {
@@ -42,7 +38,6 @@ local P = {
     resume = ccws_command('resume'),
     stop = ccws_command('stop'),
     source = function() end,
-    resize = ccwss_resize,
     position = ccwss_position,
     bootstrap = ccws_bootstrap,
 }

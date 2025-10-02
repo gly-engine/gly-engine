@@ -5,26 +5,26 @@
 --! @lihttps://en.wikipedia.org/wiki/3D_Maze
 --!
 
-local function wolf_getmap(std, game, x, y)
+local function wolf_getmap(self, std, x, y)
     local mapX = std.math.floor(x)
     local mapY = std.math.floor(y)
-    if mapX < 1 or mapX > game.map.width or mapY < 1 or mapY > game.map.height then
+    if mapX < 1 or mapX > self.map.width or mapY < 1 or mapY > self.map.height then
         return 1
     end
-    return game.map.grid[(mapY - 1) * game.map.width + mapX]
+    return self.map.grid[(mapY - 1) * self.map.width + mapX]
 end
 
-local function wolf_raycast(std, game, angle)
+local function wolf_raycast(self, std, angle)
     local dist = 0
     local hit = false
     local hitX, hitY, hitType = nil, nil, 0
     local cosA = std.math.cos(angle)
     local sinA = std.math.sin(angle)
-    while (not hit) and (dist < game.max_distance) do
-        dist = dist + game.ray_step
-        local x = game.player.x + cosA * dist
-        local y = game.player.y + sinA * dist
-        local cellType = wolf_getmap(std, game, x, y)
+    while (not hit) and (dist < self.max_distance) do
+        dist = dist + self.ray_step
+        local x = self.player.x + cosA * dist
+        local y = self.player.y + sinA * dist
+        local cellType = wolf_getmap(self, std, x, y)
         if cellType ~= 0 then
             hit = true
             hitX, hitY = x, y
@@ -49,23 +49,23 @@ local function wolf_newmap(std)
     return {width=mapWidth, height=mapHeight, grid=grid}
 end
 
-local function bot_bfs(std, game, startX, startY, goalX, goalY)
+local function bot_bfs(self, std, startX, startY, goalX, goalY)
     local queue = {}
     local visited = {}
     local parent = {}
     local dirs = {{dx=1, dy=0}, {dx=-1, dy=0}, {dx=0, dy=1}, {dx=0, dy=-1}}
 
     queue[#queue+1] = {x=startX, y=startY}
-    visited[(startY-1)*game.map.width + startX] = true
+    visited[(startY-1)*self.map.width + startX] = true
 
     while #queue > 0 do
         local current = table.remove(queue, 1)
         for _, dir in ipairs(dirs) do
             local nx = current.x + dir.dx
             local ny = current.y + dir.dy
-            if nx >= 1 and nx <= game.map.width and ny >= 1 and ny <= game.map.height then
-                local idx = (ny-1)*game.map.width + nx
-                if not visited[idx] and (wolf_getmap(std, game, nx, ny) == 0 or wolf_getmap(std, game, nx, ny) == 2) then
+            if nx >= 1 and nx <= self.map.width and ny >= 1 and ny <= self.map.height then
+                local idx = (ny-1)*self.map.width + nx
+                if not visited[idx] and (wolf_getmap(self, std, nx, ny) == 0 or wolf_getmap(self, std, nx, ny) == 2) then
                     visited[idx] = true
                     parent[idx] = current
                     queue[#queue+1] = {x=nx, y=ny}
@@ -74,7 +74,7 @@ local function bot_bfs(std, game, startX, startY, goalX, goalY)
                         local node = {x=nx, y=ny}
                         while node do
                             table.insert(path, 1, node)
-                            local p = parent[(node.y-1)*game.map.width + node.x]
+                            local p = parent[(node.y-1)*self.map.width + node.x]
                             node = p
                         end
                         return path
@@ -86,34 +86,34 @@ local function bot_bfs(std, game, startX, startY, goalX, goalY)
     return nil
 end
 
-local function init(std, game)
-    game.player = {x=3, y=3, angle=0, fov=std.math.pi/3, speed=5, turn_speed=1.5}
-    game.bot = {timer=0, angle=game.player.angle, path=nil, targetIndex=1, state="turning"}
-    game.map = wolf_newmap(std) 
-    game.num_rays = 100
-    game.max_distance = 30
-    game.ray_step = 0.1
-    game.ray_angle_step = game.player.fov / game.num_rays
+local function init(self, std)
+    self.player = {x=3, y=3, angle=0, fov=std.math.pi/3, speed=5, turn_speed=1.5}
+    self.bot = {timer=0, angle=self.player.angle, path=nil, targetIndex=1, state="turning"}
+    self.map = wolf_newmap(std) 
+    self.num_rays = 100
+    self.max_distance = 30
+    self.ray_step = 0.1
+    self.ray_angle_step = self.player.fov / self.num_rays
 end
 
-local function bot_move(std, game, dt)
-    local goalX, goalY = game.map.width, std.math.floor(game.map.height/2)
-    local currentCell = {x=std.math.floor(game.player.x), y=std.math.floor(game.player.y)}
+local function bot_move(self, std, dt)
+    local goalX, goalY = self.map.width, std.math.floor(self.map.height/2)
+    local currentCell = {x=std.math.floor(self.player.x), y=std.math.floor(self.player.y)}
 
     if currentCell.x == goalX and currentCell.y == goalY then return end
 
-    if not game.bot.path then
-        game.bot.path = bot_bfs(std, game, currentCell.x, currentCell.y, goalX, goalY)
-        game.bot.targetIndex = 2
-        game.bot.state = "turning"
+    if not self.bot.path then
+        self.bot.path = bot_bfs(self, std, currentCell.x, currentCell.y, goalX, goalY)
+        self.bot.targetIndex = 2
+        self.bot.state = "turning"
     end
 
-    if not game.bot.path or #game.bot.path < game.bot.targetIndex then return end
+    if not self.bot.path or #self.bot.path < self.bot.targetIndex then return end
 
-    local targetCell = game.bot.path[game.bot.targetIndex]
+    local targetCell = self.bot.path[self.bot.targetIndex]
     if currentCell.x == targetCell.x and currentCell.y == targetCell.y then
-        game.bot.targetIndex = game.bot.targetIndex + 1
-        game.bot.state = "turning"
+        self.bot.targetIndex = self.bot.targetIndex + 1
+        self.bot.state = "turning"
         return
     end
 
@@ -121,68 +121,68 @@ local function bot_move(std, game, dt)
     local dy = targetCell.y - currentCell.y
     local targetAngle = (dx == 1 and 0) or (dx == -1 and std.math.pi) or (dy == 1 and std.math.pi/2) or 3*std.math.pi/2
 
-    game.bot.angle = targetAngle
-    local angleDiff = std.math.abs(game.player.angle - targetAngle)
+    self.bot.angle = targetAngle
+    local angleDiff = std.math.abs(self.player.angle - targetAngle)
     angleDiff = (angleDiff + std.math.pi) % (2 * std.math.pi) - std.math.pi
     
     if std.math.abs(angleDiff) < 0.1 then
-        game.player.x = game.player.x + std.math.cos(game.player.angle) * game.player.speed * dt
-        game.player.y = game.player.y + std.math.sin(game.player.angle) * game.player.speed * dt
+        self.player.x = self.player.x + std.math.cos(self.player.angle) * self.player.speed * dt
+        self.player.y = self.player.y + std.math.sin(self.player.angle) * self.player.speed * dt
     end
 end
 
-local function loop(std, game)
-    game.bot.timer = game.bot.timer + std.delta
+local function loop(self, std)
+    self.bot.timer = self.bot.timer + std.delta
     if std.key.press.any then
-        game.bot.timer = 0
-        game.bot.path = nil
+        self.bot.timer = 0
+        self.bot.path = nil
     end
 
-    if game.bot.timer >= 3000 then
+    if self.bot.timer >= 3000 then
         local dt = std.delta / 1000
-        local angleDiff = game.bot.angle - game.player.angle
-        if std.math.abs(angleDiff) > game.player.turn_speed * dt then
-            game.player.angle = game.player.angle + (angleDiff > 0 and game.player.turn_speed or -game.player.turn_speed) * dt
+        local angleDiff = self.bot.angle - self.player.angle
+        if std.math.abs(angleDiff) > self.player.turn_speed * dt then
+            self.player.angle = self.player.angle + (angleDiff > 0 and self.player.turn_speed or -self.player.turn_speed) * dt
         else
-            game.player.angle = game.bot.angle
+            self.player.angle = self.bot.angle
         end
 
-        bot_move(std, game, dt)
-        local cellX, cellY = std.math.floor(game.player.x), std.math.floor(game.player.y)
-        if wolf_getmap(std, game, cellX, cellY) == 2 then std.app.reset() end
+        bot_move(self, std, dt)
+        local cellX, cellY = std.math.floor(self.player.x), std.math.floor(self.player.y)
+        if wolf_getmap(self, std, cellX, cellY) == 2 then std.app.reset() end
         return
     end
 
     local dt = std.delta / 1000
-    local speed = game.player.speed * dt
-    local new_x = game.player.x + (std.key.press.up and std.math.cos(game.player.angle) or std.key.press.down and -std.math.cos(game.player.angle) or 0) * speed
-    local new_y = game.player.y + (std.key.press.up and std.math.sin(game.player.angle) or std.key.press.down and -std.math.sin(game.player.angle) or 0) * speed
+    local speed = self.player.speed * dt
+    local new_x = self.player.x + (std.key.press.up and std.math.cos(self.player.angle) or std.key.press.down and -std.math.cos(self.player.angle) or 0) * speed
+    local new_y = self.player.y + (std.key.press.up and std.math.sin(self.player.angle) or std.key.press.down and -std.math.sin(self.player.angle) or 0) * speed
 
-    if wolf_getmap(std, game, new_x, game.player.y) == 0 then game.player.x = new_x end
-    if wolf_getmap(std, game, game.player.x, new_y) == 0 then game.player.y = new_y end
+    if wolf_getmap(self, std, new_x, self.player.y) == 0 then self.player.x = new_x end
+    if wolf_getmap(self, std, self.player.x, new_y) == 0 then self.player.y = new_y end
 
-    if wolf_getmap(std, game, new_x, game.player.y) == 2 or wolf_getmap(std, game, game.player.x, new_y) == 2 then
+    if wolf_getmap(self, std, new_x, self.player.y) == 2 or wolf_getmap(self, std, self.player.x, new_y) == 2 then
         std.app.reset()
     end
 
-    if std.key.press.left then game.player.angle = game.player.angle - game.player.turn_speed * dt end
-    if std.key.press.right then game.player.angle = game.player.angle + game.player.turn_speed * dt end
+    if std.key.press.left then self.player.angle = self.player.angle - self.player.turn_speed * dt end
+    if std.key.press.right then self.player.angle = self.player.angle + self.player.turn_speed * dt end
 end
 
-local function draw(std, game)
+local function draw(self, std)
     std.draw.clear(0xFFFFFFFF)
     std.draw.color(0xFFA500FF)
-    std.draw.rect(0, 0, game.height/2, game.width, game.height/2)
+    std.draw.rect(0, 0, self.height/2, self.width, self.height/2)
 
-    for i = 0, game.num_rays do
-        local angle = game.player.angle - game.player.fov/2 + (i * game.ray_angle_step)
-        local dist, _, _, hitType = wolf_raycast(std, game, angle)
-        local lineHeight = std.math.min(game.height, 1000 / (dist + 0.0001))
-        local x = (i / game.num_rays) * game.width
+    for i = 0, self.num_rays do
+        local angle = self.player.angle - self.player.fov/2 + (i * self.ray_angle_step)
+        local dist, _, _, hitType = wolf_raycast(self, std, angle)
+        local lineHeight = std.math.min(self.height, 1000 / (dist + 0.0001))
+        local x = (i / self.num_rays) * self.width
 
-        local wallColor = hitType == 2 and 0x0000FFFF or (std.math.floor(std.math.max(0.2, 1 - dist/game.max_distance)*255)*0x1000000+0xFF)
+        local wallColor = hitType == 2 and 0x0000FFFF or (std.math.floor(std.math.max(0.2, 1 - dist/self.max_distance)*255)*0x1000000+0xFF)
         std.draw.color(wallColor)
-        std.draw.rect(0, x, (game.height - lineHeight)/2, game.width/game.num_rays + 1, lineHeight)
+        std.draw.rect(0, x, (self.height - lineHeight)/2, self.width/self.num_rays + 1, lineHeight)
     end
 end
 

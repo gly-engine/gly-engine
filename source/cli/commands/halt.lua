@@ -1,6 +1,7 @@
 local build = require('source/cli/commands/build/main')
 local build_bin = require('source/cli/commands/build/bin')
 local build_html = require('source/cli/commands/build/html')
+local build_ginga = require('source/cli/commands/build/ginga')
 local zeebo_compiler = require('source/cli/build/compiler')
 local zeebo_bundler = require('source/cli/build/bundler')
 local str_fs = require('source/shared/string/schema/fs')
@@ -42,10 +43,19 @@ local function test(args)
     local coverage = args.coverage and '-lluacov' or ''
     local files = cli_fs.ls('./tests/unit')
     local ok, index = true, 1
+    if args.bundler then cli_fs.clear('.bundler') end
     while index <= #files do
-        ok = ok and os.execute(args.luabin..' '..coverage..' ./tests/unit/'..files[index])
+        local file = './tests/unit/'..files[index]
+        local command = args.luabin..' '..coverage..' '..file
+        if args.bundler then
+            local outfile = str_fs.path('.bundler', files[index]).get_fullfilepath()
+            assert(zeebo_compiler.build(str_fs.file(file).get_fullfilepath(), outfile))
+            command = args.luabin..' '..outfile
+        end
+        ok = ok and os.execute(command)
         index = index + 1
     end
+    if args.bundler then cli_fs.rmdir('.bundler') end
     if #coverage > 0 then
         os.execute('luacov src')
         os.execute('tail -n '..tostring(#files + 5)..' luacov.report.out')
@@ -92,7 +102,9 @@ local P = {
     compile = compile,
     build = build.build,
     ['build-bin'] = build_bin.build,
-    ['build-html'] = build_html.build
+    ['build-html'] = build_html.build,
+    ['build-ginga'] = build_ginga.build,
+    ['build-engine'] = build.build_engine
 }
 
 return P
