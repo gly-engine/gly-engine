@@ -29,6 +29,7 @@ local command = cli.argparse(arg)
     .add_option_has('videofake', {hidden=true})
     .add_option_has('enginecdn', {hidden=true})
     .add_option_has('aa', {hidden=true})
+    .add_option_has('non-relative')
     .add_option_has('bundler')
     .add_option_has('run')
     --
