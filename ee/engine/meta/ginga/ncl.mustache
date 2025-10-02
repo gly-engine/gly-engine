@@ -1,9 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
+{{! @todo must use ISO-8859-1 ? }}
 <ncl id="{{# fn.case.lower }}{{# fn.case.msdos }}{{& meta.title }}{{/ fn.case.msdos }}{{/ fn.case.lower }}">
   <head>
     <regionBase>
       <region id="regionTv" left="0" top="0" width="1280" height="720" zIndex="1"/>
-      <region id="regionApplication" width="100%" height="100%" zIndex="2"/>
+      {{# args.dev }}
+      <region id="regionApplication" left="0" top="0" width="100%" height="100%" zIndex="2"/>
+      {{/ args.dev }}
+      {{^ args.dev }}
+      <region id="regionApplication" left="0" top="0" width="1280" height="720" zIndex="2"/>
+      {{/ args.dev }}    
     </regionBase>
     <descriptorBase>
       <descriptor id="descriptorTv" region="regionTv" focusBorderWidth="0" focusBorderColor="black" selBorderColor="black" focusBorderTransparency="100%"/>
