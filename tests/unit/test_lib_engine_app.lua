@@ -49,13 +49,13 @@ function test_app_reset_no_node()
         }
     }
 
-    engine.root.callbacks.exit = function(std_param, data_param)
+    engine.root.callbacks.exit = function(data_param, std_param)
         assert(std_param == std)
         assert(data_param == engine.root.data)
         exit_called = true
     end
 
-    engine.root.callbacks.init = function(std_param, data_param)
+    engine.root.callbacks.init = function(data_param, std_param)
         assert(std_param == std)
         assert(data_param == engine.root.data)
         init_called = true
@@ -136,13 +136,13 @@ function test_app_install()
         }
     }
 
-    engine.root.callbacks.exit = function(std_param, data_param)
+    engine.root.callbacks.exit = function(data_param, std_param)
         assert(std_param == std)
         assert(data_param == engine.root.data)
         exit_called = true
     end
 
-    engine.root.callbacks.init = function(std_param, data_param)
+    engine.root.callbacks.init = function(data_param, std_param)
         assert(std_param == std)
         assert(data_param == engine.root.data)
         init_called = true

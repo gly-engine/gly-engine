@@ -1,26 +1,25 @@
 --! @see pong
 --! @see asteroids
 
-local function load(std, game)
+local function load(self, std)
     local game1 = std.node.load('samples/pong/game.lua')
     local game2 = std.node.load('samples/asteroids/game.lua')
 
-    game.toggle = false
-    game.ui_split = std.ui.grid('2x1')
+    self.toggle = false
+    self.ui_split = std.ui.grid('2x1')
         :add(game1)
         :add(game2)
-        :apply()
 
-    std.node.pause(game.ui_split:get_item(2), 'loop')
+    std.node.pause(self.ui_split:get_item(2), 'loop')
 end
 
-local function key(std, game)
+local function key(self, std)
     if std.key.press.b then
-        local to_pause = game.ui_split:get_item(game.toggle and 2 or 1)
-        local to_resume = game.ui_split:get_item(game.toggle and 1 or 2)
+        local to_pause = self.ui_split:get_item(self.toggle and 2 or 1)
+        local to_resume = self.ui_split:get_item(self.toggle and 1 or 2)
         std.node.pause(to_pause, 'loop')
         std.node.resume(to_resume, 'loop')
-        game.toggle = not game.toggle
+        self.toggle = not self.toggle
     end
 end
 

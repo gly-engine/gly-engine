@@ -84,6 +84,9 @@
         data-gpz-bind="KeyC KeyV KeyZ KeyX">
       </canvas>
       {{/ args.gamepadzilla }}
+      {{# assets.png }}
+      <img src="{{& fn.colon.to }}" alt="{{# fn.case.msdos }}{{& fn.colon.from }}{{/ fn.case.msdos }}" style="display:none;"/>
+      {{/ assets.fonts }}
     </main>
     {{# args.videofake }}
     <script>window.videofake=100</script>
@@ -107,26 +110,26 @@
     window.LuaMultiReturn = LuaMultiReturn
     </script>
     {{/ args.fengari }}
-    <script src="https://cdn.jsdelivr.net/npm/@gamely/core-native-html5@0.1.8" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@gamely/core-native-html5@0.2.0" defer></script>
     <script>
       document.addEventListener('DOMContentLoaded', async () => {
-        window.gly = await core_native_html5()
-          .set_el_root('main')
-          .set_el_canvas('#gameCanvas')
-          .set_library('wasmoon', window.LuaFactory, window.LuaMultiReturn)
-          .set_library('fengari', window.fengari)
-          .set_library('fengari-jsonrxi', 'https://cdn.jsdelivr.net/gh/rxi/json.lua/json.lua')
-          .set_library('fengari-or-wasmoon-check')
-          .set_library('runtime', {unfocus_pause: true})
-          .set_library('gamepad')
-          .set_library('keyboard')
-          .set_library('{{ var.build.html5.lib_resize }}')
-          .set_library('player-html5')
-          .set_library('player-youtube')
-          .set_library('player-fake', window.videofake)
-          .set_library('player-videojs', window.videojs)
-          .set_engine(`{{& var.build.html5.src_engine }}`)
-          .set_game(`{{& var.build.html5.src_game }}`)
+        window.gly = await CoreNativeHtml5()
+          .setElementRoot('main')
+          .setElementCanvas('#gameCanvas')
+          .addLibrary('wasmoon', window.LuaFactory, window.LuaMultiReturn)
+          .addLibrary('fengari', window.fengari)
+          .addLibrary('fengari-jsonrxi', 'https://cdn.jsdelivr.net/gh/rxi/json.lua/json.lua')
+          .addLibrary('fengari-or-wasmoon-check')
+          .addLibrary('runtime', {unfocus_pause: true})
+          .addLibrary('gamepad')
+          .addLibrary('keyboard')
+          .addLibrary('{{ var.build.html5.lib_resize }}')
+          .addLibrary('player-html5')
+          .addLibrary('player-youtube')
+          .addLibrary('player-fake', window.videofake)
+          .addLibrary('player-videojs', window.videojs)
+          .setEngine(`{{& var.build.html5.src_engine }}`)
+          .setGame(`{{& var.build.html5.src_game }}`)
           .build()
       })
     </script>

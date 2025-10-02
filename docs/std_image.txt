@@ -15,5 +15,7 @@ as they use a specific bitmap and it is necessary to implement a
 
 @fakefunc load(src)
 
+@fakefunc mensure(src)
+
 @}
 @}

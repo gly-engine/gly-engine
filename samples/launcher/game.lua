@@ -1,33 +1,33 @@
-local function load(std, data)
-    data._menu = 1
-    data._msg = 'loading...'
+local function load(self, std)
+    self._menu = 1
+    self._msg = 'loading...'
     std.http.get('http://games.gamely.com.br/games.json')
         :error(function()
-            data._msg = std.http.error
+            self._msg = std.http.error
         end)
         :failed(function()
-            data._msg = tostring(std.http.status)
+            self._msg = tostring(std.http.status)
         end)
         :success(function()
-            data._list = std.json.decode(std.http.body)
-            data._msg = nil
+            self._list = std.json.decode(std.http.body)
+            self._msg = nil
         end)
         :run()
 end
 
-local function keys(std, data)
-    if data._game then return end
-    if not data._list then return end
+local function keys(self, std)
+    if self._game then return end
+    if not self._list then return end
 
-    data._menu = std.math.clamp2(data._menu + std.key.axis.y, 1, #data._list)
+    self._menu = std.math.clamp2(self._menu + std.key.axis.y, 1, #self._list)
 
     if std.key.press.a then
-        data._game = {}
-        std.http.get(data._list[data._menu].raw_url)
+        self._game = {}
+        std.http.get(self._list[self._menu].raw_url)
             :success(function()
-                std.app.title(data._list[data._menu].title)
-                data._game = std.node.load(std.http.body)
-                std.node.spawn(data._game)
+                std.app.title(self._list[self._menu].title)
+                self._game = std.node.load(std.http.body)
+                std.node.spawn(self._game)
                 std.bus.emit('init')
                 std.bus.emit('i18n')
             end)
@@ -35,29 +35,29 @@ local function keys(std, data)
     end
 end
 
-local function draw(std, data)
-    if data._game then return end
+local function draw(self, std)
+    if self._game then return end
     std.draw.clear(0x333333FF)
     std.draw.color(std.color.white)
-    if data._msg then 
-        std.text.put(1, 1, data._msg)
+    if self._msg then 
+        std.text.put(1, 1, self._msg)
         return
     end
     local index = 1
-    while index <= #data._list do
-        std.text.put(3, index, data._list[index].title)
-        std.text.put(32, index, data._list[index].version)
-        std.text.put(40, index, data._list[index].author)
+    while index <= #self._list do
+        std.text.put(3, index, self._list[index].title)
+        std.text.put(32, index, self._list[index].version)
+        std.text.put(40, index, self._list[index].author)
         index = index + 1
     end
     std.draw.color(std.color.red)
-    std.text.put(1, data._menu, '>')
+    std.text.put(1, self._menu, '>')
 end
 
-local function quit(std, data)
+local function quit(self, std)
     std.bus.abort()
-    std.node.kill(data._game)
-    data._game = nil
+    std.node.kill(self._game)
+    self._game = nil
 end
 
 local P = {

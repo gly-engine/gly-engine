@@ -113,6 +113,7 @@ local function scan(type_file)
             get_sys_path=get_path(self, separator),
             get_win_path=get_path(self, '\\'),
             get_unix_path=get_path(self, '/'),
+            get_unixfilepath=get_fullfilepath(self, '/'),
             get_fullfilepath=get_fullfilepath(self, separator)
         }
     end

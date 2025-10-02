@@ -6,10 +6,10 @@ local util_decorator = require('source/shared/functional/decorator')
 
 local function install(std, engine, application)
     std.ui = std.ui or {}
-    std.h = util_decorator.prefix2(std, engine, ui_jsx.h)
+    std.h = function(a, b, ...) return ui_jsx.h(std, engine, a, b, {...}) end
     std.ui.grid = util_decorator.prefix2(std, engine, ui_grid.component)
     std.ui.slide = util_decorator.prefix2(std, engine, ui_slide.component)
-    std.ui.style = util_decorator.prefix2(std, engine, ui_style.component)
+    std.ui.style = util_decorator.prefix1(engine, ui_style.component)
 end
 
 local P = {

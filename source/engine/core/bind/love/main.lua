@@ -1,5 +1,6 @@
 local os = require('os')
 --
+local tree = require('source/shared/engine/tree')
 local loadgame = require('source/shared/engine/loadgame')
 local loadcore = require('source/shared/engine/loadcore')
 --
@@ -74,7 +75,7 @@ function love.load(args)
     local fullscreen = util_arg.has(args, 'fullscreen')
     local game_title = util_arg.param(arg, {'screen'}, 2)
     local application = loadgame.script(game_title, application_default)
-    local engine = {offset_x=0,offset_y=0}
+    local engine = {offset_x=0,offset_y=0,dom={}}
     
     if screen then
         local w, h = screen:match('(%d+)x(%d+)')
@@ -118,10 +119,9 @@ function love.load(args)
         :package('hash', lib_api_hash, cfg_system)
         :run()
 
-    std.node.spawn(application)
-
-    engine.root = application
-    engine.current = application
+    std.bus.listen('resize', function(w, h) tree.resize(engine.dom, w, h) end)
+    engine.dom = tree.node_begin(application, std.app.width, std.app.height)
+    engine.root, engine.current = application, application
 
     std.app.title(application.meta.title..' - '..application.meta.version)
 

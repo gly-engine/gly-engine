@@ -5,56 +5,56 @@
 --! @li https://www.vgdb.com.br/telejogo/jogos/paredao
 --!
 
-local function init(std, game)
-    game.highscore = game.highscore or 0
-    game.player_pos = game.height/2
-    game.ball_pos_x = game.width/2
-    game.ball_pos_y = game.height/2
-    game.ball_spd_x = 50
-    game.ball_spd_y = 30
-    game.score = 0
+local function init(self, std)
+    self.highscore = self.highscore or 0
+    self.player_pos = self.height/2
+    self.ball_pos_x = self.width/2
+    self.ball_pos_y = self.height/2
+    self.ball_spd_x = 50
+    self.ball_spd_y = 30
+    self.score = 0
 end
 
-local function loop(std, game)
+local function loop(self, std)
     -- moves
-    game.ball_size = std.math.max(game.width, game.height) / 160
-    game.player_size = (std.math.min(game.width, game.height) / 8) + 2
-    game.ball_pos_x = std.math.clamp(game.ball_pos_x + (game.width * game.ball_spd_x * std.delta)/100000, 0, game.width)
-    game.ball_pos_y = std.math.clamp(game.ball_pos_y + (game.height * game.ball_spd_y * std.delta)/100000, 0, game.height)
-    game.player_pos = std.math.clamp(game.player_pos + (std.key.axis.y * game.ball_size), 0, game.height - game.player_size)  
+    self.ball_size = std.math.max(self.width, self.height) / 160
+    self.player_size = (std.math.min(self.width, self.height) / 8) + 2
+    self.ball_pos_x = std.math.clamp(self.ball_pos_x + (self.width * self.ball_spd_x * std.delta)/100000, 0, self.width)
+    self.ball_pos_y = std.math.clamp(self.ball_pos_y + (self.height * self.ball_spd_y * std.delta)/100000, 0, self.height)
+    self.player_pos = std.math.clamp(self.player_pos + (std.key.axis.y * self.ball_size), 0, self.height - self.player_size)  
 
     -- colisions
-    if game.ball_pos_x >= (game.width - game.ball_size) then
-        game.ball_spd_x = -std.math.abs(game.ball_spd_x)
+    if self.ball_pos_x >= (self.width - self.ball_size) then
+        self.ball_spd_x = -std.math.abs(self.ball_spd_x)
     end
-    if game.ball_pos_y >= (game.height - game.ball_size) then
-        game.ball_spd_y = -std.math.abs(game.ball_spd_y)
+    if self.ball_pos_y >= (self.height - self.ball_size) then
+        self.ball_spd_y = -std.math.abs(self.ball_spd_y)
     end
-    if game.ball_pos_y <= 0 then
-        game.ball_spd_y = std.math.abs(game.ball_spd_y)
+    if self.ball_pos_y <= 0 then
+        self.ball_spd_y = std.math.abs(self.ball_spd_y)
     end
-    if game.ball_pos_x <= 0 then 
-        if std.math.clamp(game.ball_pos_y, game.player_pos, game.player_pos + game.player_size) == game.ball_pos_y then
-            game.ball_spd_y = game.ball_spd_y + game.ball_spd_x - (std.milis % (game.ball_spd_x*2))
-            game.ball_spd_x = std.math.abs(game.ball_spd_x + (game.ball_spd_x/10))
-            game.score = game.score + 1
+    if self.ball_pos_x <= 0 then 
+        if std.math.clamp(self.ball_pos_y, self.player_pos, self.player_pos + self.player_size) == self.ball_pos_y then
+            self.ball_spd_y = self.ball_spd_y + self.ball_spd_x - (std.milis % (self.ball_spd_x*2))
+            self.ball_spd_x = std.math.abs(self.ball_spd_x + (self.ball_spd_x/10))
+            self.score = self.score + 1
         else
             std.app.reset()
         end
     end
 end
 
-local function draw(std, game)
+local function draw(self, std)
     std.draw.clear(std.color.black)
     std.draw.color(std.color.white)
-    std.draw.rect(0, game.ball_size, game.player_pos, game.ball_size, game.player_size)
-    std.draw.rect(0, game.ball_pos_x, game.ball_pos_y, game.ball_size, game.ball_size)
-    std.text.put(20, 1, game.score)
-    std.text.put(60, 1, game.highscore)
+    std.draw.rect2(0, self.ball_size, self.player_pos, self.ball_size, self.player_size, self.ball_size)
+    std.draw.rect2(0, self.ball_pos_x, self.ball_pos_y, self.ball_size, self.ball_size, self.ball_size)
+    std.text.put(20, 1, self.score)
+    std.text.put(60, 1, self.highscore)
 end
 
-local function exit(std, game)
-    game.highscore = std.math.max(game.highscore, game.score)
+local function exit(self, std)
+    self.highscore = std.math.max(self.highscore, self.score)
 end
 
 local P = {
