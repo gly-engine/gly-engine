@@ -5,7 +5,12 @@
     <regionBase>
       <region id="regionTv" left="0" top="0" width="1280" height="720" zIndex="1"/>
       {{! @todo use relative or absolute for prod?}}
+      {{# args.non-relative }}
+      <region id="regionApplication" left="0" top="0" width="1280" height="720" zIndex="2"/>
+      {{/ args.non-relative }}
+      {{^ args.non-relative }}
       <region id="regionApplication" left="0" top="0" width="100%" height="100%" zIndex="2"/>
+      {{/ args.non-relative }} 
     </regionBase>
     <descriptorBase>
       <descriptor id="descriptorTv" region="regionTv" focusBorderWidth="0" focusBorderColor="black" selBorderColor="black" focusBorderTransparency="100%"/>
