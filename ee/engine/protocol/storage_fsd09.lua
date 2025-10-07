@@ -1,4 +1,3 @@
-local json = require('source/third_party/rxi_json')
 local user_agent = require('source/agent')
 local base_url = 'http://localhost:44642/dtv/current-service/ginga/persistent'
 local requests = {}
@@ -6,11 +5,23 @@ local headers = {
     ['User-Agent'] = user_agent
 }
 
+local function encode_bytes(str)
+    return (str:gsub('.', function(c)
+        return string.format('%02x', string.byte(c))
+    end))
+end
+
+local function decode_bytes(hexstr)
+    return (hexstr:gsub('(%x%x)', function(h)
+        return string.char(tonumber(h, 16))
+    end))
+end
+
 local function storage_set(key, value, promise, resolve)
     local self = {promise=promise,resolve=resolve}
     local session = tonumber(tostring(self):match("0x(%x+)$"), 16)
     local uri = base_url..'/channel.'..key..'?var-name=channel.'..key
-    local body = json.encode({varValue=value})
+    local body = '{"varValue": "'..encode_bytes(value)..'"}'
 
     requests[session] = self
 
@@ -29,7 +40,7 @@ end
 local function storage_get(key, push, promise, resolve)
     local self = {push=push,promise=promise,resolve=resolve,body=''}
     local session = tonumber(tostring(self):match("0x(%x+)$"), 16)
-    local uri = base_url..'/channel.'..key
+    local uri = base_url..'?var-name=channel.'..key
 
     requests[session] = self
 
@@ -68,15 +79,8 @@ local function callback(std, engine, evt)
 
         if evt.finished or evt.code == 200 then
             requests[evt.session] = nil
-            local ok, data = pcall(json.decode, self.body)
-            data = ok and data and data.persistent or data
-            data = data and data[1] or data
-            data = data and data.value or data
-            if ok or evt.finished then
-                self.push(data or '')
-                self.resolve()
-                return
-            end
+            self.push(decode_bytes(self.body))
+            self.resolve()
         end
     end
 end
