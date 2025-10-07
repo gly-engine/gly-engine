@@ -18,7 +18,7 @@
     ],
     "scripts": {
         "step1": "cd ../.. && rm -Rf dist && mkdir -p ./dist/types",
-        "step2": "cd ../.. && node cli.js build --core lite --bundler --outdir dist/dist",
+        "step2": "cd ../.. && node cli.js build-engine @lite --bundler --outdir dist/dist",
         "step3": "cd ../.. && node cli.js meta source/cli/main.lua --infile npm/gly-engine-lite/package.json --outfile dist/package.json",
         "step4": "cd ../.. && echo \"declare module '@gamely/gly-engine-lite' {\n const content: string;\n export default content;\n}\" > dist/types/main.d.ts",
         "build": "npm run step1 && npm run step2 && npm run step3 && npm run step4"

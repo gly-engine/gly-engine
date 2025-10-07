@@ -14,6 +14,17 @@ local build_screen = require('source/shared/var/build/screen')
 local runtime_bin = require('source/shared/var/runtime/bin')
 local runtime_flag = require('source/shared/var/runtime/flag')
 
+local function filter(array, fn)
+    local result, index = {}, 1
+    while index <= #array do
+        if fn(array[index], index) then
+            result[#result + 1] = array[index] 
+        end
+        index = index + 1
+    end
+    return result
+end
+
 local fn_colon = {
     from = function(self)
         return self:match('^(.-):')
@@ -198,6 +209,7 @@ local function metadata(infile, args, optional)
             version = version,
         },
         assets = {
+            png = filter(game.assets or {}, function(str) return str:find('%.png$') end),
             list = game.assets or {},
             fonts = game.fonts or {}
         },

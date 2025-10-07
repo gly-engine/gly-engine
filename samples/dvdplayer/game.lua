@@ -1,28 +1,28 @@
-local function init(std, game)
-    game.x = game.width/2
-    game.y = game.height/2
-    game.size = 80
-    game.hspeed = game.width/5000
-    game.vspeed = game.height/4000
+local function init(self, std)
+    self.x = self.width/2
+    self.y = self.height/2
+    self.size = 80
+    self.hspeed = self.width/5000
+    self.vspeed = self.height/4000
 end
 
-local function loop(std, game)
-    game.x = game.x + (game.hspeed * std.delta)
-    game.y = game.y + (game.vspeed * std.delta)
-    if game.x <= 1 or game.x >= game.width - game.size then
-        game.hspeed = -1 * game.hspeed
+local function loop(self, std)
+    self.x = self.x + (self.hspeed * std.delta)
+    self.y = self.y + (self.vspeed * std.delta)
+    if self.x <= 1 or self.x >= self.width - self.size then
+        self.hspeed = -1 * self.hspeed
     end
-    if game.y <= 1 or game.y >= game.height - game.size then
-        game.vspeed = -1 * game.vspeed
+    if self.y <= 1 or self.y >= self.height - self.size then
+        self.vspeed = -1 * self.vspeed
     end
 end
 
-local function draw(std, game)
+local function draw(self, std)
     std.draw.clear(std.color.black)
-    std.image.draw('icon80x80.png', game.x, game.y)
+    std.image.draw('icon80x80.png', self.x, self.y)
 end
 
-local function exit(std, game)
+local function exit(self, std)
 end
 
 local P = {

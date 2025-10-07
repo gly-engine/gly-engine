@@ -9,7 +9,7 @@ App.fonts = {
  'Tiresias:https://cdn.jsdelivr.net/gh/alyssonbrito/gingaar@latest/ginga.ar-2.0/tool/ginga/fonts/Tiresias.ttf'
 }
 
-function App.draw(std, data)
+function App.draw(self, std)
     std.text.font_name('Tiresias')
     std.draw.clear(std.color.black)
     
@@ -19,7 +19,7 @@ function App.draw(std, data)
         else
             std.draw.color(std.color.red)
         end
-        std.draw.rect(0, 0, y, data.width, 1)
+        std.draw.rect(0, 0, y, self.width, 1)
     end
 
     local font_size = 8
@@ -30,8 +30,8 @@ function App.draw(std, data)
         std.text.font_size(font_size)
         std.text.print_ex(x, 60-font_size, "A",0)
         local w, h = std.text.mensure("A")
-        w = math.floor(w)
-        h = math.floor(h)
+        w = std.math.floor(w)
+        h = std.math.floor(h)
         std.text.font_size(15)
         if i % 2 == 1 then
             std.text.print_ex(x, 60 + 45, font_size .." - "..w .. "x" .. h,0)
@@ -47,8 +47,8 @@ function App.draw(std, data)
         std.text.font_size(font_size)
         std.text.print_ex(x, 300-font_size, "A",0)
         local w, h = std.text.mensure("A")
-        w = math.floor(w)
-        h = math.floor(h)
+        w = std.math.floor(w)
+        h = std.math.floor(h)
         std.text.font_size(15)
         if i % 2 == 1 then
             std.text.print_ex(x, 300 + 45, font_size .." - "..w .. "x" .. h,0)
@@ -64,8 +64,8 @@ function App.draw(std, data)
         std.text.font_size(104)
         std.text.print_ex(x, 605-font_size, "A",0)
         local w, h = std.text.mensure("A")
-        w = math.floor(w)
-        h = math.floor(h)
+        w = std.math.floor(w)
+        h = std.math.floor(h)
         std.text.font_size(15)
         if i % 2 == 1 then
             std.text.print_ex(x, 600 + 45, 104 .." - "..w .. "x" .. h,0)

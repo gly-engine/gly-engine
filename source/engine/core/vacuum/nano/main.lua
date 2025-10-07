@@ -40,12 +40,12 @@ local cfg_text={
 
 function native_callback_loop(dt)
     std.milis, std.delta=std.milis + dt, dt
-    application.callbacks.loop(std, application.data)
+    application.callbacks.loop(application.data, std)
 end
 
 function native_callback_draw()
     native_draw_start()
-    application.callbacks.draw(std, application.data)
+    application.callbacks.draw(application.data, std)
     native_draw_flush()
 end
 
@@ -68,7 +68,11 @@ function native_callback_init(width, height, game_lua)
     end
 
     if not script then
-        ok, script=pcall(loadfile, 'game.lua')
+        ok, script = pcall(loadfile, 'game.lua')
+    end
+    
+    if type(script) == 'function' then
+        ok, script = pcall(script)
     end
 
     if not ok or not script then
@@ -83,10 +87,12 @@ function native_callback_init(width, height, game_lua)
     
     std.draw.color=native_draw_color
     std.draw.font=native_draw_font
+    std.draw.rect2=native_draw_rect2 or native_draw_rect
     std.draw.rect=native_draw_rect
     std.draw.line=native_draw_line
     std.image.load=native_image_load
     std.image.draw=native_image_draw
+    std.image.mensure=native_image_mensure
     std.text.print=native_text_print
     std.text.mensure=native_text_mensure
     std.text.font_size=native_text_font_size
@@ -96,8 +102,8 @@ function native_callback_init(width, height, game_lua)
         native_draw_clear(tint, 0, 0, application.data.width, application.data.height)
     end
     std.app.reset = function()
-        (application.callbacks.exit or function() end)(std, application.data)
-        application.callbacks.init(std, application.data)
+        (application.callbacks.exit or function() end)(application.data, std)
+        application.callbacks.init(application.data, std)
     end
 
     engine.root=application
@@ -106,7 +112,7 @@ function native_callback_init(width, height, game_lua)
     engine_api_draw_text.install(std, engine, cfg_text)
     engine_api_draw_poly.install(std, engine, cfg_poly)
     engine.current=application
-    application.callbacks.init(std, application.data)
+    application.callbacks.init(application.data, std)
 end
 
 local P={

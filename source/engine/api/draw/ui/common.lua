@@ -1,19 +1,9 @@
+local tree = require('source/shared/engine/tree')
+
 --! @defgroup std
 --! @{
 --! @defgroup ui
 --! @{
-
---! @hideparam self
-local function gap(self, space_between_items)
-    self.px_gap = space_between_items or 0
-    return self
-end
-
---! @hideparam self
-local function margin(self, space_container)
-    self.px_margin = space_container or 0
-    return self
-end
 
 --! @hideparam std
 --! @hideparam engine
@@ -22,19 +12,11 @@ end
 --! @param [in] size column width in blocks
 local function add(std, engine, self, application, size)
     if not application then return self end
-    local index = #self.items_node + 1
-    local node = application.node or std.node.load(application.node or application)
-
-    std.node.spawn(node)
-    node.config.parent = self.node
-
-    self.items_node[index] = node
-    self.items_size[index] = size or 1
-    
-    if application.node then
-        self.items_ui[application.node] = application
-    end
-
+    local node = application.node or std.node.load(application)
+    tree.node_add(engine.dom, node, {
+        parent = self.node,
+        size = size
+    })
     return self
 end
 
@@ -55,14 +37,11 @@ end
 --! @param [in] id item index
 --! @return node
 local function get_item(self, id)
-    return self.items_node[id]
+    return self.node.childs[id]
 end
 
---! @hideparam classkey
---! @hideparam self
-local function style(classkey, self, classlist)
-    self[classkey] = classlist
-    return self
+local function get_items(self)
+    return self.node.childs
 end
 
 --! @}
@@ -70,10 +49,8 @@ end
 
 local P = {
     add=add,
-    gap=gap,
-    margin=margin,
-    style=style,
     get_item=get_item,
+    get_items=get_items,
     add_items=add_items,
 }
 
