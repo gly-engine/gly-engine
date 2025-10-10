@@ -109,6 +109,9 @@ local command = cli.argparse(arg)
     .add_next_value('dist', {})
     .add_option_get('name', {})
     .add_option_has('const')
+    --
+    .add_subcommand('fs-check-png', commands_fs)
+    .add_next_value('file', {required=true})
     -- 
     .add_subcommand('fs-luaconf', commands_fs)
     .add_next_value('file', {required=true})
