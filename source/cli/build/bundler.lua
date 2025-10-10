@@ -104,9 +104,9 @@ local function build(src, dest)
     local pattern_require4 = '^%s*require%s*[\'"](.-)[\'"](.*)'
     local pattern_require5 = '^%s*([%w_%-]+)%s*=%s*require%s*[\'"](.-)[\'"](.*)'
     local pattern_require6 = '^%s*local%s*([%w_%-]+)%s*=%s*require%s*[\'"](.-)[\'"](.*)'
-    local before_lib_declaration = 'b_{id}[{index}] = function() local c = (function()\n'
-    local after_lib_declaration = 'end)() or false;b_{id}[{index}] = function() return c end return c end\n'
-    local require_lib = 'b_{id}[{index}](\'{alias}\')'
+    local before_lib_declaration = 'b{id}[{index}] = r{id}({index}, function()\n'
+    local after_lib_declaration = 'end)\n'
+    local require_lib = 'b{id}[{index}](\'{alias}\')'
     local id = tostring({}):gsub('0x', ''):match(pattern_identify)
     local deps_list = {}
     local deps_dict = {}
@@ -264,17 +264,21 @@ local function build(src, dest)
 
     if #deps_list > 0 then
         local index = 1
-        local pre_alloc = ('local b_{id} = {'):gsub('{id}', id)
+        local pre_alloc = ('local b{id} = {'):gsub('{id}', id)
+        local bind_require = ('local r{id} = function(i, f)\nreturn function()\nlocal c = f()\n'
+            ..'b{id}[i] = function() return c end\nreturn c\nend\nend\n'):gsub('{id}', id)
+    
         while index <= #deps_list do
             pre_alloc = pre_alloc..'0,'
             index = index + 1
         end
-        main_before = pre_alloc:gsub(',$', '')..'}\n'..main_before
+
+        main_before = pre_alloc:gsub(',$', '')..'}\n'..bind_require..main_before
     end
 
     do
-        main_content = 'local function main_'..id..'()\n'..main_content..'end\n'
-        main_content = main_before..main_content..main_after..'return main_'..id..'()\n'
+        main_content = 'local function m'..id..'()\n'..main_content..'end\n'
+        main_content = main_before..main_content..main_after..'return m'..id..'()\n'
     end
 
     src_file, src_err = io.open(dest_path.get_fullfilepath(), 'w')
