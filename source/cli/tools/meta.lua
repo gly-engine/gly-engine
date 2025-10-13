@@ -2,6 +2,7 @@ local agent = require('source/agent')
 local version = require('source/version')
 local env = require('source/shared/string/parse/env')
 local base64 = require('source/shared/string/encode/base64')
+local ltable = require('source/shared/string/encode/table')
 local zlib = require('source/third_party/zerkman_zlib')
 local json = require('source/third_party/rxi_json')
 local lustache = require('source/third_party/olivinelabs_lustache')
@@ -65,6 +66,12 @@ local function dumper(tbl)
         end,
         json = function()
             return json.encode(tbl)
+        end,
+        safe_lua = function()
+            return ltable.safe_encode(tbl)
+        end,
+        lua = function()
+            return ltable.encode(tbl)
         end
     }
 end
