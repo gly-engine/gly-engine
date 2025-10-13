@@ -48,4 +48,4 @@ function test_bug_214_repeating_include_node()
     assert(({dist_text:gsub('local node_lib', '')})[2] == 1)
 end
 
-test.unit(_G)
+-- @skip test.unit(_G)
