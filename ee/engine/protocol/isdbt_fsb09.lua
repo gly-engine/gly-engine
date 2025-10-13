@@ -6,7 +6,7 @@ end
 
 local function ccwss_position(channel, pos_x, pos_y, width, height)
     x, y = tostring(pos_x), tostring(pos_y)
-    if w and h then
+    if width and height then
         w, h = tostring(width), tostring(height)
     end
 end
@@ -24,7 +24,15 @@ local function ccws_command(_cmd)
     end
 end
 
+local function install(std, engine)
+    local perfil_b = tostring(engine.envs.ginga_fsb_09)
+    if perfil_b ~= 'true' and perfil_b ~= '' then
+        error('old device!')
+    end
+end
+
 local P = {
+    install = install,
     play = ccws_command('start'),
     pause = ccws_command('pause'),
     resume = ccws_command('resume'),

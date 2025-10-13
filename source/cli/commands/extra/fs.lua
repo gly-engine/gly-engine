@@ -1,4 +1,5 @@
 local cli_fs = require('source/cli/tools/fs')
+local png_validator = require('source/shared/validator/png')
 
 local function replace(args)
     local file_in = io.open(args.file,'r')
@@ -95,12 +96,17 @@ local function luaconf(args)
     return true
 end
 
+local function checkpng(args)
+    return png_validator.check_error(args.file)
+end
+
 local P = {
     ['fs-copy'] = copy,
     ['fs-xxd-i'] = vim_xxd_i,
     ['fs-luaconf'] = luaconf,
     ['fs-replace'] = replace,
-    ['fs-download'] = download
+    ['fs-download'] = download,
+    ['fs-check-png'] = checkpng
 }
 
 return P

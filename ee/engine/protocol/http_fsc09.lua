@@ -4,6 +4,22 @@ local content_length = {}
 local request_dict = {}
 local data_dict = {}
 
+local function deep_copy_headers(headers)
+    if type(headers) ~= 'table' then
+        return {}
+    end
+    
+    local copy = {}
+    for key, value in pairs(headers) do
+        if type(value) == 'table' then
+            copy[key] = deep_copy_headers(value)
+        else
+            copy[key] = value
+        end
+    end
+    return copy
+end
+
 local function handler(self)
     local uri = self.url..str_url.search_param(self.param_list, self.param_dict)
     local session = tonumber(tostring(self):match("0x(%x+)$"), 16)
@@ -50,6 +66,7 @@ local function callback(evt)
         if evt.headers['Content-Length'] then
             content_length[session] = tonumber(evt.headers['Content-Length'])
         end
+        self.set('headers', deep_copy_headers(evt.headers))
     end
 
     if evt.code then
