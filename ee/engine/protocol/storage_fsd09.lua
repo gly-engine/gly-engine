@@ -13,7 +13,8 @@ end
 
 local function decode_bytes(hexstr)
     return (hexstr:gsub('(%x%x)', function(h)
-        return string.char(tonumber(h, 16))
+        local n = tonumber(h, 16)
+        return n and string.char(n) or ''
     end))
 end
 
