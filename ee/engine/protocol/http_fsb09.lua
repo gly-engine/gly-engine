@@ -125,7 +125,7 @@ local function parse_response_headers(header_string)
     
     local lines = {}
     for line in header_string:gmatch('([^\r\n]+)') do
-        table.insert(lines, line)
+        lines[#lines + 1] = line
     end
     
     for i = 2, #lines do
