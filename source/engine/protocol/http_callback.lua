@@ -51,6 +51,9 @@ local callbacks = {
     ['set-body'] = function(self, data)
         self.set('body', data)
     end,
+    ['set-headers'] = function(self, data)
+        self.set('headers', data or {})
+    end,
     ['add-body-data'] = function(self, data, std)
         self.set('body', (std.http.body or '')..data)
     end    

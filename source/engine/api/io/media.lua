@@ -58,8 +58,8 @@
 local function media_create(node, channels, handler)
     local decorator = function(func)
         func = func or function() end
-        return function(self, a, b, c, d)
-            func(0, a, b, c, d)
+        return function(self, a, b, c, d, e, f)
+            func(0, a, b, c, d, e, f)
             return self
         end
     end

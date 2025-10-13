@@ -120,10 +120,36 @@ end
 --! @endcond
 
 --! @cond
+local function parse_response_headers(header_string)
+    local headers = {}
+    
+    local lines = {}
+    for line in header_string:gmatch('([^\r\n]+)') do
+        lines[#lines + 1] = line
+    end
+    
+    for i = 2, #lines do
+        local line = lines[i]
+        if line and line ~= '' then
+            local name, value = line:match('^([^:]+):%s*(.*)$')
+            if name and value then
+                name = name:lower()
+                headers[name] = value
+            end
+        end
+    end
+    
+    return headers
+end
+--! @endcond
+
+--! @cond
 local function http_headers(self)
     self.p_header = self.p_data:sub(1, self.p_header_pos -1)
     self.p_status = tonumber(self.p_header:match('^HTTP/%d.%d (%d+) %w*'))
     self.p_content_size = tonumber(self.p_header:match('Content%-Length: (%d+)') or 0)
+    
+    self.p_parsed_headers = parse_response_headers(self.p_header)
 end
 --! @endcond
 
@@ -187,6 +213,15 @@ local function http_data_fast(self)
         application_internal.http.callbacks.http_error(self)
     else
         self.p_status = tonumber(status)
+        
+        local header_end = self.evt.value:find('\r\n\r\n')
+        if header_end then
+            local header_string = self.evt.value:sub(1, header_end - 1)
+            self.p_parsed_headers = parse_response_headers(header_string)
+        else
+            self.p_parsed_headers = {}
+        end
+        
         application_internal.http.callbacks.http_resolve(self)
     end
     event.post({
@@ -237,6 +272,7 @@ local function http_resolve(self)
     self.set('ok', str_http.is_ok(self.p_status))
     self.set('status', self.p_status)
     self.set('body', body)
+    self.set('headers', self.p_parsed_headers or {})
     application_internal.http.callbacks.http_clear(self)
     self.resolve()
 end
@@ -255,6 +291,7 @@ local function http_clear(self)
     self.p_header_pos = nil
     self.p_data = nil
     self.p_redirects = nil
+    self.p_parsed_headers = nil
 end
 --! @endcond
 

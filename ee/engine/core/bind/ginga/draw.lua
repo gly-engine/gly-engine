@@ -47,37 +47,7 @@ local function line(std, engine, canvas, x1, y1, x2, y2)
     canvas:drawLine(px1, py1, px2, py2)
 end
 
-local function image_load(std, engine, canvas, src)
-    return std.mem.cache('image'..src, function()
-        local file = io.open(src, 'rb')
-        if not file then return nil end
-        file:close()
-        return canvas:new(src)
-    end)
-end
-
-local function image_draw(std, engine, canvas, src, pos_x, pos_y)
-    local image = image_load(std, engine, canvas, src)
-    if image then
-        local x = engine.offset_x + (pos_x or 0)
-        local y = engine.offset_y + (pos_y or 0)
-        canvas:compose(x, y, image)
-    end
-end
-
-local function image_mensure(std, engine, canvas, src)
-    local image = image_load(std, engine, canvas, src)
-    if image then
-        local w, h = image:attrSize()
-        return w, h
-    end
-    return nil
-end
-
 local function install(std, engine)
-    std.image.load = util_decorator.prefix3(std, engine, engine.canvas, image_load)
-    std.image.draw = util_decorator.prefix3(std, engine, engine.canvas, image_draw)
-    std.image.mensure = util_decorator.prefix3(std, engine, engine.canvas, image_mensure)
     std.draw.clear = util_decorator.prefix3(std, engine, engine.canvas, clear)
     std.draw.color = util_decorator.prefix3(std, engine, engine.canvas, color)
     std.draw.rect2 = util_decorator.prefix3(std, engine, engine.canvas, rect2)
