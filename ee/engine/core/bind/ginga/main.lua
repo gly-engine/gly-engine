@@ -178,7 +178,7 @@ local ok, crt0 = pcall(require, 'crt0')
 if not event then
     return P
 elseif ok then
-    crt0(main, cfg_json_rxi)
+    crt0(main, cfg_json_rxi.decode)
 else
     event.register(main)
 end
