@@ -13,6 +13,7 @@ local lib_api_hash = require('source/engine/api/data/hash')
 local lib_api_http = require('source/engine/api/io/http')
 local lib_api_i18n = require('source/engine/api/data/i18n')
 local lib_api_key = require('source/engine/api/system/key')
+local lib_api_env = require('source/engine/api/system/getenv')
 local engine_log = require('source/engine/api/debug/log')
 local engine_math = require('source/engine/api/math/basic')
 local engine_math_clib = require('source/engine/api/math/clib')
@@ -70,6 +71,10 @@ local cfg_text = {
     font_previous = core_text.font_previous
 }
 
+local cfg_env = {
+    get_env = os and os.getenv
+}
+
 function love.load(args)
     local screen = util_arg.get(args, 'screen')
     local fullscreen = util_arg.has(args, 'fullscreen')
@@ -109,6 +114,7 @@ function love.load(args)
         :package('@loop', core_loop)
         :package('@color', color)
         :package('@log', engine_log, cfg_logsystem)
+        :package('@env', lib_api_env, cfg_env)
         :package('math', engine_math_clib)
         :package('math.random', engine_math_random)
         :package('mock.video', lib_api_media)

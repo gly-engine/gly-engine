@@ -8,6 +8,7 @@ local engine_hash = require('source/engine/api/data/hash')
 local engine_http = require('source/engine/api/io/http')
 local engine_i18n = require('source/engine/api/data/i18n')
 local engine_key = require('source/engine/api/system/key')
+local engine_env = require('source/engine/api/system/getenv')
 local engine_log = require('source/engine/api/debug/log')
 local engine_math = require('source/engine/api/math/basic')
 local engine_math_clib = require('source/engine/api/math/clib')
@@ -100,6 +101,10 @@ local cfg_xml = {
     encode = native_xml_encode
 }
 
+local cfg_env = {
+    get_env = native_system_get_env
+}
+
 function native_callback_loop(dt)
     std.milis = std.milis + dt
     std.delta = dt
@@ -173,6 +178,7 @@ function native_callback_init(width, height, game_lua)
         :package('@draw.poly', engine_api_draw_poly, cfg_poly)
         :package('@color', color)
         :package('@log', engine_log, cfg_log)
+        :package('@env', engine_env, cfg_env)
         :package('math', engine_math_clib)
         :package('math.random', engine_math_random)
         :package('http', engine_http, cfg_http)

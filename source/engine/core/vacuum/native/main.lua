@@ -20,6 +20,7 @@ local engine_storage = require('source/engine/api/io/storage')
 local engine_raw_bus = require('source/engine/api/raw/bus')
 local engine_raw_memory = require('source/engine/api/raw/memory')
 local engine_raw_node = require('source/engine/api/raw/node')
+local engine_env = require('source/engine/api/system/env')
 local engine_color = require('source/engine/api/system/color')
 local engine_game = require('source/engine/api/system/app')
 local engine_key = require('source/engine/api/system/key')
@@ -113,6 +114,10 @@ local cfg_storage = {
     set = native_storage_set
 }
 
+local cfg_env = {
+    get_env = native_system_get_env
+}
+
 local function clear(tint)
     local x, y = engine.offset_x, engine.offset_y
     local width, height = engine.current.data.width, engine.current.data.height
@@ -189,6 +194,7 @@ function native_callback_init(width, height, game_lua)
         :package('@draw.poly', engine_draw_poly, cfg_poly)
         :package('@color', engine_color)
         :package('@log', engine_log, cfg_log)
+        :package('@env', engine_env, native_system_get_env)        
         :package('math', engine_math_clib)
         :package('math.random', engine_math_random)
         :package('http', engine_http, cfg_http)

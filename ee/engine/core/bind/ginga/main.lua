@@ -83,6 +83,10 @@ local cfg_fps_control = {
     uptime=event and event.uptime
 }
 
+local cfg_env = {
+    get_env = os and os.getenv
+}
+
 local cfg_text = {
     font_previous = core_text.font_previous
 }
@@ -131,7 +135,7 @@ local function main(evt, gamefile)
         :package('@draw.poly', engine_api_draw_poly, cfg_poly)
         :package('@color', color)
         :package('@log', engine_log, cfg_logsystem)
-        :package('@getenv', engine_getenv, engine)
+        :package('@getenv', engine_getenv, cfg_env)
         :package('math', engine_math_clib)
         :package('math.random', engine_math_random)
         :package('hash', engine_hash, {'ginga'})
