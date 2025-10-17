@@ -6,6 +6,7 @@ local ltable = require('source/shared/string/encode/table')
 local zlib = require('source/third_party/zerkman_zlib')
 local json = require('source/third_party/rxi_json')
 local lustache = require('source/third_party/olivinelabs_lustache')
+local ftcsv = require('source/third_party/fouriertransformer_ftcsv')
 local util_decorator = require('source/shared/functional/decorator')
 local cli_buildder = require('source/cli/build/builder')
 local eval_code = require('source/shared/string/eval/code')
@@ -14,6 +15,19 @@ local build_html = require('source/shared/var/build/html')
 local build_screen = require('source/shared/var/build/screen')
 local runtime_bin = require('source/shared/var/runtime/bin')
 local runtime_flag = require('source/shared/var/runtime/flag')
+
+local csv = {
+    decode = function(c)
+        return ftcsv.parse(c, {loadFromString=true})
+    end,
+    encode = function(c)
+        local ok, res = pcall(ftcsv.encode, c)
+        if ok then return res end
+        ok, res = pcall(ftcsv.encode, {c})
+        if ok then return res end
+        return nil
+    end
+}
 
 local function filter(array, fn)
     local result, index = {}, 1
@@ -72,6 +86,9 @@ local function dumper(tbl)
         end,
         lua = function()
             return ltable.encode(tbl)
+        end,
+        csv = function()
+            return csv.encode(tbl) or error('is not a table!', 0)
         end
     }
 end
@@ -196,6 +213,7 @@ local function metadata(infile, args, optional)
         or try_lua(infile)
         or try_decode(infile, json)
         or try_decode(infile, env)
+        or try_decode(infile, csv)
         or try_tic80(infile)
         or try_love(infile)
     ) or (optional and {})
