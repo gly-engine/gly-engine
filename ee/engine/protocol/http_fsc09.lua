@@ -88,7 +88,7 @@ local function callback(evt)
 end
 
 local function install(std, engine)    
-    if tostring(engine.envs['ginga.fsb09']) ~= 'true' then
+    if tostring(engine.envs['ginga.fsc09']) ~= 'true' then
         error('old device!')
     end
     std.bus.listen('ginga', callback)
