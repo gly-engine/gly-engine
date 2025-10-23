@@ -1,3 +1,5 @@
+local os = require('os')
+--
 local version = require('source/version')
 --
 local tree = require('source/shared/engine/tree')
@@ -84,6 +86,10 @@ local cfg_fps_control = {
     uptime=event and event.uptime
 }
 
+local cfg_env = {
+    get_env = os and os.getenv
+}
+
 local cfg_text = {
     font_previous = core_text.font_previous
 }
@@ -133,7 +139,7 @@ local function main(evt, gamefile)
         :package('@draw.poly', engine_api_draw_poly, cfg_poly)
         :package('@color', color)
         :package('@log', engine_log, cfg_logsystem)
-        :package('@getenv', engine_getenv, engine)
+        :package('@getenv', engine_getenv, cfg_env)
         :package('math', engine_math_clib)
         :package('math.random', engine_math_random)
         :package('hash', engine_hash, {'ginga'})
@@ -180,7 +186,7 @@ local ok, crt0 = pcall(require, 'crt0')
 if not event then
     return P
 elseif ok then
-    crt0(main, cfg_json_rxi)
+    crt0(main, cfg_json_rxi.decode)
 else
     event.register(main)
 end

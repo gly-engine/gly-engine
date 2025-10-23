@@ -34,32 +34,6 @@ local function escape_string_all(s)
   return "'" .. table.concat(out) .. "'"
 end
 
-local function value_to_literal(v, seen, stack, out)
-  local t = type(v)
-  if t == "string" then
-    out[#out+1] = escape_string_single(v)
-  elseif t == "number" then
-    out[#out+1] = tostring(v)
-  elseif t == "boolean" then
-    out[#out+1] = v and "true" or "false"
-  elseif t == "nil" then
-    out[#out+1] = "nil"
-  elseif t == "table" then
-    if seen[v] then
-      out[#out+1] = "nil" -- circular -> safe fallback
-    else
-      -- push a frame to stack to process this table
-      stack[#stack+1] = { tbl = v, keys = nil, idx = 1, started = false }
-      -- mark now so further references see it as seen (prevents deep cycles)
-      seen[v] = true
-      out[#out+1] = nil -- placeholder, we'll fill with table text later by tracking positions
-    end
-  else
-    -- function, userdata, thread -> ignore by signaling to caller (nil)
-    out[#out+1] = nil
-  end
-end
-
 local function table_keys(t)
   local keys = {}
   for k in pairs(t) do

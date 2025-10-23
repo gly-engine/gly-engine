@@ -3,7 +3,11 @@ local function init(self, std)
     self.msg = 'loading...'
     self.time = std.milis
     self.wmax = 1
-    std.http.get('http://t.gamely.com.br/medias.json'):json()
+    if not std.media.video then
+        self.msg = 'Media Unsupported!'
+        return
+    end
+    std.http.get('https://raw.githubusercontent.com/RodrigoDornelles/RodrigoDornelles/refs/heads/master/medias.json'):json()
         :error(function()
             self.msg = std.http.error
         end)
@@ -45,6 +49,7 @@ end
 
 local function draw(self, std)
     if self.msg then
+        std.draw.color(std.color.white)
         std.text.put(1, 1, self.msg)
     end
     if self.list and #self.list > 0 then
@@ -78,7 +83,7 @@ local P = {
         version='1.0.0'
     },
     config={
-        require='http json media.video'
+        require='http json media.video?'
     },
     callbacks={
         init=init,

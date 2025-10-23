@@ -48,15 +48,13 @@
       <property name="screen_{{ left }}_{{ top }}_{{ width }}_{{ height }}"/>
       {{/ app.screens  }}
       {{# var.build.ncl.settings }}
-      <property name="{{ env }}"/>
+      <property name="settings.{{ . }}"/>
       {{/ var.build.ncl.settings }}
     </media>
     <media type="application/x-ginga-settings" id="settings">
       <property name="service.currentKeyMaster" value="application"/>
       {{# var.build.ncl.settings }}
-      {{# ginga }}
       <property name="{{ . }}"/>
-      {{/ ginga }}
       {{/ var.build.ncl.settings }}
     </media>
     {{! focus begin }}
@@ -88,15 +86,13 @@
     </link>
     {{/ app.screens }}
     {{# var.build.ncl.settings }}
-    {{# ginga }}
     <link xconnector="onBeginSet">
       <bind role="onBegin" component="application"/>
-      <bind role="set" component="application" interface="{{ env }}">
+      <bind role="set" component="application" interface="settings.{{ . }}">
         <bindParam name="var" value="$get"/>
       </bind>
       <bind role="get" component="settings" interface="{{ . }}"/>
     </link>
-    {{/ ginga }}
     {{/ var.build.ncl.settings }}
   </body>
 </ncl>

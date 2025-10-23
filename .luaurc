@@ -59,6 +59,7 @@
     "native_media_source",
     "native_media_stop",
     "native_system_exit",
+    "native_system_get_env",
     "native_system_get_fps",
     "native_system_get_language",
     "native_system_get_secret",

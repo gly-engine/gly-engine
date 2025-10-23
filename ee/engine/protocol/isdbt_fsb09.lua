@@ -25,9 +25,9 @@ local function ccws_command(_cmd)
 end
 
 local function install(std, engine)
-    local perfil_b = tostring(engine.envs.ginga_fsb_09)
-    if perfil_b ~= 'true' and perfil_b ~= '' then
-        error('old device!')
+    local perfil_b = tostring(engine.envs['ginga.fsb09'])
+    if perfil_b ~= 'true' and perfil_b ~= 'disable' and perfil_b ~= 'nil' and perfil_b ~= '' then
+        error('old device!', 0)
     end
 end
 
