@@ -114,7 +114,6 @@ local function build(src, dest)
     local main_before = ''
     local main_after = ''
     local lib_index = 0
-    local lib_name = nil
 
     if not src_file then
         return false, src_err or 'src is required'

@@ -25,5 +25,7 @@ if core == 'ginga' then
 else
     cmd('./cli.sh build-engine --bundler @'..core)
 end
+if ('loveginga'):find(core) then
+    cmd('./cli.sh hazard-package-mock tests/mock/json.lua dist/main.lua source_third_party_rxi_json')
+end
 cmd(replace..' --format "function native_callback" --replace "local function _native_callback"')
-cmd('./cli.sh hazard-package-mock tests/mock/json.lua dist/main.lua source/third_party/rxi_json')
