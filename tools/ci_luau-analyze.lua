@@ -12,6 +12,7 @@ if core == 'cli' then
     cmd('./cli.sh hazard-package-mock tests/mock/json.lua dist/main.lua source/third_party/rxi_json')
     cmd('./cli.sh hazard-package-mock tests/mock/lustache.lua dist/main.lua source/third_party/olivinelabs_lustache')
     cmd('./cli.sh hazard-package-mock tests/mock/zlib.lua dist/main.lua source/third_party/zerkman_zlib')
+    cmd('./cli.sh hazard-package-mock tests/mock/csv.lua dist/main.lua source/third_party/fouriertransformer_ftcsv')
     return
 end
 

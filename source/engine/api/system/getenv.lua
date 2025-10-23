@@ -1,5 +1,3 @@
-local os = require('os')
-
 --! @defgroup std
 --! @{
 
