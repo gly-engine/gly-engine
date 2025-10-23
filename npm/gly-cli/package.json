@@ -30,7 +30,7 @@
         "step5": "cd ../.. && echo '#!/usr/bin/env node' > dist/cli.header && mkdir -p dist/bin &&  cat dist/cli.header dist/cli.js > dist/bin/cli.js && rm dist/cli.*",
         "step6": "cd ../.. && node cli.js meta source/cli/main.lua --infile npm/gly-cli/package.json --outfile dist/package.json",
         "step7": "cd ../.. && node cli.js fs-replace README.md ./dist/README.md --format 'lua cli.lua' --replace 'npx gly-cli'",
-        "step8": "cd ../.. && node cli.js fs-replace ./dist/README.md ./dist/README.md --format '%[%<img [^\n]*' --replace ''",
+        "step8": "cd ../.. && echo @todo fix step8",
         "step9": "cd ../.. && chmod +x dist/bin/cli.js",
         "build": "npm run step1 && npm run step2 && npm run step3 && npm run step4 && npm run step5 && npm run step6 && npm run step7 && npm run step8 && npm run step9"
     },
