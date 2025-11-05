@@ -1,7 +1,6 @@
 local tree = require('source/shared/engine/tree')
 local loadgame = require('source/shared/engine/loadgame')
 local node_default = require('source/shared/var/object/node')
-local util_decorator = require('source/shared/functional/decorator')
 
 --! @defgroup std
 --! @{
@@ -94,32 +93,36 @@ local function load(application)
 end
 
 --! @short register node to event bus
---! @hideparam engine
+--! @decorator
 --! @param [in/out] application
 --! @par Example
 --! @code{.java}
 --! local game = std.node.load('samples/awesome/game.lua')
 --! std.node.spawn(game)
 --! @endcode
-local function spawn(engine, application)
-    tree.node_add(engine.dom, application, {parent=engine.current})
-    return application
+local function spawn(engine)
+    return function(application)
+        tree.node_add(engine.dom, application, {parent=engine.current})
+        return application
+    end
 end
 
 --! @short unregister node from event bus
---! @hideparam engine
+--! @decorator
 --! @par Example
 --! @code{.java}
 --! if std.milis > minigame_limit_time then
 --!    std.node.kill(minigame)
 --! end
 --! @endcode
-local function kill(engine, application)
-    tree.node_del(engine.dom, application)
+local function kill(engine)
+    return function(application)
+        tree.node_del(engine.dom, application)
+    end
 end
 
 --! @short disable node callback
---! @hideparam engine
+--! @decorator
 --! @brief stop receive specific event int the application
 --! @par Example
 --! @code{.java}
@@ -127,12 +130,14 @@ end
 --!     std.node.pause(minigame, 'loop')
 --! end
 --! @endcode
-local function pause(engine, application, key)
-    tree.node_pause(engine.dom, application, key)
+local function pause(engine)
+    return function(application, key)
+        tree.node_pause(engine.dom, application, key)
+    end
 end
 
 --! @short enable node callback
---! @hideparam engine
+--! @decorator
 --! @brief return to receiving specific event in the application
 --! @par Example
 --! @code{.java}
@@ -140,8 +145,10 @@ end
 --!     std.node.resume(minigame, 'loop')
 --! end
 --! @endcode
-local function resume(engine, application, key)
-    tree.node_resume(engine.dom, application, key)
+local function resume(engine)
+    return function(application, key)
+        tree.node_resume(engine.dom, application, key)
+    end
 end
 --! @}
 --! @}
@@ -149,14 +156,11 @@ end
 local function install(std, engine)
     std.node = std.node or {}
 
-    std.node.kill = util_decorator.prefix1(engine, kill)
-    std.node.pause = util_decorator.prefix1(engine, pause)
-    std.node.resume = util_decorator.prefix1(engine, resume)
+    std.node.kill = kill(engine)
+    std.node.pause = pause(engine)
+    std.node.spawn = spawn(engine)
+    std.node.resume = resume(engine)
     std.node.load = load
-
-    std.node.spawn = function (application)
-        return spawn(engine, application)
-    end
 
     std.node.emit = function(application, key, a, b, c, d, e, f)
         return emit(std, application, key, a, b, c, e, f)

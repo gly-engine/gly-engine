@@ -210,6 +210,7 @@ function main()
 
     local rename_function = false
     local params_hiden = {}
+    local is_decorator_func = false
 
     repeat
         local line = file:read('*l')
@@ -228,6 +229,9 @@ function main()
 
             if is_lua and doxygen then
                 line = line:gsub(doxygen_pattern, '//!')
+                if line:match('@decorator') then
+                    is_decorator_func = true
+                end
             end
 
             if classfunc then
@@ -241,6 +245,24 @@ function main()
             if rename_function and clojure then
                 clojure = clojure:gsub('^([%w_]+)', rename_function)
                 rename_function = false
+            end
+
+            if clojure and is_decorator_func then
+                local func_name = clojure:match('^([%w_]+)')
+                if func_name then
+                    local next_line
+                    repeat
+                        next_line = file:read('*l')
+                        if next_line then
+                            local params = next_line:match('^%s*return%s+function%s*(%b())')
+                            if params then
+                                clojure = func_name .. params
+                                break
+                            end
+                        end
+                    until not next_line or next_line:find('^%s*end%s*$')
+                end
+                is_decorator_func = false
             end
 
             if #params_hiden > 0 and clojure then
