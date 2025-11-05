@@ -1,26 +1,25 @@
 name: docs
 
-env:
-  CLOUDFLARE_PROJECT_DOXYGEN: doxygen-gly
-  CLOUDFLARE_PROJECT_EXAMPLE: example-gly
-
 on:
   workflow_dispatch:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
-      - develop
     paths:
-      - 'samples/**'
       - 'source/**'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
 
 jobs:
   doxygen:
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.draft == false
     steps:
       - 
         uses: actions/checkout@master
@@ -34,41 +33,11 @@ jobs:
         run: |
           docker run --rm -v $(pwd):/app -w /app rodrigodornelles/doxygen:lua lua tools/doxygen_urlfix.lua
       - 
-        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository || github.event_name == 'workflow_dispatch'
-        uses: cloudflare/pages-action@v1
+        uses: actions/configure-pages@v4
+      - 
+        uses: actions/upload-pages-artifact@v3
         with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: ${{ env.CLOUDFLARE_PROJECT_DOXYGEN }}
-          directory: html
-
-  example:
-    if: github.event_name == 'push' || github.event.pull_request.draft == false
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        game: [
-          # 'asteroids', 'dvdplayer', '2games', 'helloworld', 'gridsystem', 'pong',
-          # 'capybird', 'maze3d', 'videostream', 'fakestream', 'rickstream',
-          # @todo: temporarily removed 'launcher' until third-party games are migrated to 0.2.X
-          # 'launcher'
-        ]
-    steps:
+          path: ./html
       - 
-        uses: actions/checkout@master
-      - 
-        uses: leafo/gh-actions-lua@v10
-        with:
-          luaVersion: '5.4'
-      - 
-        run: |
-          lua tools/cd_docs_example.lua ${{ matrix.game }}
-      - 
-        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository || github.event_name == 'workflow_dispatch'
-        uses: cloudflare/pages-action@v1
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: ${{ matrix.game }}-${{ env.CLOUDFLARE_PROJECT_EXAMPLE }}
-          directory: html
+        id: deployment
+        uses: actions/deploy-pages@v4
