@@ -1,6 +1,7 @@
 local user_agent = require('source/agent')
 local base_url = 'http://localhost:44642/dtv/current-service/ginga/persistent'
 local requests = {}
+local mutex = false
 local headers = {
     ['User-Agent'] = user_agent
 }
@@ -44,6 +45,7 @@ local function storage_get(key, push, promise, resolve)
     local uri = base_url..'?var-name=channel.'..key
 
     requests[session] = self
+    mutex = true
 
     self.promise()
     event.post({
@@ -65,6 +67,7 @@ local function callback(std, engine, evt)
         if not self.body then
             requests[evt.session] = nil
             self.resolve()
+            mutex = false
             return
         end
 
@@ -75,6 +78,7 @@ local function callback(std, engine, evt)
         if (evt.error and (not evt.body or not evt.code)) or evt.code ~= 200 then
             requests[evt.session] = nil
             self.resolve()
+            mutex = false
             return
         end
 
@@ -82,6 +86,7 @@ local function callback(std, engine, evt)
             requests[evt.session] = nil
             self.push(decode_bytes(self.body))
             self.resolve()
+            mutex = false
         end
     end
 end
@@ -94,6 +99,7 @@ local function install(std, engine)
 end
 
 local P = {
+    mutex = function() return mutex end,
     install = install,
     get = storage_get,
     set = storage_set,

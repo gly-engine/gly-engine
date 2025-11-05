@@ -120,6 +120,13 @@ local function storage_command(cmd, std, engine, handlers)
     end
 end
 
+local function storage_mutex(mutex_func)
+    return function()
+        if mutex_func then return mutex_func() end
+        return false
+    end
+end
+
 local function install(std, engine, handlers)
     if handlers.install then
         handlers.install(std, engine)
@@ -128,6 +135,7 @@ local function install(std, engine, handlers)
         error('missing handlers')
     end
     std.storage = std.storage or {}
+    std.storage.in_mutex = storage_mutex(handlers.mutex)
     std.storage.set = storage_command('set', std, engine, handlers)
     std.storage.get = storage_command('get', std, engine, handlers)
 end
