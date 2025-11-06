@@ -67,6 +67,7 @@ local function media_create(node, channels, handler)
         -- api
         src = decorator(handler.source),
         play = decorator(handler.play),
+        prepare = decorator(handler.prepare),
         pause = decorator(handler.pause),
         resume = decorator(handler.resume),
         stop = decorator(handler.stop),
