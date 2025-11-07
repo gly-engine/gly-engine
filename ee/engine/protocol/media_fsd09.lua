@@ -98,6 +98,7 @@ local P = {
     play = ccws_command('start'),
     pause = ccws_command('pause'),
     resume = ccws_command('resume'),
+    prepare = ccws_command('prepare'),
     mutex = ccws_mutex,
     error = ccws_error,
     stop = ccws_stop,
