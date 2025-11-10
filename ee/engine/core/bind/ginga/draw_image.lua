@@ -1,9 +1,11 @@
 local png_validator = require('source/shared/image/check_png')
 
 local function load_png(std, engine, canvas, src)
-    if not src or #src == 0 then return false end
-    return std.mem.cache('image'..src, function()
-        if not png_validator.check_error(src) then return false end
+    local is_userdata = type(src) == 'userdata'
+    local key = src and tostring(src)
+    if not key or #key == 0 then return false end
+    return std.mem.cache('image'..key, function()
+        if not is_userdata and not png_validator.check_error(src) then return false end
         local ok, texture = pcall(canvas.new, canvas, src)
         return (ok and texture) or false
     end)
