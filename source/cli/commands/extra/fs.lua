@@ -1,5 +1,5 @@
 local cli_fs = require('source/cli/tools/fs')
-local png_validator = require('source/shared/validator/png')
+local png_validator = require('source/shared/image/check_png')
 
 local function replace(args)
     local file_in = io.open(args.file,'r')

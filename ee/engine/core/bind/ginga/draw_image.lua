@@ -1,4 +1,4 @@
-local png_validator = require('source/shared/validator/png')
+local png_validator = require('source/shared/image/check_png')
 
 local function load_png(std, engine, canvas, src)
     if not src or #src == 0 then return false end
