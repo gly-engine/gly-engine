@@ -1,5 +1,3 @@
-local util_decorator = require('source/shared/functional/decorator')
-
 --! @defgroup std
 --! @{
 --! @defgroup text
@@ -56,32 +54,34 @@ local util_decorator = require('source/shared/functional/decorator')
 
 --! @short std.text.put
 --! @renamefunc put
---! @hideparam std
---! @hideparam engine
---! @hideparam font_previous
+--! @decorator
 --! @brief print text grid in based 80x24
 --! @par Example
 --! @code{.java}
 --! std.text.put(20, 1, '1/4 text')
 --! @endcode
-local function text_put(std, engine, font_previous, pos_x, pos_y, text, size)
-    size = size or 2
-    local hem = engine.current.data.width / 80
-    local vem = engine.current.data.height / 24
-    local font_size = hem * size
+local function text_put(std, engine, font_previous)
+    return function(pos_x, pos_y, text, size)
+        size = size or 2
+        local hem = engine.current.data.width / 80
+        local vem = engine.current.data.height / 24
+        local font_size = hem * size
 
-    std.text.font_default(0)
-    std.text.font_size(font_size)
-    std.text.print(pos_x * hem, pos_y * vem, text)
-    font_previous()
+        std.text.font_default(0)
+        std.text.font_size(font_size)
+        std.text.print(pos_x * hem, pos_y * vem, text)
+        font_previous()
+    end
 end
 
 --! @cond
-local function text_print_ex(std, engine, x, y, text, align_x, align_y)
-    local w, h = std.text.mensure(text)
-    local aligns_x, aligns_y = {w, w/2, 0}, {h, h/2, 0}
-    std.text.print(x - aligns_x[(align_x or 1) + 2], y - aligns_y[(align_y or 1) + 2], text)
-    return w, h
+local function text_print_ex(std, engine)
+    return function(x, y, text, align_x, align_y)
+        local w, h = std.text.mensure(text)
+        local aligns_x, aligns_y = {w, w/2, 0}, {h, h/2, 0}
+        std.text.print(x - aligns_x[(align_x or 1) + 2], y - aligns_y[(align_y or 1) + 2], text)
+        return w, h
+    end
 end
 --! @endcond
 
@@ -91,8 +91,8 @@ end
 local function install(std, engine, config)
     std.text.font_previous = config.font_previous
     std.text.is_tui = config.is_tui or function() return false end
-    std.text.print_ex = util_decorator.prefix2(std, engine, text_print_ex)
-    std.text.put = util_decorator.prefix3(std, engine, config.font_previous, text_put)
+    std.text.print_ex = text_print_ex(std, engine)
+    std.text.put = text_put(std, engine, config.font_previous)
 end
 
 local P = {

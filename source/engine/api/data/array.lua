@@ -1,3 +1,4 @@
+--! @todo delete this to 0.4.X
 local util_decorator = require('source/shared/functional/decorator')
 
 --! @defgroup std
