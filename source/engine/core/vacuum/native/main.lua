@@ -118,6 +118,10 @@ local cfg_env = {
     get_env = native_system_get_env
 }
 
+local cfg_key = {
+    has_media = native_keyboard_has_media,
+}
+
 local function clear(tint)
     local x, y = engine.offset_x, engine.offset_y
     local width, height = engine.current.data.width, engine.current.data.height
@@ -187,7 +191,7 @@ function native_callback_init(width, height, game_lua)
         :package('@game', engine_game, cfg_system)
         :package('@math', engine_math)
         :package('@array', engine_array)
-        :package('@key', engine_key, {})
+        :package('@key', engine_key, cfg_key)
         :package('@draw.ui', engine_draw_ui)
         :package('@draw.fps', engine_draw_fps)
         :package('@draw.text', engine_draw_text, cfg_text)
