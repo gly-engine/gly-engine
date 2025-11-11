@@ -38,6 +38,7 @@ local function real_keyup(std, engine, key)
 end
 
 local function install(std, engine, config)
+    config = config or {}
     engine.key_bindings = config.bindings or {}
     engine.keyboard = real_key
     
