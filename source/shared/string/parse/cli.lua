@@ -6,6 +6,7 @@ local function add_next_value(self, param, opt)
     self.param_dict_value_alias[self.current][param] = opt.alias
     self.param_dict_value_default[self.current][param] = opt.default
     self.param_dict_value_required[self.current][param] = opt.required == true
+    self.param_dict_value_multiple[self.current][param] = opt.multiple == true
     return self
 end
 
@@ -35,6 +36,7 @@ local function add_subcommand(self, cmd_name, cmd_collection)
     self.param_dict_value_required[cmd_name] = {}
     self.param_dict_value_default[cmd_name] = {}
     self.param_dict_value_alias[cmd_name] = {}
+    self.param_dict_value_multiple[cmd_name] = {}
     self.param_list_value[cmd_name] = {}
     self.hidden[cmd_name] = {}
     self.cmd_execution[cmd_name] = cmd_collection[cmd_name]
@@ -91,20 +93,46 @@ local function run(self, host_args)
     end
 
     do
+        local value_arg_index = 1
         local index = 1
         while index <= #self.param_list_value[command] and command ~= self.error_usage do
             local param = self.param_list_value[command][index]
-            local value = zeebo_args.param(host_args, self.param_list_option_get[command], index + 1)
-            local alias = self.param_dict_value_alias[command][param]
             local required = self.param_dict_value_required[command][param]
             local default_value = self.param_dict_value_default[command][param]
-            if alias and (value or ''):sub(1, 1) == alias:sub(1, 1)  then
-                value = self.param_dict_value_alias[command][param]:sub(2):gsub('{{'..param..'}}', value:sub(2))
+            local alias = self.param_dict_value_alias[command][param]
+            local multiple = self.param_dict_value_multiple[command] and self.param_dict_value_multiple[command][param]
+
+            if multiple then
+                local values = {}
+                while true do
+                    local value = zeebo_args.param(host_args, self.param_list_option_get[command], value_arg_index + 1)
+                    if not value then break end
+                    if alias and (value or ''):sub(1, 1) == alias:sub(1, 1)  then
+                        value = alias:sub(2):gsub('{{'..param..'}}', value:sub(2))
+                    end
+                    table.insert(values, value)
+                    value_arg_index = value_arg_index + 1
+                end
+                args[param] = values
+                if required and #values == 0 then
+                    command = self.error_usage
+                end
+                if #values == 0 and default_value then
+                    args[param] = default_value
+                end
+            else
+                local value = zeebo_args.param(host_args, self.param_list_option_get[command], value_arg_index + 1)
+                if value then
+                    value_arg_index = value_arg_index + 1
+                end
+                if alias and (value or ''):sub(1, 1) == alias:sub(1, 1)  then
+                    value = alias:sub(2):gsub('{{'..param..'}}', value:sub(2))
+                end
+                if required and not value then
+                    command = self.error_usage
+                end
+                args[param] = value or default_value
             end
-            if required and not value then
-                command = self.error_usage
-            end
-            args[param] = value or default_value
             index = index + 1
         end
     end
@@ -143,6 +171,7 @@ local function argparse(host_args)
         param_dict_value_required = {},
         param_dict_value_default = {},
         param_dict_value_alias = {},
+        param_dict_value_multiple = {},
         param_list_value = {},
         cmd_execution = {},
         commands = {},

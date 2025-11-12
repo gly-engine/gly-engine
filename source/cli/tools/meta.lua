@@ -15,6 +15,7 @@ local build_html = require('source/shared/var/build/html')
 local build_screen = require('source/shared/var/build/screen')
 local runtime_bin = require('source/shared/var/runtime/bin')
 local runtime_flag = require('source/shared/var/runtime/flag')
+local deep_merge = require('source/shared/table/deep_merge')
 
 local csv = {
     decode = function(c)
@@ -196,22 +197,32 @@ local function vars(args)
     }
 end
 
-local function metadata(infile, args, optional)
-    if type(infile) == 'string' then
-        local f = io.open(infile, 'rb')
-        if f then
-            infile = f:read('*a')
-            f:close()
-        end
+local function metadata(infiles, args, optional)
+    if type(infiles) ~= 'table' then
+        infiles = {infiles}
     end
 
-    local game = normalize_table(try_lua(infile)
-        or try_decode(infile, json)
-        or try_decode(infile, env)
-        or try_decode(infile, csv)
-        or try_tic80(infile)
-        or try_love(infile)
-    ) or (optional and {})
+    local merged_game = nil
+    for _, infile in ipairs(infiles) do
+        if type(infile) == 'string' then
+            local f = io.open(infile, 'rb')
+            if f then
+                infile = f:read('*a')
+                f:close()
+            end
+        end
+
+        local game_part = try_lua(infile)
+            or try_decode(infile, json)
+            or try_decode(infile, env)
+            or try_decode(infile, csv)
+            or try_tic80(infile)
+            or try_love(infile)
+        
+        merged_game = deep_merge.table(merged_game, game_part)
+    end
+
+    local game = normalize_table(merged_game) or (optional and {})
 
     if not game then 
         return nil
@@ -221,8 +232,8 @@ local function metadata(infile, args, optional)
     local envs = env.normalize(game)
 
     local data = {
-        app = game,
         env = envs,
+        self = game,
         meta = meta,
         engine = {
             agent = agent,

@@ -70,7 +70,7 @@ local command = cli.argparse(arg)
     .add_option_get('screen', {})
     --
     .add_subcommand('meta', commands_halt)
-    .add_next_value('src', {required=true, alias='@samples/{{src}}/game.lua'})
+    .add_next_value('src', {required=true, alias='@samples/{{src}}/game.lua', multiple=true})
     .add_option_get('format', {default='{{& meta.title }} {{& meta.version }}'})
     .add_option_get('infile', {hidden=true})
     .add_option_get('outfile', {hidden=true})
