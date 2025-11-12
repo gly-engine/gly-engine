@@ -4,6 +4,14 @@ local content_length = {}
 local request_dict = {}
 local data_dict = {}
 
+local function normalized_header(header)
+    local normalized = {}
+    for k, v in pairs(header) do
+        normalized[string.lower(k)] = v
+    end
+    return normalized
+end
+
 local function deep_copy_headers(headers)
     if type(headers) ~= 'table' then
         return {}
@@ -17,7 +25,8 @@ local function deep_copy_headers(headers)
             copy[key] = value
         end
     end
-    return copy
+    local normalized = normalized_header(copy)
+    return normalized
 end
 
 local function handler(self)
