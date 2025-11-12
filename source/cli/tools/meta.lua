@@ -153,14 +153,14 @@ local function try_lua(content)
         local ok_eval, lua_evaluated = eval_code.script(table.concat(lua_code, '\n'))
         return (ok_eval and lua_evaluated)
     end)
-    return ok and next(data) ~= nil and data
+    return ok and next(data or {}) ~= nil and data
 end
 
 local function try_decode(content, parser)
     local ok, data = pcall(function()
         return parser.decode(content)
     end)
-    return ok and next(data) ~= nil and data
+    return ok and next(data or {}) ~= nil and data
 end
 
 local function try_tic80(content)
@@ -178,7 +178,7 @@ local function try_tic80(content)
         end
         return next(m) and {meta = m}
     end)
-    return ok and next(data) ~= nil and data
+    return ok and next(data or {}) ~= nil and data
 end
 
 local function try_love(love_content)
