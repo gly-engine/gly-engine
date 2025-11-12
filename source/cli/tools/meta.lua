@@ -5,6 +5,7 @@ local base64 = require('source/shared/string/encode/base64')
 local ltable = require('source/shared/string/encode/table')
 local zlib = require('source/third_party/zerkman_zlib')
 local json = require('source/third_party/rxi_json')
+local javascript = require('source/shared/string/encode/javascript')
 local lustache = require('source/third_party/olivinelabs_lustache')
 local ftcsv = require('source/third_party/fouriertransformer_ftcsv')
 local util_decorator = require('source/shared/functional/decorator')
@@ -90,6 +91,21 @@ local function dumper(tbl)
         end,
         csv = function()
             return csv.encode(tbl) or error('is not a table!', 0)
+        end,
+        ['js-var'] = function()
+            return javascript.var(tbl)
+        end,
+        ['js-const'] = function()
+            return javascript.const(tbl)
+        end,
+        ['js-esm'] = function()
+            return javascript.esm(tbl)
+        end,
+        ['js-esm-default'] = function()
+            return javascript.esm_default(tbl)
+        end,
+        ['js-common'] = function()
+            return javascript.cjs_default(tbl)
         end
     }
 end
