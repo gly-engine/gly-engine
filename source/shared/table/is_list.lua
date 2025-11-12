@@ -1,4 +1,4 @@
-function is_list_partial(t)
+local function is_list_partial(t)
     if type(t) ~= "table" then
         return false
     end
