@@ -223,7 +223,7 @@ local function request(method, std, engine, protocol)
             function()
                 protocol.handler(self, self.id)
             end,
-            -- parse json
+            -- parsers
             function()
                 if self.options['json'] and json_decode and std.http.body then
                     pcall(function()
@@ -231,6 +231,12 @@ local function request(method, std, engine, protocol)
                         std.http.body = new_body
                     end)
                 end
+
+                local lower_header = {}
+                for k, v in pairs(std.http.header) do
+                    lower_header[string.lower(k)] = v
+                end
+                std.http.header = lower_header
             end,
             -- callbacks
             function()
