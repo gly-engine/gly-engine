@@ -1,32 +1,36 @@
-local util_decorator = require('source/shared/functional/decorator')
-
 --! @defgroup std
 --! @{
 --! @defgroup app
 --! @{
 
---! @hideparam std
---! @hideparam engine
+--! @decorator
 local function reset(std, engine)
     if std.node then
-        std.bus.emit('exit')
-        std.bus.emit('init')
-    else
+        return function()
+            std.bus.emit('exit')
+            std.bus.emit('init')
+        end
+    end
+    return function()
         engine.root.callbacks.exit(engine.root.data, std)
         engine.root.callbacks.init(engine.root.data, std)
     end
 end
 
---! @hideparam std
+--! @decorator
 local function exit(std)
-    std.bus.emit('exit')
-    std.bus.emit('quit')
+    return function()
+        std.bus.emit('exit')
+        std.bus.emit('quit')
+    end
 end
 
---! @hideparam func
-local function title(func, window_name)
-    if func then
-        func(window_name)
+--! @decorator
+local function title(func)
+    return function(window_name)
+        if func then
+            func(window_name)
+        end
     end
 end
 
@@ -45,9 +49,9 @@ local function install(std, engine, config)
         end
     end)
 
-    std.app.title = util_decorator.prefix1(config.set_title, title)
-    std.app.exit = util_decorator.prefix1(std, exit)
-    std.app.reset = util_decorator.prefix2(std, engine, reset)
+    std.app.title = title(config.set_title)
+    std.app.exit = exit(std)
+    std.app.reset = reset(std, engine)
     std.app.get_fps = config.get_fps
 
     return std.app

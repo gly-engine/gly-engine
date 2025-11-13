@@ -44,6 +44,7 @@
     "native_image_mensure",
     "native_json_decode",
     "native_json_encode",
+    "native_keyboard_has_media",
     "native_log_debug",
     "native_log_error",
     "native_log_fatal",

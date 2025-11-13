@@ -5,6 +5,7 @@ local base64 = require('source/shared/string/encode/base64')
 local ltable = require('source/shared/string/encode/table')
 local zlib = require('source/third_party/zerkman_zlib')
 local json = require('source/third_party/rxi_json')
+local javascript = require('source/shared/string/encode/javascript')
 local lustache = require('source/third_party/olivinelabs_lustache')
 local ftcsv = require('source/third_party/fouriertransformer_ftcsv')
 local util_decorator = require('source/shared/functional/decorator')
@@ -15,6 +16,7 @@ local build_html = require('source/shared/var/build/html')
 local build_screen = require('source/shared/var/build/screen')
 local runtime_bin = require('source/shared/var/runtime/bin')
 local runtime_flag = require('source/shared/var/runtime/flag')
+local deep_merge = require('source/shared/table/deep_merge')
 
 local csv = {
     decode = function(c)
@@ -89,6 +91,21 @@ local function dumper(tbl)
         end,
         csv = function()
             return csv.encode(tbl) or error('is not a table!', 0)
+        end,
+        ['js-var'] = function()
+            return javascript.var(tbl)
+        end,
+        ['js-const'] = function()
+            return javascript.const(tbl)
+        end,
+        ['js-esm'] = function()
+            return javascript.esm(tbl)
+        end,
+        ['js-esm-default'] = function()
+            return javascript.esm_default(tbl)
+        end,
+        ['js-common'] = function()
+            return javascript.cjs_default(tbl)
         end
     }
 end
@@ -130,37 +147,27 @@ local function normalized_meta(app)
     }
 end
 
-local function try_table(infile)
-    if type(infile) == 'table' then
-        return infile
-    end
-    return nil
-end
-
-local function try_lua(infile)
-    local ok, lua = pcall(dofile, infile)
-    local ok2, lua2 = pcall(function()
-        local lua_code = cli_buildder.optmizer(io.open(infile, 'r'):read('*a'), 'gamelua', {})
-        local ok, lua_evaluated = eval_code.script(table.concat(lua_code, '\n'))
-        return (ok and lua_evaluated)
-    end)
-    local data = (ok and lua) or (ok2 and lua2) or {}
-    return type(data) == 'table' and next(data) ~= nil and data
-end
-
-local function try_decode(infile, parser)
+local function try_lua(content)
     local ok, data = pcall(function()
-        return parser.decode(io.open(infile, 'r'):read('*a'))
+        local lua_code = cli_buildder.optmizer(content, 'gamelua', {})
+        local ok_eval, lua_evaluated = eval_code.script(table.concat(lua_code, '\n'))
+        return (ok_eval and lua_evaluated)
     end)
-    return ok and next(data) ~= nil and data
+    return ok and next(data or {}) ~= nil and data
 end
 
-local function try_tic80(infile, parser)
+local function try_decode(content, parser)
     local ok, data = pcall(function()
-        local h, m = io.open(infile, "rb"), {}
-        if not h then return end
+        return parser.decode(content)
+    end)
+    return ok and next(data or {}) ~= nil and data
+end
+
+local function try_tic80(content)
+    local ok, data = pcall(function()
+        local m = {}
         local done = false
-        for l in h:lines() do
+        for l in content:gmatch("[^\r\n]+") do
             if done then return next(m) and {meta = m} or {} end
             local k, v = l:match("%-%-%s*(%w+)%s*:%s*(.*)")
             if k and (k == 'title' or k == 'author' or k == 'desc' or k == 'version' or k == 'ver') then
@@ -169,16 +176,14 @@ local function try_tic80(infile, parser)
                 done = true
             end
         end
-        h:close()
         return next(m) and {meta = m}
     end)
     return ok and next(data or {}) ~= nil and data
 end
 
-local function try_love(infile)
+local function try_love(love_content)
     local ok, data = pcall(function ()
         _G.love = {}
-        local love_content = io.open(infile, 'rb'):read('*a')
         local love_start = love_content:find("PK\003\004", 1, true)
         local love_data = love_content:sub(love_start)
         local love_conf = zlib.unzip(love_data, 'conf.lua')
@@ -208,15 +213,32 @@ local function vars(args)
     }
 end
 
-local function metadata(infile, args, optional)
-    local game = normalize_table(try_table(infile)
-        or try_lua(infile)
-        or try_decode(infile, json)
-        or try_decode(infile, env)
-        or try_decode(infile, csv)
-        or try_tic80(infile)
-        or try_love(infile)
-    ) or (optional and {})
+local function metadata(infiles, args, optional)
+    if type(infiles) ~= 'table' then
+        infiles = {infiles}
+    end
+
+    local merged_game = nil
+    for _, infile in ipairs(infiles) do
+        if type(infile) == 'string' then
+            local f = io.open(infile, 'rb')
+            if f then
+                infile = f:read('*a')
+                f:close()
+            end
+        end
+
+        local game_part = try_lua(infile)
+            or try_decode(infile, json)
+            or try_decode(infile, env)
+            or try_decode(infile, csv)
+            or try_tic80(infile)
+            or try_love(infile)
+        
+        merged_game = deep_merge.table(merged_game, game_part)
+    end
+
+    local game = normalize_table(merged_game) or (optional and {})
 
     if not game then 
         return nil
@@ -226,8 +248,8 @@ local function metadata(infile, args, optional)
     local envs = env.normalize(game)
 
     local data = {
-        app = game,
         env = envs,
+        self = game,
         meta = meta,
         engine = {
             agent = agent,
@@ -241,7 +263,7 @@ local function metadata(infile, args, optional)
         dump = {
             meta = dumper(meta),
             raw = dumper(game),
-            env = dumper(envs)
+            env = dumper(envs),
         },
         fn = {
             colon = fn_colon,

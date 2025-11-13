@@ -1,5 +1,3 @@
-local util_decorator = require('source/shared/functional/decorator')
-
 local deafult_font_name = 'Tiresias'
 local previous_font_name = deafult_font_name
 local previous_font_size = 9
@@ -12,7 +10,8 @@ local function apply_font()
     canvas:attrFont(current_font_name, current_font_size/1.59)
 end
 
-local function text_print(std, engine, canvas, pos_x, pos_y, text)
+local function text_print(std, engine, canvas)
+    return function(pos_x, pos_y, text)
     if previous_font_name ~= current_font_name or previous_font_size ~= current_font_size then
         apply_font()
     end
@@ -20,23 +19,26 @@ local function text_print(std, engine, canvas, pos_x, pos_y, text)
     local x = engine.offset_x + pos_x
     local y = engine.offset_y + pos_y
     canvas:drawText(x, y, text)
+    end
 end
 
-local function text_mensure(canvas, text)
+local function text_mensure(canvas)
+    return function(text)
     apply_font()
     local w, h = canvas:measureText(text)
     return w, h
+    end
 end
 
-local function font_size(std, engine, size)
+local function font_size(size)
     current_font_size = size
 end
 
-local function font_name(std, engine, name)
+local function font_name( name)
     current_font_name = name
 end
 
-local function font_default(std, engine, font_id)
+local function font_default(_font_id)
     current_font_name = deafult_font_name
 end
 
@@ -46,16 +48,14 @@ end
 
 local function install(std, engine)
     std.text = std.text or {}
-    std.text.print = util_decorator.prefix3(std, engine, engine.canvas, text_print)
-    std.text.font_size = util_decorator.prefix2(std, engine, font_size)
-    std.text.font_name = util_decorator.prefix2(std, engine, font_name)
-    std.text.font_default = util_decorator.prefix2(std, engine, font_default)
-    std.text.mensure = util_decorator.prefix1(canvas, text_mensure)
+    std.text.font_size = font_size
+    std.text.font_name = font_name
+    std.text.font_default = font_default
+    std.text.print = text_print(std, engine, engine.canvas)
+    std.text.mensure = text_mensure(canvas)
 end
 
-local P = {
+return {
     install=install,
     font_previous=font_previous
 }
-
-return P
