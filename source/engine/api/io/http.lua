@@ -233,10 +233,10 @@ local function request(method, std, engine, protocol)
                 end
 
                 local lower_header = {}
-                for k, v in pairs(std.http.header or {}) do
+                for k, v in pairs(std.http.headers or {}) do
                     lower_header[string.lower(k)] = v
                 end
-                std.http.header = lower_header
+                std.http.headers = lower_header
             end,
             -- callbacks
             function()
