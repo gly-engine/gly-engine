@@ -6,7 +6,8 @@ local function normalize(app, base)
     if not app then return nil end
     if not app.callbacks then
         local old_app = app
-        app = {meta={},config={},callbacks={}, data={}}
+        --- @todo refact?
+        app = {meta={},config={},callbacks={}, data={}, envs={}}
         
         for key, value in pairs(old_app) do
             local is_function = type(value) == 'function'
@@ -16,6 +17,8 @@ local function normalize(app, base)
                 app.config[key] = value
             elseif is_function then
                 app.callbacks[key] = value
+            elseif app[key] then
+                app[key] = value
             else
                 app.data[key] = value
             end
