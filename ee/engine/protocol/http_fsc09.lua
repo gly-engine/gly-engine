@@ -63,7 +63,7 @@ local function callback(evt)
         data_dict[session] = data_dict[session]..evt.body
     end
 
-    if evt.finished or raise_error or content_length[session] <= #data_dict[session] then
+    if evt.finished or raise_error or (content_length[session] >= 0 and content_length[session] <= #data_dict[session]) then
         self.set('body', data_dict[session])
         content_length[session] = nil
         request_dict[session] = nil
