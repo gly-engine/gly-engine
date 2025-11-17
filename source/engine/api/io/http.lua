@@ -226,10 +226,14 @@ local function request(method, std, engine, protocol)
             -- parsers
             function()
                 if self.options['json'] and json_decode and std.http.body then
-                    pcall(function()
+                    local ok, err = pcall(function()
                         local new_body = json_decode(std.http.body)
                         std.http.body = new_body
                     end)
+                    if not ok then
+                        self.set('ok', false)
+                        self.set('error', err)
+                    end
                 end
 
                 local lower_header = {}
