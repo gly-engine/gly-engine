@@ -248,6 +248,8 @@ local function build(src, dest)
                     if lib_type == 'local' then
                         replacer = 'local '..replacer
                     end
+                    -- @todo improve
+                    line = line:gsub('%-', '%%-')
                     main_after = main_after:gsub(line, replacer)
                     main_content = main_content:gsub(line, replacer)
                 end
