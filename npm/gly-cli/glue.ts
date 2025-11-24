@@ -4,6 +4,7 @@ import { to_luastring, to_jsstring } from "fengari/src/fengaricore";
 import * as fs from "fs";
 import * as path from "path";
 import * as child_process from "child_process";
+import { fileURLToPath } from "url";
 
 function createModuleTable(L, functions: Record<string, (L) => number>): void {
   lua.lua_newtable(L);
@@ -15,8 +16,9 @@ function createModuleTable(L, functions: Record<string, (L) => number>): void {
 }
 
 export function bootstrap() {
-  const mock = fs.readFileSync('tests/mock/io.lua', 'utf8');
-  const bootstrap = fs.readFileSync('source/cli/hazard/silvertap.lua', 'utf8');
+  const root = path.resolve(fileURLToPath(import.meta.url), '..', '..', '..')
+  const mock = fs.readFileSync(`${root}/tests/mock/io.lua`, 'utf8');
+  const bootstrap = fs.readFileSync(`${root}/source/cli/hazard/silvertap.lua`, 'utf8');
   const match = mock.match(/--! @bootstrap(.*?)--! @endbootstrap/s);
   if (!match) {
     throw new Error("Bootstrap section not found in mock file.");
