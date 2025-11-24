@@ -6,6 +6,8 @@ import * as path from "path";
 import * as child_process from "child_process";
 import { fileURLToPath } from "url";
 
+const root = path.resolve(fileURLToPath(import.meta.url), '..', '..', '..')
+
 function createModuleTable(L, functions: Record<string, (L) => number>): void {
   lua.lua_newtable(L);
   for (const [name, fn] of Object.entries(functions)) {
@@ -16,7 +18,6 @@ function createModuleTable(L, functions: Record<string, (L) => number>): void {
 }
 
 export function bootstrap() {
-  const root = path.resolve(fileURLToPath(import.meta.url), '..', '..', '..')
   const mock = fs.readFileSync(`${root}/tests/mock/io.lua`, 'utf8');
   const bootstrap = fs.readFileSync(`${root}/source/cli/hazard/silvertap.lua`, 'utf8');
   const match = mock.match(/--! @bootstrap(.*?)--! @endbootstrap/s);
@@ -32,7 +33,6 @@ export function addNpmToLuaPath(L)
   lua.lua_getglobal(L, "package");     
   lua.lua_getfield(L, -1, "path");      
 
-  const root = path.resolve(fileURLToPath(import.meta.url), '..', '..', '..');
   let currentPath = to_jsstring(lua.lua_tostring(L, -1));
   currentPath += `;${root}/?.lua`;
 
@@ -91,7 +91,8 @@ function getJsModules(): Record<string, Record<string, (L) => number>> {
   return {
     fs: {
       readFileSync: (L) => {
-        const filename = to_jsstring(lua.lua_tostring(L, 1));
+        const file = to_jsstring(lua.lua_tostring(L, 1));
+        const filename = [file, `${root}/${file}`].find(fs.existsSync)!
         const encoding = lua.lua_type(L, 2) === lua.LUA_TSTRING? to_jsstring(lua.lua_tostring(L, 2)): undefined;
         //! @todo lua if is dir is problematic interpolating with javascript
         if (fs.statSync(filename).isDirectory()) {
@@ -103,8 +104,9 @@ function getJsModules(): Record<string, Record<string, (L) => number>> {
         return 1;
       },
       existsSync: (L) => {
-        const filename = to_jsstring(lua.lua_tostring(L, 1));
-        lua.lua_pushboolean(L, fs.existsSync(filename));
+        const file = to_jsstring(lua.lua_tostring(L, 1));
+        const filename = [file, `${root}/${file}`].find(fs.existsSync)
+        lua.lua_pushboolean(L, filename !== undefined);
         return 1;
       },
       writeFileSync: (L) => {
