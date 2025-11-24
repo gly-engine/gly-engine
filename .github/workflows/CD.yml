@@ -25,9 +25,12 @@ jobs:
           node-version: '20.x'
           registry-url: 'https://registry.npmjs.org'
       -
+        if: matrix.package != 'gly-cli'
         working-directory: ./npm/${{ matrix.package }}
-        run: |
-          npm run build
+        run: npm run build
+      -
+        if: matrix.package == 'gly-cli'
+        run: npm run build
       - 
         working-directory: ./dist
         run: |
