@@ -1,6 +1,6 @@
 import { lauxlib, lualib } from "fengari";
 
-import cli from "../../../dist/cli.txt" assert { type: "text" };
+import cli from "../../dist/cli.txt" assert { type: "text" };
 
 import * as zlib from "zlib";
 import * as glue from "./glue.ts";
