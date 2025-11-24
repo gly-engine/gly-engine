@@ -1,7 +1,6 @@
 {
     "name": "@gamely/gly-cli",
     "author": "RodrigoDornelles",
-    "type": "module",
     "license": "Apache-2.0",
     "homepage": "https://docs.gamely.com.br",
     "repository": "https://github.com/gly-engine/gly-engine",

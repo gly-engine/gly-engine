@@ -1,10 +1,9 @@
 #!/usr/bin/env node
-import { execFileSync } from 'child_process';
-import { fileURLToPath } from 'url';
-import { existsSync } from 'fs';
-import { resolve } from 'path';
+const { execFileSync } = require('child_process');
+const { existsSync } = require('fs');
+const { resolve } = require('path');
 
-const GLY_CLI = resolve(fileURLToPath(import.meta.url), '..', 'npm', 'gly-cli', 'index.ts');
+const GLY_CLI = resolve(__dirname, 'npm', 'gly-cli', 'index.ts');
 const ROOT_VENDOR = resolve('node_modules');
 
 try {
