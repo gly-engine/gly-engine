@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 const { execFileSync } = require('child_process');
 const { existsSync } = require('fs');
-const { fileURLToPath } = require('url');
 const { resolve } = require('path');
 
 const GLY_CLI = resolve(__dirname, 'npm', 'gly-cli', 'index.ts');
