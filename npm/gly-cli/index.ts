@@ -12,6 +12,7 @@ function main() {
   const script = to_luastring(glue.bootstrap() + fs.readFileSync(main, 'utf8'));
   lualib.luaL_openlibs(L);
   glue.overridePrint(L);
+  glue.addNpmToLuaPath(L);
   glue.setLuaArgs(L, process.argv.slice(2));
   glue.registerJsRequire(L);
   glue.createBufferTable(L);

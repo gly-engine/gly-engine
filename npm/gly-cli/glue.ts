@@ -27,6 +27,22 @@ export function bootstrap() {
   return content;
 }
 
+export function addNpmToLuaPath(L)
+{
+  lua.lua_getglobal(L, "package");     
+  lua.lua_getfield(L, -1, "path");      
+
+  const root = path.resolve(fileURLToPath(import.meta.url), '..', '..', '..');
+  let currentPath = to_jsstring(lua.lua_tostring(L, -1));
+  currentPath += `;${root}/?.lua`;
+
+  lua.lua_pop(L, 1); 
+  lua.lua_pushstring(L, to_luastring(currentPath));
+  lua.lua_setfield(L, -2, "path");   
+
+  lua.lua_pop(L, 1); 
+}
+
 export function overridePrint(L) {
   lua.lua_getglobal(L, to_luastring("_G"));
   lua.lua_pushjsfunction(L, function (L) {
