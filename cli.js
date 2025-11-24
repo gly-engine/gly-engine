@@ -1,10 +1,11 @@
 #!/usr/bin/env node
-const { execFileSync } = require('child_process');
-const { existsSync } = require('fs');
-const { resolve } = require('path');
+import { execFileSync } from 'child_process';
+import { fileURLToPath } from 'url';
+import { existsSync } from 'fs';
+import { resolve } from 'path';
 
 const RUNTIME = ['bun', 'ts-node'].map(cmd => resolve('node_modules', '.bin', cmd)).find(existsSync);
-const GLY_CLI = resolve('npm', 'gly-cli', 'index.ts');
+const GLY_CLI = resolve(fileURLToPath(import.meta.url), '..', 'npm', 'gly-cli', 'index.ts');
 const ROOT_VENDOR = resolve('node_modules');
 
 try {
