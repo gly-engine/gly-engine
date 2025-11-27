@@ -42,6 +42,7 @@
     "native_image_draw",
     "native_image_load",
     "native_image_mensure",
+    "native_image_unload",
     "native_json_decode",
     "native_json_encode",
     "native_keyboard_has_media",

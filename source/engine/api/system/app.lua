@@ -54,11 +54,7 @@ local function install(std, engine, config)
     config = config or {}
     std.app = std.app or {}
 
-    std.bus.listen('post_quit', function()
-        if config.quit then
-            config.quit()
-        end
-    end)
+    std.bus.listen('post_quit', config.quit or config.exit or function() end)
 
     std.app.title = title(config.set_title)
     std.app.exit = exit(std)

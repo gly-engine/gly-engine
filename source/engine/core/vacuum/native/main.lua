@@ -9,6 +9,7 @@ local engine_draw_fps = require('source/engine/api/draw/fps')
 local engine_draw_poly = require('source/engine/api/draw/poly')
 local engine_draw_text = require('source/engine/api/draw/text')
 local engine_draw_ui = require('source/engine/api/draw/ui')
+local engine_draw_img = require('source/engine/api/draw/image')
 local engine_array = require('source/engine/api/data/array')
 local engine_encoder = require('source/engine/api/data/encoder')
 local engine_hash = require('source/engine/api/data/hash')
@@ -59,6 +60,13 @@ local cfg_media = {
     pause=native_media_pause,
     play=native_media_play,
     stop=native_media_stop
+}
+
+local cfg_image = {
+    load = native_image_load,
+    draw = native_image_draw,
+    mensure = native_image_mensure,
+    unload = native_image_unload
 }
 
 local cfg_poly = {
@@ -171,11 +179,6 @@ function native_callback_init(width, height, game_lua)
     std.draw.rect2=util_decorator.offset_xy2(engine, native_draw_rect2 or native_draw_rect)
     std.draw.rect=util_decorator.offset_xy2(engine, native_draw_rect)
     std.draw.line=util_decorator.offset_xyxy1(engine, native_draw_line)
-    std.image.load=native_image_load
-    std.image.mensure=native_image_mensure
-    std.image.mensure_width=function(v) return select(1, native_image_mensure(v)) end
-    std.image.mensure_height=function(v) return select(2, native_image_mensure(v)) end
-    std.image.draw=util_decorator.offset_xy2(engine, native_image_draw)
     std.text.print = util_decorator.offset_xy1(engine, native_text_print)
     std.text.mensure=native_text_mensure
     std.text.font_size=native_text_font_size
@@ -193,6 +196,7 @@ function native_callback_init(width, height, game_lua)
         :package('@array', engine_array)
         :package('@key', engine_key, cfg_key)
         :package('@draw.ui', engine_draw_ui)
+        :package('@draw.img', engine_draw_img, cfg_image)
         :package('@draw.fps', engine_draw_fps)
         :package('@draw.text', engine_draw_text, cfg_text)
         :package('@draw.poly', engine_draw_poly, cfg_poly)
