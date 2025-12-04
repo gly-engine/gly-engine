@@ -69,6 +69,7 @@ local engine = {
     fps = 0
 }
 
+
 local cfg_system = {
     quit = function() event.post({class = 'ncl', type = 'presentation', action = 'stop'}) end,
     get_language = function() return 'pt-BR' end
@@ -83,7 +84,7 @@ local cfg_poly = {
 local cfg_fps_control = {
     list={60, 30, 20, 15, 10},
     time={10, 30, 40, 60, 90},
-    uptime=event and event.uptime
+    uptime=event.uptime
 }
 
 local cfg_env = {
@@ -94,24 +95,42 @@ local cfg_text = {
     font_previous = core_text.font_previous
 }
 
-local function register_event_loop()
-    event.register(function(evt) pcall(std.bus.emit, 'ginga', evt) end)
-end
+--! @details
+--! The fallback mechanism attempts to address an issue where Ginga sometimes simply omits events
+--! whether a `@c event.timer` or a silent error that was not caught by `pcall`/`xpcall`.
+--! If a certain amount of time has passed and the loop appears to have been stopped for more than one second,
+--! it is restarted.
+local fallback_restarts = 0
 
-local function register_fixed_loop()
+local function register_fixed_loop(fallback)
     local tick = nil
     local loop = std.bus.trigger('loop')
-    local draw = std.bus.trigger('draw')    
+    local draw = std.bus.trigger('draw')
+
+    fallback_restarts = fallback
+
     tick = function()
         xpcall(loop, engine.handler)
         canvas:attrColor(0, 0, 0, 0)
         canvas:clear()
         xpcall(draw, engine.handler)
         canvas:flush()
-        event.timer(engine.delay, tick)
+        if fallback_restarts == fallback then
+            event.timer(engine.delay, tick)
+        end
     end
 
     event.timer(engine.delay, tick)
+end
+
+local function register_event_loop()
+    event.register(function(evt) 
+        pcall(std.bus.emit, 'ginga', evt)
+        if event.uptime() - std.milis >= 1000 then
+            register_fixed_loop(fallback_restarts + 1)
+            engine.handler('[ginga] fallback: '..tostring(fallback_restarts))
+        end
+    end)
 end
 
 local function main(evt, gamefile)
@@ -161,7 +180,7 @@ local function main(evt, gamefile)
     engine.root, engine.current = application, application
 
     register_event_loop()
-    register_fixed_loop()
+    register_fixed_loop(0)
 
     std.bus.emit_next('load')
     std.bus.emit_next('init')
