@@ -57,7 +57,6 @@ local command = cli.argparse(arg)
     .add_option_has('non-relative')
     .add_option_has('enterprise')
     .add_option_has('bundler')
-    .add_option_has('dev')
     .add_option_has('run')
     --
     .add_subcommand('build-engine', commands_halt)
