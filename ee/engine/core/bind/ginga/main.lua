@@ -103,10 +103,10 @@ local function register_fixed_loop()
     local loop = std.bus.trigger('loop')
     local draw = std.bus.trigger('draw')    
     tick = function()
-        pcall(loop)
+        xpcall(loop, engine.handler)
         canvas:attrColor(0, 0, 0, 0)
         canvas:clear()
-        pcall(draw)
+        xpcall(draw, engine.handler)
         canvas:flush()
         event.timer(engine.delay, tick)
     end
@@ -118,6 +118,7 @@ local function main(evt, gamefile)
     if evt.class and evt.class ~= 'ncl' or evt.action ~= 'start' and evt.type ~= 'presentation' then return end
 
     engine.envs = evt
+    engine.handler = function(msg) pcall(engine.root.callbacks.error or function() end, engine.root.data, std, tostring(msg)) end
     application = loadgame.script(gamefile, application_default)
 
     loadcore.setup(std, application, engine)
