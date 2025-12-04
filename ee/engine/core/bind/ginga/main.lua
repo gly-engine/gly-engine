@@ -102,6 +102,8 @@ local cfg_text = {
 --! If a certain amount of time has passed and the loop appears to have been stopped for more than one second,
 --! it is restarted.
 local fallback_restarts = 0
+local falback_fallback_time = 0
+local falback_fallback_restart = 0
 
 local function register_fixed_loop(fallback)
     local tick = nil
@@ -124,12 +126,32 @@ local function register_fixed_loop(fallback)
     event.timer(engine.delay, tick)
 end
 
+local function register_fallback(fallback)
+    local tick = nil
+    falback_fallback_restart = fallback
+
+    tick = function()
+        falback_fallback_time = event.uptime()
+        if falback_fallback_time - std.milis >= 1000 then
+            register_fixed_loop(fallback_restarts + 1)
+        end
+        if falback_fallback_restart == fallback then
+            event.timer(5000, tick)
+        end
+    end
+
+    event.timer(engine.delay, tick)
+end
+
 local function register_event_loop()
     event.register(function(evt) 
+        local uptime = event.uptime()
         pcall(std.bus.emit, 'ginga', evt)
-        if event.uptime() - std.milis >= 1000 then
+        if (uptime - std.milis) >= 1000 then
             register_fixed_loop(fallback_restarts + 1)
-            engine.handler('[ginga] fallback: '..tostring(fallback_restarts))
+        end
+        if (uptime - falback_fallback_time) >= 6000 then
+            register_fallback(falback_fallback_restart + 1)
         end
     end)
 end
@@ -186,6 +208,7 @@ local function main(evt, gamefile)
 
     register_event_loop()
     register_fixed_loop(0)
+    register_fallback(0)
 
     std.bus.emit_next('load')
     std.bus.emit_next('init')
