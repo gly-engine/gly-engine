@@ -9,7 +9,6 @@ local javascript = require('source/shared/string/encode/javascript')
 local lustache = require('source/third_party/olivinelabs_lustache')
 local ftcsv = require('source/third_party/fouriertransformer_ftcsv')
 local util_decorator = require('source/shared/functional/decorator')
-local cli_buildder = require('source/cli/build/builder')
 local eval_code = require('source/shared/string/eval/code')
 local build_ncl = require('source/shared/var/build/ncl')
 local build_html = require('source/shared/var/build/html')
@@ -149,8 +148,7 @@ end
 
 local function try_lua(content)
     local ok, data = pcall(function()
-        local lua_code = cli_buildder.optmizer(content, 'gamelua', {})
-        local ok_eval, lua_evaluated = eval_code.script(table.concat(lua_code, '\n'))
+        local ok_eval, lua_evaluated = eval_code.script(content)
         return (ok_eval and lua_evaluated)
     end)
     return ok and next(data or {}) ~= nil and data

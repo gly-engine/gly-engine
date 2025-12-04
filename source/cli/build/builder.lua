@@ -1,40 +1,5 @@
 local str_fs = require('source/shared/string/schema/fs')
 
---! @todo move this!
-local function optmizer(content, srcname, args)
-    if args.dev and srcname == 'eeenginecorebindgingakeyslua' then
-        content = content:gsub('gly_key, pressed', 'gly_key, not pressed')
-    end
-    if args.dev and srcname == 'eeenginecorebindgingamainlua' then
-        content = content:gsub('pcall%(draw%)', 'draw()')
-        content = content:gsub('pcall%(loop%)', 'loop()')
-        content = content:gsub('event%.register%(%s*function%b()%s*.-end%s*%)', 'event.register(std.bus.trigger(\'ginga\'))')
-    end
-    if args.bundler and srcname == 'eeenginecorebindgingamainlua' then
-        content = content:gsub('_ENV=nil', '')
-    end
-    if content:find('_hx_') and not content:find('_hx_gly') then
-        local haxe_pattern_std = 'std%.(%w+):(%w+)'
-        local haxe_replace_std = 'std.%1.%2'
-        local haxe_pattern_utf8 = '_G%.require%("lua%-utf8"%)'
-        local haxe_replace_utf8 = '((function() local x, y = pcall(require, \'lua-utf8\'); return x and y end)())'
-            ..' or ((function() local x, y = pcall(require, \'utf8\'); return x and y end)())'
-            ..' or _G.utf8 or _G.string'
-        local haxe_pattern_metatable = '(local _hx_string_mt = _G%.getmetatable.-\n\n)'
-        local haxe_content_metatable = content:match(haxe_pattern_metatable) or ''
-        local haxe_replace_metatable = 'if not _hx_gly then\n'..haxe_content_metatable..'\n_hx_gly=true\nend\n'
-        content = content:gsub(haxe_pattern_metatable, haxe_replace_metatable)
-        content = content:gsub(haxe_pattern_utf8, haxe_replace_utf8)
-        content = content:gsub(haxe_pattern_std, haxe_replace_std)
-    end
-
-    local lines = {}
-    for line in content:gmatch("[^\n]+") do
-        lines[#lines + 1] = line
-    end
-    return lines
-end
-
 --! @todo rewrite all the move() and build() 
 local function move(src_filename, out_filename, options, args)
     local deps = {}
@@ -49,12 +14,7 @@ local function move(src_filename, out_filename, options, args)
     local pattern_comment = '%-%-'
 
     if src_file and out_file then
-        local file_content = src_file:read('*a')
-        local lines = optmizer(file_content, src_filename:gsub('[^%a]', ''), args)
-        
-        local index = 1
-        while index <= #lines do
-            local line = lines[index]
+        for line in src_file:lines() do
             local pos_comment = line:find(pattern_comment)
             local pos_require = line:find(pattern_require) or line:find(pattern_gameload)
             local is_comment = pos_comment and pos_require and pos_comment < pos_require
@@ -87,7 +47,6 @@ local function move(src_filename, out_filename, options, args)
             else
                 content = content..line..'\n'
             end
-            index = index + 1
         end
     end
 
@@ -149,8 +108,7 @@ end
 
 local P = {
     move=move,
-    build=build,
-    optmizer=optmizer
+    build=build
 }
 
 return P
