@@ -187,6 +187,12 @@ function native_callback_init(width, height, game_lua)
     std.text.mensure_width=function(v) return select(1, native_image_mensure(v)) end
     std.text.mensure_height=function(v) return select(2, native_image_mensure(v)) end
 
+    engine.handler = function(msg) 
+        if select(2, pcall(engine.root.callbacks.error or function() end, engine.root.data, std, tostring(msg))) == true then
+            (native_system_exit or native_system_fatal or function() end)()
+        end
+    end
+
     loadcore.setup(std, application, engine)
         :package('@bus', engine_raw_bus)
         :package('@node', engine_raw_node)

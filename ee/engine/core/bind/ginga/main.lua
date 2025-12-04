@@ -59,6 +59,7 @@ local event = event
 --! @field canvas <http://www.telemidia.puc-rio.br/~francisco/nclua/referencia/canvas.html>
 --! @field event <http://www.telemidia.puc-rio.br/~francisco/nclua/referencia/event.html>
 local engine = {
+    handler = function(a) end,
     current = application_default,
     root = application_default,
     canvas = canvas,
@@ -137,7 +138,11 @@ local function main(evt, gamefile)
     if evt.class and evt.class ~= 'ncl' or evt.action ~= 'start' and evt.type ~= 'presentation' then return end
 
     engine.envs = evt
-    engine.handler = function(msg) pcall(engine.root.callbacks.error or function() end, engine.root.data, std, tostring(msg)) end
+    engine.handler = function(msg) 
+        if select(2, pcall(engine.root.callbacks.error or function() end, engine.root.data, std, tostring(msg))) == true then
+            os.exit()
+        end
+    end
     application = loadgame.script(gamefile, application_default)
 
     loadcore.setup(std, application, engine)
