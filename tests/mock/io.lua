@@ -1,4 +1,9 @@
 --! @bootstrap
+local function common_io_lines(self)
+    return (self:read('*a') or ''):gmatch("([^\n]*)\n?")
+end
+
+
 local function file_reader(self, mode, size, func)
     if not self.content or #self.content == 0 then
         self.content = func()
@@ -44,6 +49,7 @@ local function open(files)
         if (mode or 'r'):find('r') and (files[filename] or storage[filename]) then
             return {
                 pointer = 1,
+                lines = common_io_lines,
                 write = function() end,
                 close = function() end,
                 read = function(self, size)

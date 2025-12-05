@@ -133,6 +133,7 @@ local function node_add(self, node, options)
     cfg.pause_all = false
     cfg.parent = parent
     cfg.size = options.size or 1
+    cfg.offset = options.offset or 0
     parent.childs[#parent.childs + 1] = node
     self.flag_relist = false
     self.flag_reparent = true
@@ -225,8 +226,9 @@ local function dom(node, parent_x, parent_y, parent_w, parent_h)
         local x, y = 0, 0
 
         for _, child in ipairs(node.childs) do
-            local size = child.config.size or 1
-            local cx, cy = parent_x + x * cell_w, parent_y + y * cell_h
+            local offset, size = child.config.offset, child.config.size or 1
+            local cx = parent_x + cell_w * (((dir == 0) and offset or 0) + x)
+            local cy = parent_y + cell_h * (((dir == 1) and offset or 0) + y)
             local w = (dir == 0) and (size * cell_w) or cell_w
             local h = (dir == 1) and (size * cell_h) or cell_h
 
@@ -236,10 +238,10 @@ local function dom(node, parent_x, parent_y, parent_w, parent_h)
             dom(child, cx, cy, w, h)
 
             if dir == 1 then
-                y = y + size
+                y = y + size + offset
                 if y >= cols then y, x = 0, x + 1 end
             else
-                x = x + size
+                x = x + size + offset
                 if x >= rows then x, y = 0, y + 1 end
             end
         end

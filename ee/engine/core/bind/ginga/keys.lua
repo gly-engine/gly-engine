@@ -50,7 +50,7 @@ local function event_ginga(std, evt)
     end
 
     --! @li https://github.com/TeleMidia/ginga/issues/190
-    --! this condtional is inverse in ---dev building flag.
+    if canvas._dump_to_memory then pressed = not pressed end
     std.bus.emit('rkey', gly_key, pressed)
 end
 

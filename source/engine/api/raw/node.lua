@@ -70,6 +70,7 @@ local node_default = require('source/shared/var/object/node')
 --! @enduml
 
 --! @hideparam std
+--! @todo remove emit from std.node in 0.4.X
 --! @short send event to node
 --! @par Tip
 --! You can send message to "not spawned" node, as if he were an orphan.
@@ -172,12 +173,11 @@ local function install(std, engine)
             engine.offset_x = node.config.offset_x
             engine.offset_y = node.config.offset_y
             if node.callbacks[key] then
-                node.callbacks[key](node.data, std, a, b, c, d, e, f)
+                xpcall(function() node.callbacks[key](node.data, std, a, b, c, d, e, f) end, engine.handler)
             end
         end)
     end)
 end
-
 local P = {
     install=install
 }

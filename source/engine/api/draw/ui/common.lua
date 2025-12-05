@@ -8,13 +8,17 @@ local tree = require('source/shared/engine/tree')
 --! @hideparam std
 --! @hideparam engine
 --! @hideparam self
+--! @todo in future, dont suport @c options as number
 --! @param [in,out] application new column
 --! @param [in] size column width in blocks
-local function add(std, engine, self, application, size)
+local function add(std, engine, self, application, options)
     if not application then return self end
     local node = application.node or std.node.load(application)
+    local size = (type(options) == 'number' and options) or (options or {}).span
+    local offset = options ~= size and (options or {}).offset
     tree.node_add(engine.dom, node, {
         parent = self.node,
+        offset = offset,
         size = size
     })
     return self

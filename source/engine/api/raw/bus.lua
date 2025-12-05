@@ -8,7 +8,6 @@ local buses = {
     list = {},
     dict = {},
     queue = {},
-    pause = {},
     all = {}
 }
 
@@ -150,6 +149,7 @@ end
 --! @endcond
 
 --! @short send unique event
+--! @hideparam engine
 --! @hideparam prefixes
 --! @details
 --! broadcast message for all nodes.
@@ -168,7 +168,7 @@ end
 --! @code
 --! std.bus.emit('on_shoot', x1, y1, x2, y2)
 --! @endcode
-local function emit(prefixes, key, a, b, c, d, e, f)
+local function emit(engine, prefixes, key, a, b, c, d, e, f)
     local index1, index2, index3 = 1, 1, 1
 
     while index1 <= #prefixes do
@@ -178,16 +178,13 @@ local function emit(prefixes, key, a, b, c, d, e, f)
         local bus = buses.dict[topic]
 
         while not must_abort and bus and index2 <= #bus do
-            local func = bus[index2]
-            if not buses.pause[func] then
-                func(a, b, c, d, e, f)
-            end
+            xpcall(function() bus[index2](a, b, c, d, e, f) end, engine.handler)
             index2 = index2 + 1
         end
 
         index3 = 1
         while index3 <= #buses.all do
-            buses.all[index3](topic, a, b, c, d, e, f)
+            xpcall(function() buses.all[index3](topic, a, b, c, d, e, f) end, engine.handler)
             index3 = index3 + 1
         end
 
@@ -196,14 +193,17 @@ local function emit(prefixes, key, a, b, c, d, e, f)
     must_abort = false
 end
 
+--! @decorator
 --! @short sender event function
 --! @par Example
 --! @code
 --! love.filedropped = std.bus.trigger('file_dropped')
 --! @endcode
-local function trigger(key)
-    return function (a, b, c, d, e, f)
-        emit(ev_prefixes, key, a, b, c, d, e, f)
+local function trigger(engine)
+    return function (key)
+        return function (a, b, c, d, e, f)
+            emit(engine, ev_prefixes, key, a, b, c, d, e, f)
+        end
     end
 end
 
@@ -243,16 +243,16 @@ local function install(std, engine)
 
     std.bus.abort = abort
     std.bus.listen = listen
-    std.bus.trigger = trigger
+    std.bus.trigger = trigger(engine)
     std.bus.emit_next = emit_next
     std.bus.listen_all = listen_all
 
     engine.bus_emit_ret = function(key, a)
-        emit({'ret_'}, key, a)
+        emit(engine, {'ret_'}, key, a)
     end
 
     std.bus.emit = function(key, a, b, c, d, e, f)
-        emit(ev_prefixes, key, a, b, c, d, e, f)
+        emit(engine, ev_prefixes, key, a, b, c, d, e, f)
     end
 
     std.bus.listen_std = function(key, handler_func)
@@ -277,7 +277,7 @@ local function install(std, engine)
         local index = 1
         while index <= #buses.queue do
             local pid = buses.queue[index]
-            emit({''}, pid[1], pid[2], pid[3], pid[4], pid[5], pid[6])
+            emit(engine, {''}, pid[1], pid[2], pid[3], pid[4], pid[5], pid[6])
             index = index + 1
         end
         buses.queue = {}

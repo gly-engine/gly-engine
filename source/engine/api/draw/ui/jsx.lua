@@ -35,7 +35,7 @@ local function h(std, engine, element, attribute, childs)
         while index <= #childs do
             local item = childs[index]
             if item.node then
-                grid:add(item.node, item.span or 1)
+                grid:add(item.node, {span=item.span or 1,offset=item.ofsset or 0})
                 if item.style then add_style(std, grid:get_item(index), item.style) end
             else
                 grid:add(item)
@@ -45,7 +45,13 @@ local function h(std, engine, element, attribute, childs)
         grid.span = attribute.span
         return grid
     elseif element == 'item' then
-        return {type='item', node=childs[attribute.index or 1], span=attribute.span, style=attribute.style}
+        return {
+            type='item',
+            node=childs[attribute.index or 1],
+            span=attribute.span,
+            style=attribute.style,
+            offset=attribute.offset
+        }
     elseif element == 'style' then
         return std.ui.style(attribute.class, attribute)
     elseif el_type == 'function' then
