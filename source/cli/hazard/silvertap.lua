@@ -6,10 +6,6 @@ local javascript_fs = jsRequire and jsRequire('fs')
 local javascript_ps = jsRequire and jsRequire('child_process')
 local real_io_open = io and io.open
 
-local function common_io_lines(self)
-    return (self:read('*a') or ''):gmatch("([^\n]*)\n?")
-end
-
 local function bootstrap_has_file(filename, mode)
     if not BOOTSTRAP then return false end
     if BOOTSTRAP_DISABLE then return false end

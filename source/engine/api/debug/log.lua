@@ -25,7 +25,7 @@ local function printer(engine, printers, func_a, func_b)
         local msgs = {...}
         local count = #msgs
 
-        if level < engine.loglevel then
+        if level <= engine.loglevel then
             local content = ''
             for i = 1, count do
                 local v = msgs[i]
