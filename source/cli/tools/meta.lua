@@ -3,6 +3,7 @@ local version = require('source/version')
 local env = require('source/shared/string/parse/env')
 local base64 = require('source/shared/string/encode/base64')
 local ltable = require('source/shared/string/encode/table')
+local yaml = require('source/shared/string/encode/yaml')
 local zlib = require('source/third_party/zerkman_zlib')
 local json = require('source/third_party/rxi_json')
 local javascript = require('source/shared/string/encode/javascript')
@@ -90,6 +91,9 @@ local function dumper(tbl)
         end,
         csv = function()
             return csv.encode(tbl) or error('is not a table!', 0)
+        end,
+        yaml = function()
+            return yaml.encode(tbl)
         end,
         ['js-var'] = function()
             return javascript.var(tbl)
