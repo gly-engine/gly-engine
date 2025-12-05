@@ -1,47 +1,70 @@
-local util_decorator = require('source/shared/functional/decorator')
+local yaml = require('source/shared/string/encode/yaml')
 
 --! @defgroup std
 --! @{
 --! @defgroup log
 --! @{
 --! @call code
-local logging_types = {
-    'none', 'fatal', 'error', 'warn', 'debug', 'info'
-}
+local levels = { none = 0, fatal = 1, error = 2, warn = 3, info = 4, debug = 5, trace = 6}
 --! @call endcode
 
---! @fakefunc fatal(message)
---! @fakefunc error(message)
---! @fakefunc warn(message)
---! @fakefunc debug(message)
---! @fakefunc info(message)
+--! @fakefunc fatal(...)
+--! @fakefunc error(...)
+--! @fakefunc warn(...)
+--! @fakefunc info(...)
+--! @fakefunc debug(..)
+--! @fakefunc trace(..)
+--! @cond
+local function printer(engine, printers, func_a, func_b)
+    local fn_a = func_a and printers[func_a]
+    local fn_b = func_b and printers[func_b]
+    local func = fn_a or fn_b or function() end
+    local level = levels[func_a] or 7
 
---! @hideparam engine
---! @hideparam lpf
---! @hideparam lpn
+    return function (...)
+        local msgs = {...}
+        local count = #msgs
 
+        if level < engine.loglevel then
+            local content = ''
+            for i = 1, count do
+                local v = msgs[i]
+                local t = type(v)
+                if t == 'table' then
+                    content = content..'\n'..yaml.encode(v)..'\n'
+                elseif t ~= 'function' then
+                    local add_space = i ~= count and i > 1 and content:sub(-1) ~= '\n'
+                    local prefix = add_space and ' ' or ''
+                    content = content..prefix..tostring(v)
+                end
+            end
+            func(content)
+        end
+    end
+end
+--! @endcond
+
+--! @decorator
 --! @par Examples
 --! @details
 --! Adjusts the level of omission of log messages.
 --! @code{.java}
---! std.log.level(std.log.error)
+--! std.log.level('debug')
 --! @endcode
 --! @code{.java}
---! std.log.level('error')
+--! std.log.level(5)
 --! @endcode
---! @code{.java}
---! std.log.level(3)
---! @endcode
-local function level(engine, lpf, lpn, level)
-    local l = lpf[level] or lpn[level] or level
-    if type(l) ~= 'number' or l <= 0 or l > #logging_types then
-        error('logging level not exist: '..tostring(level)) 
+local function level(engine)
+    return function(n)
+        local lv = levels[n] or (type(n) == 'number' and n) or -1
+        if lv < 0 or 6 < lv then
+            error('logging level not exist: '..tostring(level)) 
+        end
+        engine.loglevel = lv
     end
-    engine.loglevel = l
 end
 
---! @hideparam std
---! @hideparam engine
+--! @decorator
 --! @details
 --! Restarts log system by redirecting messages to new destinations.
 --! @par Example
@@ -50,32 +73,20 @@ end
 --!     fatal = function(message) print('[fatal]', message) end,
 --!     error = function(message) print('[error]', message) end,
 --!     warn  = function(message) print('[warn]',  message) end,
+--!     info  = function(message) print('[info]',  message) end,
 --!     debug = function(message) print('[debug]', message) end,
---!     info  = function(message) print('[info]',  message) end
+--!     trace  = function(message) print('[trace]',  message) end,
 --! })
 --! @endcode
-local function init(std, engine, printers)
-    local index = 1
-    local level_per_func = {}
-    local level_per_name = {}
-    while index <= #logging_types do
-        local ltype = logging_types[index]
-        local lfunc = function() end
-        if index > 1 and printers[ltype] then
-            lfunc = (function (level)
-                return function(message)
-                    if engine.loglevel >= level then
-                        printers[ltype](message)
-                    end
-                end
-            end)(index - 1)
-        end
-        level_per_func[lfunc] = index - 1
-        level_per_name[ltype] = index - 1
-        std.log[ltype] = lfunc
-        index = index + 1
-    end
-    std.log.level = util_decorator.prefix3(engine, level_per_func, level_per_name, level)
+local function init(std, engine)
+    return function(printers)
+        std.log.fatal = printer(engine, printers, 'fatal', 'error')
+        std.log.error = printer(engine, printers, 'error')
+        std.log.warn = printer(engine, printers, 'warn')
+        std.log.info = printer(engine, printers, 'info')
+        std.log.debug = printer(engine, printers, 'debug', 'info')
+        std.log.trace = printer(engine, printers, 'trace', 'info')
+    end    
 end
 
 --! @}
@@ -83,9 +94,10 @@ end
 
 local function install(std, engine, printers)
     std.log = std.log or {}
-    engine.loglevel = #logging_types
-    std.log.init = util_decorator.prefix2(std, engine, init)
+    std.log.init = init(std, engine)
+    std.log.level = level(engine)
     std.log.init(printers)
+    std.log.level('debug')
 end
 
 local P = {
