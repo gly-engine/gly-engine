@@ -36,51 +36,51 @@ local function stylesheet(self, name, options)
 
     if not exe then
         exe = function(x, y, width, height)
-            local css_left, css_right = css.left, css.right
-            local css_top, css_bottom  = css.top, css.bottom
+            local css_left, has_left = css.left or 0, css.left ~= nil
+            local css_right, has_right = css.right or 0, css.left ~= nil
+            local css_top, has_top = css.top or 0, css.top ~= nil
+            local css_bottom, has_bottom = css.bottom or 0, css.bottom ~= nil
             local css_width, css_height = css.width, css.height
 
             if css_width then
-                local w = css_width
-                if (css_left and css_right) or (not css_left and not css_right) then
-                    local free = width - css_left - css_right - w
+                if (has_left and has_right) or (not has_left and not has_right) then                    
+                    local free = width - css_left - css_right - css_width
                     x = x + css_left + free * (1/2)
-                    width = w
-                elseif not css_left and css_right then
-                    x = x + width - css_right - w
-                    width = w
+                    width = css_width
+                elseif not has_left and has_right then
+                    x = x + width - css_right - css_width
+                    width = css_width
                 else
                     x = x + (css_left or 0)
-                    width = w
+                    width = css_width
                 end
             else
-                if css.left then 
-                    x = x + css.left
-                    width = width - css.left
+                if has_left then 
+                    x = x + css_left
+                    width = width - css_left
                 end
-                if css.right then
-                    width = width - css.right
+                if has_right then
+                    width = width - css_right
                 end
             end
             if css_height then
-                local h = css_height
-                if (css_top and css_bottom) or (not css_top or not css_bottom) then
-                    local free = height - css_top - css_bottom - h
+                if (has_top and has_bottom) or (not has_top or not has_bottom) then
+                    local free = height - css_top - css_bottom - css_height
                     y = y + css_top + free * (1/2)
-                    height = h
-                elseif not css_top and css_bottom then
-                    y = y + height - css_bottom - h
-                    height = h
+                    height = css_height
+                elseif not has_top and has_bottom then
+                    y = y + height - css_bottom - css_height
+                    height = css_height
                 else
                     y = y + (css_top or 0)
-                    height = h
+                    height = css_height
                 end
             else
-                if css_top then
+                if has_top then
                     y = y + css_top
                     height = height - css_top
                 end
-                if css.bottom then 
+                if has_bottom then 
                     height = height - css_bottom
                 end
             end
