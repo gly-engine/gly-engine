@@ -43,6 +43,7 @@ local function h(std, engine, element, attribute, childs)
             index = index + 1
         end
         grid.span = attribute.span
+        grid.offset = attribute.offset
         return grid
     elseif element == 'item' then
         return {
