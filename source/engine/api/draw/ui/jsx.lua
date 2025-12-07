@@ -23,7 +23,8 @@ local function h(std, engine, element, attribute, childs)
     if element == std then
         return error
     elseif element == std.h then
-        return nil
+        for i = 1, #childs do std.node.spawn(std.node.load(childs[i])) end
+        return childs
     elseif element == std.ui then
         return childs
     elseif element == 'node' then
