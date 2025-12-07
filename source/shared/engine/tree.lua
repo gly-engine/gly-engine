@@ -30,12 +30,30 @@ local function stylesheet(self, name, options)
         css.right = options.right or options.margin or nil
         css.top = options.top or options.margin or nil
         css.bottom = options.bottom or options.margin or nil
+        css.height = options.height or nil
+        css.width = options.width or nil
     end
 
     if not exe then
         exe = function(x, y, width, height)
-            if css.width then
+            local css_left, css_right = css.left, css.right
+            local css_top, css_bottom  = css.top, css.bottom
+            local css_width, css_height = css.width, css.height
 
+            if css_width then
+                local w = css_width
+                if css_left and css_right then
+                    local free = width - css_left - css_right - w
+                    x = x + css_left + free * (1/2)
+                    width = w
+
+                elseif not css_left and css_right then
+                    x = x + width - css_right - w
+                    width = w
+                else
+                    x = x + (css_left or 0)
+                    width = w
+                end
             else
                 if css.left then 
                     x = x + css.left
@@ -45,15 +63,27 @@ local function stylesheet(self, name, options)
                     width = width - css.right
                 end
             end
-            if css.height then
+            if css_height then
+                local h = css_height
+                if css_top and css_bottom then
+                    local free = height - css_top - css_bottom - h
+                    y = y + css_top + free * (1/2)
+                    height = h
 
+                elseif not css_top and css_bottom then
+                    y = y + height - css_bottom - h
+                    height = h
+                else
+                    y = y + (css_top or 0)
+                    height = h
+                end
             else
-                if css.top then
-                    y = y + css.top
-                    height = height - css.top
+                if css_top then
+                    y = y + css_top
+                    height = height - css_top
                 end
                 if css.bottom then 
-                    height = height - css.bottom
+                    height = height - css_bottom
                 end
             end
             return x, y, width, height
