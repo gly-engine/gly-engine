@@ -15,10 +15,12 @@ local function add(std, engine, self, application, options)
     if not application then return self end
     local node = application.node or std.node.load(application)
     local size = (type(options) == 'number' and options) or (options or {}).span
+    local after = options ~= size and (options or {}).after
     local offset = options ~= size and (options or {}).offset
     tree.node_add(engine.dom, node, {
         parent = self.node,
         offset = offset,
+        after = after,
         size = size
     })
     return self
