@@ -42,11 +42,10 @@ local function stylesheet(self, name, options)
 
             if css_width then
                 local w = css_width
-                if css_left and css_right then
+                if (css_left and css_right) or (not css_left and not css_right) then
                     local free = width - css_left - css_right - w
                     x = x + css_left + free * (1/2)
                     width = w
-
                 elseif not css_left and css_right then
                     x = x + width - css_right - w
                     width = w
@@ -65,11 +64,10 @@ local function stylesheet(self, name, options)
             end
             if css_height then
                 local h = css_height
-                if css_top and css_bottom then
+                if (css_top and css_bottom) or (not css_top or not css_bottom) then
                     local free = height - css_top - css_bottom - h
                     y = y + css_top + free * (1/2)
                     height = h
-
                 elseif not css_top and css_bottom then
                     y = y + height - css_bottom - h
                     height = h
