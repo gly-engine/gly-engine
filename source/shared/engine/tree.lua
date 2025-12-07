@@ -64,7 +64,7 @@ local function stylesheet(self, name, options)
                 end
             end
             if css_height then
-                if (has_top and has_bottom) or (not has_top or not has_bottom) then
+                if (has_top and has_bottom) or (not has_top and not has_bottom) then
                     local free = height - css_top - css_bottom - css_height
                     y = y + css_top + free * (1/2)
                     height = css_height
