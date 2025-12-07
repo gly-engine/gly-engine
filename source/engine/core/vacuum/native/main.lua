@@ -65,8 +65,10 @@ local cfg_media = {
 local cfg_image = {
     load = native_image_load,
     draw = native_image_draw,
+    exists = native_image_exists,
     mensure = native_image_mensure,
-    unload = native_image_unload
+    unload = native_image_unload,
+    unload_all = native_image_unload_all
 }
 
 local cfg_poly = {
