@@ -35,7 +35,7 @@ local function h(std, engine, element, attribute, childs)
         while index <= #childs do
             local item = childs[index]
             if item.node then
-                grid:add(item.node, {span=item.span or 1,offset=item.ofsset or 0})
+                grid:add(item.node, {span=item.span or 1,offset=item.offset or 0})
                 if item.style then add_style(std, grid:get_item(index), item.style) end
             else
                 grid:add(item)
