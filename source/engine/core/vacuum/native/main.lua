@@ -186,8 +186,8 @@ function native_callback_init(width, height, game_lua)
     std.text.font_size=native_text_font_size
     std.text.font_name=native_text_font_name
     std.text.font_default=native_text_font_default
-    std.text.mensure_width=function(v) return select(1, native_image_mensure(v)) end
-    std.text.mensure_height=function(v) return select(2, native_image_mensure(v)) end
+    std.text.mensure_width=function(v) return select(1, native_text_mensure(v)) end
+    std.text.mensure_height=function(v) return select(2, native_text_mensure(v)) end
 
     engine.handler = function(msg) 
         if select(2, pcall(engine.root.callbacks.error or function() end, engine.root.data, std, tostring(msg))) == true then
