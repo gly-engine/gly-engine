@@ -22,8 +22,10 @@ jobs:
       -
         uses: actions/setup-node@v2
         with:
-          node-version: '20.x'
-          registry-url: 'https://registry.npmjs.org'
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+      -
+        run: npm install -g npm@latest
       -
         if: matrix.package != 'gly-cli'
         working-directory: ./npm/${{ matrix.package }}
@@ -34,6 +36,6 @@ jobs:
       - 
         working-directory: ./dist
         run: |
-          npm publish --provenance --access public
+          npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
