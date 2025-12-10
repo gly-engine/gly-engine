@@ -129,6 +129,12 @@ function love.load(args)
     engine.dom = tree.node_begin(application, std.app.width, std.app.height)
     engine.root, engine.current = application, application
 
+    engine.handler = function(msg) 
+        if select(2, pcall(engine.root.callbacks.error or function() end, engine.root.data, std, tostring(msg))) == true then
+            love.event.quit(1)
+        end
+    end
+
     std.app.title(application.meta.title..' - '..application.meta.version)
 
     love.update = std.bus.trigger('loop')

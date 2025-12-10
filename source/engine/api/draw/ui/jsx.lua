@@ -23,7 +23,8 @@ local function h(std, engine, element, attribute, childs)
     if element == std then
         return error
     elseif element == std.h then
-        return nil
+        for i = 1, #childs do std.node.spawn(std.node.load(childs[i])) end
+        return childs
     elseif element == std.ui then
         return childs
     elseif element == 'node' then
@@ -35,7 +36,7 @@ local function h(std, engine, element, attribute, childs)
         while index <= #childs do
             local item = childs[index]
             if item.node then
-                grid:add(item.node, item.span or 1)
+                grid:add(item.node, {span=item.span, offset=item.offset, after=item.after})
                 if item.style then add_style(std, grid:get_item(index), item.style) end
             else
                 grid:add(item)
@@ -43,9 +44,18 @@ local function h(std, engine, element, attribute, childs)
             index = index + 1
         end
         grid.span = attribute.span
+        grid.after = attribute.after
+        grid.offset = attribute.offset
         return grid
     elseif element == 'item' then
-        return {type='item', node=childs[attribute.index or 1], span=attribute.span, style=attribute.style}
+        return {
+            type='item',
+            node=childs[attribute.index or 1],
+            span=attribute.span,
+            after=attribute.after,
+            style=attribute.style,
+            offset=attribute.offset
+        }
     elseif element == 'style' then
         return std.ui.style(attribute.class, attribute)
     elseif el_type == 'function' then

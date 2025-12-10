@@ -30,30 +30,58 @@ local function stylesheet(self, name, options)
         css.right = options.right or options.margin or nil
         css.top = options.top or options.margin or nil
         css.bottom = options.bottom or options.margin or nil
+        css.height = options.height or nil
+        css.width = options.width or nil
     end
 
     if not exe then
         exe = function(x, y, width, height)
-            if css.width then
+            local css_left, has_left = css.left or 0, css.left ~= nil
+            local css_right, has_right = css.right or 0, css.left ~= nil
+            local css_top, has_top = css.top or 0, css.top ~= nil
+            local css_bottom, has_bottom = css.bottom or 0, css.bottom ~= nil
+            local css_width, css_height = css.width, css.height
 
-            else
-                if css.left then 
-                    x = x + css.left
-                    width = width - css.left
+            if css_width then
+                if (has_left and has_right) or (not has_left and not has_right) then                    
+                    local free = width - css_left - css_right - css_width
+                    x = x + css_left + free * (1/2)
+                    width = css_width
+                elseif not has_left and has_right then
+                    x = x + width - css_right - css_width
+                    width = css_width
+                else
+                    x = x + (css_left or 0)
+                    width = css_width
                 end
-                if css.right then
-                    width = width - css.right
+            else
+                if has_left then 
+                    x = x + css_left
+                    width = width - css_left
+                end
+                if has_right then
+                    width = width - css_right
                 end
             end
-            if css.height then
-
-            else
-                if css.top then
-                    y = y + css.top
-                    height = height - css.top
+            if css_height then
+                if (has_top and has_bottom) or (not has_top and not has_bottom) then
+                    local free = height - css_top - css_bottom - css_height
+                    y = y + css_top + free * (1/2)
+                    height = css_height
+                elseif not has_top and has_bottom then
+                    y = y + height - css_bottom - css_height
+                    height = css_height
+                else
+                    y = y + (css_top or 0)
+                    height = css_height
                 end
-                if css.bottom then 
-                    height = height - css.bottom
+            else
+                if has_top then
+                    y = y + css_top
+                    height = height - css_top
+                end
+                if has_bottom then 
+                    height = height - css_bottom
                 end
             end
             return x, y, width, height
@@ -133,6 +161,8 @@ local function node_add(self, node, options)
     cfg.pause_all = false
     cfg.parent = parent
     cfg.size = options.size or 1
+    cfg.after = options.after or 0
+    cfg.offset = options.offset or 0
     parent.childs[#parent.childs + 1] = node
     self.flag_relist = false
     self.flag_reparent = true
@@ -225,21 +255,23 @@ local function dom(node, parent_x, parent_y, parent_w, parent_h)
         local x, y = 0, 0
 
         for _, child in ipairs(node.childs) do
-            local size = child.config.size or 1
-            local cx, cy = parent_x + x * cell_w, parent_y + y * cell_h
+            local cc = child.config
+            local offset, after, size = cc.offset, cc.after, cc.size
+            local cx = parent_x + cell_w * (((dir == 0) and offset or 0) + x)
+            local cy = parent_y + cell_h * (((dir == 1) and offset or 0) + y)
             local w = (dir == 0) and (size * cell_w) or cell_w
             local h = (dir == 1) and (size * cell_h) or cell_h
 
-            for _, css in ipairs(child.config.css) do
+            for _, css in ipairs(cc.css) do
                 cx, cy, w, h = css(cx, cy, w, h)
             end
             dom(child, cx, cy, w, h)
 
             if dir == 1 then
-                y = y + size
+                y = y + size + offset + after
                 if y >= cols then y, x = 0, x + 1 end
             else
-                x = x + size
+                x = x + size + offset + after
                 if x >= rows then x, y = 0, y + 1 end
             end
         end

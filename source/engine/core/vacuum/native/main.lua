@@ -65,8 +65,10 @@ local cfg_media = {
 local cfg_image = {
     load = native_image_load,
     draw = native_image_draw,
+    exists = native_image_exists,
     mensure = native_image_mensure,
-    unload = native_image_unload
+    unload = native_image_unload,
+    unload_all = native_image_unload_all
 }
 
 local cfg_poly = {
@@ -184,8 +186,14 @@ function native_callback_init(width, height, game_lua)
     std.text.font_size=native_text_font_size
     std.text.font_name=native_text_font_name
     std.text.font_default=native_text_font_default
-    std.text.mensure_width=function(v) return select(1, native_image_mensure(v)) end
-    std.text.mensure_height=function(v) return select(2, native_image_mensure(v)) end
+    std.text.mensure_width=function(v) return select(1, native_text_mensure(v)) end
+    std.text.mensure_height=function(v) return select(2, native_text_mensure(v)) end
+
+    engine.handler = function(msg) 
+        if select(2, pcall(engine.root.callbacks.error or function() end, engine.root.data, std, tostring(msg))) == true then
+            (native_system_exit or native_system_fatal or function() end)()
+        end
+    end
 
     loadcore.setup(std, application, engine)
         :package('@bus', engine_raw_bus)

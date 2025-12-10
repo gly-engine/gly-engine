@@ -59,6 +59,7 @@ local event = event
 --! @field canvas <http://www.telemidia.puc-rio.br/~francisco/nclua/referencia/canvas.html>
 --! @field event <http://www.telemidia.puc-rio.br/~francisco/nclua/referencia/event.html>
 local engine = {
+    handler = function(a) end,
     current = application_default,
     root = application_default,
     canvas = canvas,
@@ -68,6 +69,7 @@ local engine = {
     delay = 1,
     fps = 0
 }
+
 
 local cfg_system = {
     quit = function() event.post({class = 'ncl', type = 'presentation', action = 'stop'}) end,
@@ -83,7 +85,7 @@ local cfg_poly = {
 local cfg_fps_control = {
     list={60, 30, 20, 15, 10},
     time={10, 30, 40, 60, 90},
-    uptime=event and event.uptime
+    uptime=event.uptime
 }
 
 local cfg_env = {
@@ -94,30 +96,75 @@ local cfg_text = {
     font_previous = core_text.font_previous
 }
 
-local function register_event_loop()
-    event.register(function(evt) pcall(std.bus.emit, 'ginga', evt) end)
-end
+--! @details
+--! The fallback mechanism attempts to address an issue where Ginga sometimes simply omits events
+--! whether a `@c event.timer` or a silent error that was not caught by `pcall`/`xpcall`.
+--! If a certain amount of time has passed and the loop appears to have been stopped for more than one second,
+--! it is restarted.
+local fallback_restarts = 0
+local falback_fallback_time = 0
+local falback_fallback_restart = 0
 
-local function register_fixed_loop()
+local function register_fixed_loop(fallback)
     local tick = nil
     local loop = std.bus.trigger('loop')
-    local draw = std.bus.trigger('draw')    
+    local draw = std.bus.trigger('draw')
+
+    fallback_restarts = fallback
+
     tick = function()
-        pcall(loop)
+        xpcall(loop, engine.handler)
         canvas:attrColor(0, 0, 0, 0)
         canvas:clear()
-        pcall(draw)
+        xpcall(draw, engine.handler)
         canvas:flush()
-        event.timer(engine.delay, tick)
+        if fallback_restarts == fallback then
+            event.timer(engine.delay, tick)
+        end
     end
 
     event.timer(engine.delay, tick)
+end
+
+local function register_fallback(fallback)
+    local tick = nil
+    falback_fallback_restart = fallback
+
+    tick = function()
+        falback_fallback_time = event.uptime()
+        if falback_fallback_time - std.milis >= 1000 then
+            register_fixed_loop(fallback_restarts + 1)
+        end
+        if falback_fallback_restart == fallback then
+            event.timer(5000, tick)
+        end
+    end
+
+    event.timer(engine.delay, tick)
+end
+
+local function register_event_loop()
+    event.register(function(evt) 
+        local uptime = event.uptime()
+        pcall(std.bus.emit, 'ginga', evt)
+        if (uptime - std.milis) >= 1000 then
+            register_fixed_loop(fallback_restarts + 1)
+        end
+        if (uptime - falback_fallback_time) >= 6000 then
+            register_fallback(falback_fallback_restart + 1)
+        end
+    end)
 end
 
 local function main(evt, gamefile)
     if evt.class and evt.class ~= 'ncl' or evt.action ~= 'start' and evt.type ~= 'presentation' then return end
 
     engine.envs = evt
+    engine.handler = function(msg) 
+        if select(2, pcall(engine.root.callbacks.error or function() end, engine.root.data, std, tostring(msg))) == true then
+            os.exit()
+        end
+    end
     application = loadgame.script(gamefile, application_default)
 
     loadcore.setup(std, application, engine)
@@ -160,7 +207,8 @@ local function main(evt, gamefile)
     engine.root, engine.current = application, application
 
     register_event_loop()
-    register_fixed_loop()
+    register_fixed_loop(0)
+    register_fallback(0)
 
     std.bus.emit_next('load')
     std.bus.emit_next('init')

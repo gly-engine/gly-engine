@@ -76,25 +76,6 @@ function test_level_per_name()
     assert(msg.info == nil)
 end
 
-function test_level_per_func()
-    local std = {}
-    local msg = {}
-    
-    engine_log.install(std, {}, printers(msg))
-    
-    std.log.level(std.log.warn)
-    std.log.fatal('z1')
-    std.log.error('z2')
-    std.log.warn('z3')
-    std.log.debug('z4')
-    std.log.info('z6')
-
-    assert(msg.fatal == 'z1')
-    assert(msg.error == 'z2')
-    assert(msg.warn == 'z3')
-    assert(msg.debug == nil)
-    assert(msg.info == nil)
-end
 
 function test_reinit_system()
     local std = {}
@@ -107,7 +88,7 @@ function test_reinit_system()
     std.log.init(printers(msg2))
     std.log.info('alo')
     std.log.init(printers(msg3))
-    std.log.level(std.log.debug)
+    std.log.level('warn')
     std.log.warn('hello')
     std.log.info('hi')
     

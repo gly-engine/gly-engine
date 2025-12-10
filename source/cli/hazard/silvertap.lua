@@ -17,6 +17,7 @@ end
 local function bootstrap_io_open(filename, mode)
     return {
         pointer = 1,
+        lines = common_io_lines,
         read = function(self, size)
             return file_reader(self, mode, size, function()
                 return BOOTSTRAP[filename]
@@ -35,6 +36,7 @@ local function javascript_io_open(filename, mode)
     return {
         pointer = 1,
         content = '',
+        lines = common_io_lines,
         read = function(self, size)
             return file_reader(self, mode, size, function()
                 local encoding = (not (mode or ''):find('b')) and 'utf8' or nil
@@ -85,6 +87,7 @@ if jsRequire then
         local ok, stdout = pcall(javascript_ps.execSync, cmd, {encoding='utf8'})
         return {
             pointer = 1,
+            lines = common_io_lines,
             read = function(self, size)
                 return file_reader(self, 'r', size, function()
                     return stdout
