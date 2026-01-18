@@ -1,0 +1,12 @@
+native_draw_start = function() end
+native_draw_flush = function() end
+native_draw_clear = function() end
+native_draw_color = function() end
+native_draw_rect = function() end
+native_draw_line = function() end
+native_text_font_previous = function() end
+native_text_font_default = function() end
+native_text_font_size = function() end
+native_text_font_name = function() end
+native_text_mensure = function() return 1,1 end
+native_text_print = function() end
