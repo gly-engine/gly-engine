@@ -46,16 +46,18 @@ local cfg_poly = {
 }
 
 local cfg_keys = {
-    ['escape']='menu',
-    ['return']='a',
-    up='up',
-    left='left',
-    right='right',
-    down='down',
-    z='a',
-    x='b',
-    c='c',
-    v='d'
+    bindings = {
+        ['escape']='menu',
+        ['return']='a',
+        up='up',
+        left='left',
+        right='right',
+        down='down',
+        z='a',
+        x='b',
+        c='c',
+        v='d'
+    }
 }
 
 local cfg_system = {
