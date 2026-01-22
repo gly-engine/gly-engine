@@ -102,8 +102,8 @@ end
 --! std.node.spawn(game)
 --! @endcode
 local function spawn(engine)
-    return function(application)
-        tree.node_add(engine.dom, application, {parent=engine.current})
+    return function(application, parent)
+        tree.node_add(engine.dom, application, {parent=parent or engine.current})
         return application
     end
 end

@@ -28,7 +28,19 @@ local function h(std, engine, element, attribute, childs)
     elseif element == std.ui then
         return childs
     elseif element == 'node' then
-        return std.node.spawn(std.node.load(attribute))
+        local parent = std.node.spawn(std.node.load(attribute))
+        for i = 1, #childs do
+            local c = childs[i]
+            if c.node then
+                local is_invalid = (c.span or 1) > 1 or c.offset or c.after
+                if is_invalid then error('[error] JSX forbidden attributes in \'node\' child') end
+                if c.style then add_style(std, c.node, c.style) end
+                std.node.spawn(c.node, parent)
+            else
+                std.node.spawn(c, parent)
+            end
+        end
+        return parent
     elseif element == 'grid' then
         local index = 1
         local grid = std.ui.grid(attribute.class):dir(attribute.dir)
@@ -50,7 +62,7 @@ local function h(std, engine, element, attribute, childs)
     elseif element == 'item' then
         return {
             type='item',
-            node=childs[attribute.index or 1],
+            node=childs[1],
             span=attribute.span,
             after=attribute.after,
             style=attribute.style,
