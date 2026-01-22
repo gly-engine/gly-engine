@@ -163,7 +163,6 @@ local function node_add(self, node, options)
     cfg.size = options.size or 1
     cfg.after = options.after or 0
     cfg.offset = options.offset or 0
-    parent.childs[#parent.childs + 1] = node
     self.flag_relist = false
     self.flag_reparent = true
     self.flag_reposition = true
