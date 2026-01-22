@@ -43,6 +43,11 @@ local function install(std, engine)
     std.image.draw = image_draw(std, engine, engine.canvas)
     std.image.exists = image_exists(std, engine, engine.canvas)
     std.image.mensure = image_mensure(std, engine, engine.canvas)
+    --! @todo
+    std.image.unload = function() end
+    std.image.unload_all = function() end
+    std.image.mensure_width = function(v) return select(1, std.image.mensure(v)) end
+    std.image.mensure_height = function(v) return select(2, std.image.mensure(v)) end
 end
 
 return {
