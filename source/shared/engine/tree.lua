@@ -156,6 +156,7 @@ local function node_add(self, node, options)
         self.node_list[#self.node_list + 1] = node
     end
     dat.width, dat.height = cells(parent)
+    parent.childs[#parent.childs + 1] = node
     cfg.css = {}
     cfg.pause_key = {}
     cfg.pause_all = false
