@@ -47,6 +47,8 @@ local color = require('source/engine/api/system/color')
 local std = require('source/shared/var/object/std')
 --
 local application = application_default
+--
+local should_stop = false
 
 --! @short nclua:canvas
 --! @li <http://www.telemidia.puc-rio.br/~francisco/nclua/referencia/canvas.html>
@@ -113,6 +115,7 @@ local function register_fixed_loop(fallback)
     fallback_restarts = fallback
 
     tick = function()
+        if should_stop then return end
         xpcall(loop, engine.handler)
         canvas:attrColor(0, 0, 0, 0)
         canvas:clear()
@@ -131,6 +134,7 @@ local function register_fallback(fallback)
     falback_fallback_restart = fallback
 
     tick = function()
+        if should_stop then return end
         falback_fallback_time = event.uptime()
         if falback_fallback_time - std.milis >= 1000 then
             register_fixed_loop(fallback_restarts + 1)
@@ -145,6 +149,7 @@ end
 
 local function register_event_loop()
     event.register(function(evt) 
+        if should_stop then return end
         local uptime = event.uptime()
         pcall(std.bus.emit, 'ginga', evt)
         if (uptime - std.milis) >= 1000 then
@@ -162,7 +167,7 @@ local function main(evt, gamefile)
     engine.envs = evt
     engine.handler = function(msg) 
         if select(2, pcall(engine.root.callbacks.error or function() end, engine.root.data, std, tostring(msg))) == true then
-            os.exit()
+            should_stop = true
         end
     end
     application = loadgame.script(gamefile, application_default)
