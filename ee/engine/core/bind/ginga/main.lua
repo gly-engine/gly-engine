@@ -119,7 +119,11 @@ end
 
 local function main(evt, gamefile)
     if evt.class and evt.class ~= 'ncl' or evt.action ~= 'start' and evt.type ~= 'presentation' then return end
-
+    engine.handler = function(msg) 
+        if select(2, pcall(engine.root.callbacks.error or function() end, engine.root.data, std, tostring(msg))) == true then
+            should_stop = true
+        end
+    end
     engine.envs = evt
     application = loadgame.script(gamefile, application_default)
 
