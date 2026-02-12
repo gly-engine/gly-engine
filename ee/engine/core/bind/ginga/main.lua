@@ -102,6 +102,8 @@ end
 
 local function register_fixed_loop()
     local tick = nil
+    local draw_ok = false
+    local error_msg = nil
     local loop = std.bus.trigger('loop')
     local draw = std.bus.trigger('draw')    
     tick = function()
@@ -109,7 +111,19 @@ local function register_fixed_loop()
         pcall(loop)
         canvas:attrColor(0, 0, 0, 0)
         canvas:clear()
-        pcall(draw)
+        local ok, err = pcall(draw)
+        if not ok then
+            draw_ok = true
+            error_msg = tostring(err)
+        end
+        if draw_ok then
+            canvas:attrColor(255, 255, 255, 255)
+            canvas:drawRect('fill', 0, 0, 1080, 720)
+            canvas:attrColor(0, 0, 0, 255)
+            canvas:attrFont('Tiresias', 24)
+            canvas:drawText(20, 720/2 + 40, 'ERRO: ' .. error_msg)
+            canvas:flush()
+        end
         canvas:flush()
         event.timer(engine.delay, tick)
     end
