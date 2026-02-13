@@ -107,8 +107,10 @@ local falback_fallback_restart = 0
 
 local function register_fixed_loop(fallback)
     local tick = nil
+    local draw_ok = false
+    local error_msg = nil
     local loop = std.bus.trigger('loop')
-    local draw = std.bus.trigger('draw')
+    local draw = std.bus.trigger('draw')    
 
     fallback_restarts = fallback
 
@@ -116,7 +118,19 @@ local function register_fixed_loop(fallback)
         xpcall(loop, engine.handler)
         canvas:attrColor(0, 0, 0, 0)
         canvas:clear()
-        xpcall(draw, engine.handler)
+        local ok, err = xpcall(draw, engine.handler)
+        if not ok then
+            draw_ok = true
+            error_msg = tostring(err)
+        end
+        if draw_ok then
+            canvas:attrColor(255, 255, 255, 255)
+            canvas:drawRect('fill', 0, 0, 1080, 720)
+            canvas:attrColor(0, 0, 0, 255)
+            canvas:attrFont('Tiresias', 24)
+            canvas:drawText(20, 720/2 + 40, 'ERRO: ' .. error_msg)
+            canvas:flush()
+        end
         canvas:flush()
         if fallback_restarts == fallback then
             event.timer(engine.delay, tick)
