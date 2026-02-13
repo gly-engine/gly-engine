@@ -57,6 +57,7 @@ local function h(std, engine, element, attribute, childs)
         end
         grid.span = attribute.span
         grid.after = attribute.after
+        grid.style = attribute.style
         grid.offset = attribute.offset
         return grid
     elseif element == 'item' then
