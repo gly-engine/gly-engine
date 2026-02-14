@@ -97,7 +97,11 @@ local cfg_text = {
 }
 
 local function register_event_loop()
-    event.register(function(evt) pcall(std.bus.emit, 'ginga', evt) end)
+    event.register(function(evt) 
+        xpcall(function()
+            std.bus.emit('ginga', evt)
+        end, engine.handler)
+    end)
 end
 
 local function register_fixed_loop()
@@ -105,10 +109,10 @@ local function register_fixed_loop()
     local loop = std.bus.trigger('loop')
     local draw = std.bus.trigger('draw')    
     tick = function()
-        pcall(loop)
+        xpcall(loop, engine.handler)
         canvas:attrColor(0, 0, 0, 0)
         canvas:clear()
-        pcall(draw)
+        xpcall(draw, engine.handler)
         canvas:flush()
         event.timer(engine.delay, tick)
     end
