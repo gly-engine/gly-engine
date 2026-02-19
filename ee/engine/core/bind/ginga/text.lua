@@ -53,6 +53,9 @@ local function install(std, engine)
     std.text.font_default = font_default
     std.text.print = text_print(std, engine, engine.canvas)
     std.text.mensure = text_mensure(canvas)
+    --@ todo remove
+    std.text.mensure_width = function(v) return select(1, std.text.mensure(v)) end
+    std.text.mensure_height = function(v) return select(2, std.text.mensure(v)) end
 end
 
 return {
