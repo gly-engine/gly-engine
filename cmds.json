@@ -1,0 +1,607 @@
+{
+    "errors": [
+        {
+            "message": "please use flag --enterprise to use commercial modules.",
+            "when": [
+                [
+                    "eq",
+                    "enterprise",
+                    "false"
+                ],
+                [
+                    "like",
+                    "core",
+                    "ginga"
+                ]
+            ]
+        }
+    ],
+    "commands": [
+        {
+            "name": "init",
+            "description": "Create a new project from a template",
+            "args": [
+                {
+                    "name": "project",
+                    "type": "string",
+                    "required": true,
+                    "description": "Application title and directory name"
+                }
+            ],
+            "flags": [
+                {
+                    "name": "outdir",
+                    "type": "string",
+                    "default": ".",
+                    "description": "Output directory"
+                },
+                {
+                    "name": "template",
+                    "type": "string",
+                    "default": "@helloworld",
+                    "description": "Template to use for the new project",
+                    "hidden": true
+                }
+            ]
+        },
+        {
+            "name": "build",
+            "description": "Compile and package the project for a target platform",
+            "args": [
+                {
+                    "name": "src",
+                    "type": "string",
+                    "required": true,
+                    "description": "Source file or sample name"
+                }
+            ],
+            "flags": [
+                {
+                    "name": "core",
+                    "type": "enum",
+                    "default": "html5",
+                    "description": "Target platform core engine",
+                    "classes": [
+                        {
+                            "name": "html5",
+                            "description": "Build for web browsers (HTML5/JS)",
+                            "flags": [
+                                {
+                                    "name": "target",
+                                    "type": "string",
+                                    "default": "html5",
+                                    "description": "Build target name"
+                                },
+                                {
+                                    "name": "screen",
+                                    "type": "string",
+                                    "description": "Screen resolution (WxH)"
+                                },
+                                {
+                                    "name": "fengari",
+                                    "type": "boolean",
+                                    "description": "Use Fengari Lua VM"
+                                },
+                                {
+                                    "name": "atob",
+                                    "type": "boolean",
+                                    "description": "Include atob polyfill"
+                                },
+                                {
+                                    "name": "dev",
+                                    "type": "boolean",
+                                    "description": "Enable developer features"
+                                },
+                                {
+                                    "name": "videojs",
+                                    "type": "boolean",
+                                    "description": "Include Video.js support"
+                                },
+                                {
+                                    "name": "enginecdn",
+                                    "type": "boolean",
+                                    "description": "Load engine from CDN"
+                                },
+                                {
+                                    "name": "aa",
+                                    "type": "boolean",
+                                    "description": "Enable Anti-Aliasing"
+                                }
+                            ]
+                        },
+                        {
+                            "name": "html5:webos",
+                            "variant": "html5",
+                            "description": "Build specifically for LG WebOS TV"
+                        },
+                        {
+                            "name": "html5:tizen",
+                            "variant": "html5",
+                            "description": "Build specifically for Samsung Tizen TV"
+                        },
+                        {
+                            "name": "html5:ginga",
+                            "variant": "html5",
+                            "description": "Build for Ginga/HTML (Brazilian DTV)",
+                            "values": {
+                                "fengari": true,
+                                "atob": true,
+                                "videojs": false
+                            },
+                            "flags": [
+                                {
+                                    "name": "enterprise",
+                                    "type": "boolean",
+                                    "description": "Enable enterprise features"
+                                }
+                            ]
+                        },
+                        {
+                            "name": "ginga",
+                            "description": "Build for Ginga/NCL (Brazilian DTV)",
+                            "flags": [
+                                {
+                                    "name": "disable-relative",
+                                    "type": "boolean",
+                                    "description": "..."
+                                },
+                                {
+                                    "name": "disable-fallback",
+                                    "type": "boolean",
+                                    "description": "..."
+                                },
+                                {
+                                    "name": "enterprise",
+                                    "type": "boolean",
+                                    "description": "Enable enterprise features"
+                                }
+                            ]
+                        },
+                        {
+                            "name": "ginga:html5",
+                            "alias": "html5:ginga",
+                            "description": "Build for Ginga/HTML (Brazilian DTV)",
+                            "variant": "ginga"
+                        },
+                        {
+                            "name": "love",
+                            "description": "Build for LÖVE (Love2D) framework"
+                        },
+                        {
+                            "name": "love:zip",
+                            "variant": "love",
+                            "description": "Build and package as .love (ZIP) file",
+                            "values": {
+                                "bundler": true
+                            }
+                        },
+                        {
+                            "name": "love:exe",
+                            "variant": "love",
+                            "description": "Build as standalone Windows executable"
+                        },
+                        {
+                            "name": "tic80",
+                            "description": "Build for TIC-80 fantasy console",
+                            "flags": [
+                                {
+                                    "name": "engine",
+                                    "description": "...",
+                                    "value": "@lite"
+                                }
+                            ]
+                        },
+                        {
+                            "name": "pico8",
+                            "description": "Build for PICO-8 fantasy console",
+                            "flags": [
+                                {
+                                    "name": "engine",
+                                    "description": "...",
+                                    "value": "@lite"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "name": "outdir",
+                    "type": "string",
+                    "default": "./dist/",
+                    "description": "Output directory"
+                },
+                {
+                    "name": "bundler",
+                    "type": "boolean",
+                    "description": "Enable Lua bundler"
+                },
+                {
+                    "name": "run",
+                    "type": "boolean",
+                    "description": "Execute after successful build"
+                }
+            ]
+        },
+        {
+            "name": "run",
+            "description": "Run the project using the local runner",
+            "hidden": "true",
+            "args": [
+                {
+                    "name": "src",
+                    "type": "string",
+                    "required": true,
+                    "description": "Source file to execute"
+                }
+            ],
+            "flags": [
+                {
+                    "name": "screen",
+                    "type": "string",
+                    "description": "Screen resolution"
+                }
+            ]
+        },
+        {
+            "name": "meta",
+            "description": "Extract and manage project metadata",
+            "args": [
+                {
+                    "name": "src",
+                    "type": "string",
+                    "required": true,
+                    "multiple": true,
+                    "description": "Input source files"
+                }
+            ],
+            "flags": [
+                {
+                    "name": "format",
+                    "type": "string",
+                    "default": "{{& meta.title }} {{& meta.version }}",
+                    "description": "Output format"
+                }
+            ]
+        },
+        {
+            "name": "test",
+            "description": "Execute unit tests",
+            "flags": [
+                {
+                    "name": "luabin",
+                    "type": "string",
+                    "default": "lua",
+                    "description": "Lua interpreter binary"
+                },
+                {
+                    "name": "coverage",
+                    "type": "boolean",
+                    "description": "Generate code coverage report"
+                },
+                {
+                    "name": "bundler",
+                    "type": "boolean",
+                    "description": "Run tests on bundled source"
+                }
+            ]
+        },
+        {
+            "name": "bundler",
+            "description": "Combine multiple Lua files into a single script",
+            "args": [
+                {
+                    "name": "src",
+                    "type": "string",
+                    "required": true,
+                    "description": "Entry point file"
+                }
+            ],
+            "flags": [
+                {
+                    "name": "outfile",
+                    "type": "string",
+                    "default": "./dist/main.lua",
+                    "description": "Output file path"
+                }
+            ]
+        },
+        {
+            "name": "compile",
+            "description": "Compile Lua source to bytecode",
+            "args": [
+                {
+                    "name": "src",
+                    "type": "string",
+                    "required": true,
+                    "description": "Input source file"
+                }
+            ],
+            "flags": [
+                {
+                    "name": "outfile",
+                    "type": "string",
+                    "default": "a.out",
+                    "description": "Output bytecode file"
+                }
+            ]
+        },
+        {
+            "name": "fs",
+            "description": "Filesystem utility operations",
+            "subcommands": [
+                {
+                    "name": "copy",
+                    "description": "Copy a file to a new location",
+                    "args": [
+                        {
+                            "name": "file",
+                            "type": "string",
+                            "required": true,
+                            "description": "Source file"
+                        },
+                        {
+                            "name": "dist",
+                            "type": "string",
+                            "required": true,
+                            "description": "Destination path"
+                        }
+                    ]
+                },
+                {
+                    "name": "xxd-i",
+                    "description": "Convert file to C include (hex dump)",
+                    "args": [
+                        {
+                            "name": "file",
+                            "type": "string",
+                            "required": true,
+                            "description": "Input file"
+                        },
+                        {
+                            "name": "dist",
+                            "type": "string",
+                            "description": "Output header file"
+                        }
+                    ],
+                    "flags": [
+                        {
+                            "name": "name",
+                            "type": "string",
+                            "description": "C variable name"
+                        },
+                        {
+                            "name": "const",
+                            "type": "boolean",
+                            "description": "Apply const qualifier"
+                        }
+                    ]
+                },
+                {
+                    "name": "check-png",
+                    "description": "Verify PNG image integrity",
+                    "args": [
+                        {
+                            "name": "file",
+                            "type": "string",
+                            "required": true,
+                            "description": "PNG file to check"
+                        }
+                    ]
+                },
+                {
+                    "name": "luaconf",
+                    "description": "Modify Lua configuration headers",
+                    "args": [
+                        {
+                            "name": "file",
+                            "type": "string",
+                            "required": true,
+                            "description": "Path to luaconf.h"
+                        }
+                    ],
+                    "flags": [
+                        {
+                            "name": "32bits",
+                            "type": "boolean",
+                            "description": "Force 32-bit mode"
+                        }
+                    ]
+                },
+                {
+                    "name": "replace",
+                    "description": "Perform string replacement in a file",
+                    "args": [
+                        {
+                            "name": "file",
+                            "type": "string",
+                            "required": true,
+                            "description": "Input file"
+                        },
+                        {
+                            "name": "dist",
+                            "type": "string",
+                            "required": true,
+                            "description": "Output file"
+                        }
+                    ],
+                    "flags": [
+                        {
+                            "name": "format",
+                            "type": "string",
+                            "required": true,
+                            "description": "Search pattern"
+                        },
+                        {
+                            "name": "replace",
+                            "type": "string",
+                            "required": true,
+                            "description": "Replacement string"
+                        }
+                    ]
+                },
+                {
+                    "name": "download",
+                    "description": "Download a file from the internet",
+                    "args": [
+                        {
+                            "name": "url",
+                            "type": "string",
+                            "required": true,
+                            "description": "Source URL"
+                        },
+                        {
+                            "name": "dist",
+                            "type": "string",
+                            "required": true,
+                            "description": "Local destination path"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "love",
+            "description": "LÖVE2D framework utilities",
+            "subcommands": [
+                {
+                    "name": "exe",
+                    "description": "Create standalone executable",
+                    "args": [
+                        {
+                            "name": "src",
+                            "required": true
+                        },
+                        {
+                            "name": "outfile",
+                            "required": true
+                        }
+                    ]
+                },
+                {
+                    "name": "zip",
+                    "description": "Package into .love file",
+                    "args": [
+                        {
+                            "name": "indir",
+                            "required": true
+                        },
+                        {
+                            "name": "outfile",
+                            "default": "./dist/Game.love"
+                        }
+                    ]
+                },
+                {
+                    "name": "unzip",
+                    "description": "Extract .love/exe content",
+                    "args": [
+                        {
+                            "name": "src",
+                            "required": true
+                        },
+                        {
+                            "name": "outdir",
+                            "default": "./dist/"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "hazard",
+            "description": "Internal hazard and bootstrap tools",
+            "hidden": true,
+            "subcommands": [
+                {
+                    "name": "package-mock",
+                    "args": [
+                        {
+                            "name": "mock",
+                            "required": true
+                        },
+                        {
+                            "name": "file",
+                            "required": true
+                        },
+                        {
+                            "name": "module",
+                            "required": true
+                        }
+                    ]
+                },
+                {
+                    "name": "template-fill",
+                    "args": [
+                        {
+                            "name": "file",
+                            "required": true
+                        },
+                        {
+                            "name": "size",
+                            "required": true
+                        }
+                    ]
+                },
+                {
+                    "name": "template-replace",
+                    "args": [
+                        {
+                            "name": "src",
+                            "required": true
+                        },
+                        {
+                            "name": "game",
+                            "required": true
+                        },
+                        {
+                            "name": "output",
+                            "required": true
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "cli",
+            "description": "CLI self-management commands",
+            "hidden": true,
+            "subcommands": [
+                {
+                    "name": "build",
+                    "description": "Rebuild gly-cli",
+                    "flags": [
+                        {
+                            "name": "dist",
+                            "default": "./dist/"
+                        }
+                    ]
+                },
+                {
+                    "name": "dump",
+                    "description": "Dump bootstrap data"
+                }
+            ]
+        },
+        {
+            "name": "version",
+            "description": "Show engine and CLI version"
+        },
+        {
+            "name": "help",
+            "description": "Show general or command-specific help",
+            "args": [
+                {
+                    "name": "usage",
+                    "description": "Command to show help for"
+                }
+            ],
+            "flags": [
+                {
+                    "name": "extra",
+                    "type": "boolean",
+                    "description": "Show verbose info"
+                }
+            ]
+        }
+    ]
+}
