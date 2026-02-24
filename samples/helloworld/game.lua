@@ -1,15 +1,13 @@
-local function init( self, std)
-   
+local function init(self, std)
 end
 
-local function loop(std, self)
+local function loop(self, std)
 end
 
-local function draw( std, data)
+local function draw(self, std)
     std.draw.clear(std.color.black)
     std.draw.color(std.color.white)
     std.text.put(1, 1, 'Hello world!')
-
 end
 
 local function exit(self, std)
