@@ -23,6 +23,46 @@
                     "run"
                 ]
             ]
+        },
+        {
+            "name": "@{engine}",
+            "values": [
+                "node_modules/@gamely/{{engine}}-engine/dist/main.lua",
+                "source/engine/core/vacuum/{{engine}}/main.lua"
+            ],
+            "when": [
+                "and",
+                [
+                    "eq",
+                    "command",
+                    "build"
+                ],
+                [
+                    "neq",
+                    "engine",
+                    "@native"
+                ]
+            ]
+        },
+        {
+            "name": "@{engine}",
+            "values": [
+                "node_modules/@gamely/gly-engine/dist/main.lua",
+                "source/engine/core/vacuum/native/main.lua"
+            ],
+            "when": [
+                "and",
+                [
+                    "eq",
+                    "command",
+                    "build"
+                ],
+                [
+                    "eq",
+                    "engine",
+                    "@native"
+                ]
+            ]
         }
     ],
     "errors": [
@@ -94,10 +134,10 @@
                             "description": "Build for web browsers (HTML5/JS)",
                             "flags": [
                                 {
-                                    "name": "target",
-                                    "type": "string",
-                                    "default": "html5",
-                                    "description": "Build target name"
+                                    "name": "engine",
+                                    "type": "file",
+                                    "default": "@native",
+                                    "description": "Select subset of gly-engine or another engine"
                                 },
                                 {
                                     "name": "screen",
@@ -139,12 +179,18 @@
                         {
                             "name": "html5:webos",
                             "variant": "html5",
-                            "description": "Build specifically for LG WebOS TV"
+                            "description": "Build specifically for LG WebOS TV",
+                            "values": {
+                                "atob": true
+                            }
                         },
                         {
                             "name": "html5:tizen",
                             "variant": "html5",
-                            "description": "Build specifically for Samsung Tizen TV"
+                            "description": "Build specifically for Samsung Tizen TV",
+                            "values": {
+                                "atob": true
+                            }
                         },
                         {
                             "name": "html5:ginga",
@@ -170,12 +216,12 @@
                                 {
                                     "name": "disable-relative",
                                     "type": "boolean",
-                                    "description": "..."
+                                    "description": "Disable relative application region"
                                 },
                                 {
                                     "name": "disable-fallback",
                                     "type": "boolean",
-                                    "description": "..."
+                                    "description": "Disable fallback mechanisms"
                                 },
                                 {
                                     "name": "enterprise",
@@ -213,8 +259,9 @@
                             "flags": [
                                 {
                                     "name": "engine",
-                                    "description": "...",
-                                    "value": "@lite"
+                                    "type": "file",
+                                    "description": "Select subset of gly-engine or another engine",
+                                    "default": "@lite"
                                 }
                             ]
                         },
@@ -224,8 +271,9 @@
                             "flags": [
                                 {
                                     "name": "engine",
-                                    "description": "...",
-                                    "value": "@lite"
+                                    "type": "file",
+                                    "description": "Select subset of gly-engine or another engine",
+                                    "default": "@lite"
                                 }
                             ]
                         }
@@ -252,7 +300,7 @@
         {
             "name": "run",
             "description": "Run the project using the local runner",
-            "hidden": "true",
+            "hidden": true,
             "args": [
                 {
                     "name": "src",
@@ -496,11 +544,15 @@
                     "args": [
                         {
                             "name": "src",
-                            "required": true
+                            "type": "string",
+                            "required": true,
+                            "description": "Source directory"
                         },
                         {
                             "name": "outfile",
-                            "required": true
+                            "type": "string",
+                            "required": true,
+                            "description": "Output EXE file"
                         }
                     ]
                 },
@@ -510,11 +562,15 @@
                     "args": [
                         {
                             "name": "indir",
-                            "required": true
+                            "type": "string",
+                            "required": true,
+                            "description": "Input directory"
                         },
                         {
                             "name": "outfile",
-                            "default": "./dist/Game.love"
+                            "type": "string",
+                            "default": "./dist/Game.love",
+                            "description": "Output LOVE file"
                         }
                     ]
                 },
@@ -524,11 +580,15 @@
                     "args": [
                         {
                             "name": "src",
-                            "required": true
+                            "type": "string",
+                            "required": true,
+                            "description": "Source file"
                         },
                         {
                             "name": "outdir",
-                            "default": "./dist/"
+                            "type": "string",
+                            "default": "./dist/",
+                            "description": "Output directory"
                         }
                     ]
                 }
@@ -541,48 +601,67 @@
             "subcommands": [
                 {
                     "name": "package-mock",
+                    "description": "Package a mock module",
                     "args": [
                         {
                             "name": "mock",
-                            "required": true
+                            "type": "string",
+                            "required": true,
+                            "description": "Mock name"
                         },
                         {
                             "name": "file",
-                            "required": true
+                            "type": "string",
+                            "required": true,
+                            "description": "File path"
                         },
                         {
                             "name": "module",
-                            "required": true
+                            "type": "string",
+                            "required": true,
+                            "description": "Module name"
                         }
                     ]
                 },
                 {
                     "name": "template-fill",
+                    "description": "Fill a template with specific size",
                     "args": [
                         {
                             "name": "file",
-                            "required": true
+                            "type": "string",
+                            "required": true,
+                            "description": "File path"
                         },
                         {
                             "name": "size",
-                            "required": true
+                            "type": "string",
+                            "required": true,
+                            "description": "Size"
                         }
                     ]
                 },
                 {
                     "name": "template-replace",
+                    "description": "Replace placeholders in a template",
                     "args": [
                         {
                             "name": "src",
-                            "required": true
+                            "type": "string",
+                            "required": true,
+                            "description": "Source template"
                         },
                         {
                             "name": "game",
-                            "required": true
+                            "type": "string",
+                            "required": true,
+                            "description": "Game input file"
                         },
                         {
                             "name": "output",
-                            "required": true
+                            "type": "string",
+                            "required": true,
+                            "description": "Output file"
                         }
                     ]
                 }
@@ -599,7 +678,9 @@
                     "flags": [
                         {
                             "name": "dist",
-                            "default": "./dist/"
+                            "type": "string",
+                            "default": "./dist/",
+                            "description": "Distribution directory"
                         }
                     ]
                 },
@@ -619,14 +700,8 @@
             "args": [
                 {
                     "name": "usage",
+                    "type": "string",
                     "description": "Command to show help for"
-                }
-            ],
-            "flags": [
-                {
-                    "name": "extra",
-                    "type": "boolean",
-                    "description": "Show verbose info"
                 }
             ]
         }

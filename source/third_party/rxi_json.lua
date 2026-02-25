@@ -384,5 +384,11 @@ function json.decode(str)
   return res
 end
 
+function json.decode_file(path)
+    local f = io.open(path, 'r')
+    local content = f:read('*a')
+    f:close()
+    return json.decode(content)
+end
 
 return json

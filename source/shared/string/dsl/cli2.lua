@@ -2,12 +2,68 @@ local json = require('source/third_party/rxi_json')
 
 local cli2 = {}
 
-function cli2.load_cmds(path)
-    local f = io.open(path or 'cmds.json', 'r')
-    if not f then error('Could not open ' .. (path or 'cmds.json')) end
-    local content = f:read('*a')
-    f:close()
-    return json.decode(content)
+local VALID_TYPES = {
+    string = true, number = true, boolean = true, 
+    file = true, enum = true, directory = true
+}
+
+local function validate_dsl(data)
+    if type(data) ~= 'table' then return false, "DSL must be a table", nil end
+    if not data.commands then return false, "DSL must have 'commands' list", nil end
+
+    local function check_item(item, path)
+        if not item.name then return false, path .. " is missing 'name'" end
+        if not item.description and not item.hidden then 
+            return false, path .. " (" .. item.name .. ") is missing 'description'" 
+        end
+        
+        if item.args then
+            for i, arg in ipairs(item.args) do
+                local arg_path = path .. " arg[" .. i .. "]"
+                if not arg.name then return false, arg_path .. " missing name" end
+                if not arg.type then return false, arg_path .. " (" .. arg.name .. ") missing type" end
+                if not VALID_TYPES[arg.type] then return false, arg_path .. " has invalid type: " .. arg.type end
+                if not arg.description then return false, arg_path .. " missing description" end
+            end
+        end
+
+        if item.flags then
+            for i, flag in ipairs(item.flags) do
+                local flag_path = path .. " flag[" .. i .. "]"
+                if not flag.name then return false, flag_path .. " missing name" end
+                if not flag.type then return false, flag_path .. " (" .. flag.name .. ") missing type" end
+                if not VALID_TYPES[flag.type] then return false, flag_path .. " has invalid type: " .. flag.type end
+                if not flag.description then return false, flag_path .. " missing description" end
+                
+                if flag.type == 'enum' and flag.classes then
+                    for j, class in ipairs(flag.classes) do
+                        local ok, err = check_item(class, flag_path .. " class[" .. j .. "]")
+                        if not ok then return ok, err end
+                    end
+                end
+            end
+        end
+
+        if item.subcommands then
+            for i, sub in ipairs(item.subcommands) do
+                local ok, err = check_item(sub, path .. " sub[" .. i .. "]")
+                if not ok then return ok, err end
+            end
+        end
+
+        return true
+    end
+
+    for i, cmd in ipairs(data.commands) do
+        local ok, err = check_item(cmd, "command[" .. i .. "]")
+        if not ok then return false, err, nil end
+    end
+
+    return true, "DSL validated successfully", data
+end
+
+function cli2.load_cmds(data)
+    return validate_dsl(data)
 end
 
 local function copy_table(obj)
@@ -154,6 +210,7 @@ function cli2.render_help(cmd, display_name, all_classes)
     out = out .. render_section('Arguments', cmd.args, function(arg)
         local desc = (arg.description or '') .. (arg.type and (' (' .. arg.type .. ')') or '')
         if arg.required then desc = desc .. ' (required)' end
+        if arg.default ~= nil then desc = desc .. ' [default: ' .. tostring(arg.default) .. ']' end
         return string.format(fmt, arg.name, desc)
     end)
 
@@ -162,7 +219,7 @@ function cli2.render_help(cmd, display_name, all_classes)
         if cmd.values and cmd.values[flag.name] ~= nil then return nil end
         
         local label = '--' .. flag.name
-        local desc = (flag.description or '') .. (flag.type and (' (' .. flag.type .. ')') or '') .. (flag.default and (' [default: ' .. tostring(flag.default) .. ']') or '')
+        local desc = (flag.description or '') .. (flag.type and (' (' .. flag.type .. ')') or '') .. (flag.default ~= nil and (' [default: ' .. tostring(flag.default) .. ']') or '')
         local line = string.format(fmt, label, desc)
         
         if flag.type == 'enum' and flag.classes then
@@ -218,6 +275,7 @@ local function _find_class_in_flag(flag, name)
 end
 
 local function evaluate_rules(state, rules)
+    if not rules then return true end
     if type(rules[1]) == "string" then
         local op = rules[1]
         if op == "and" then
@@ -255,6 +313,40 @@ local function file_exists(path)
     return false
 end
 
+local function resolve_shortcut(data, state, name, val, item_type)
+    if type(val) ~= 'string' or val:sub(1,1) ~= '@' or not data.shortcuts then
+        return val
+    end
+    
+    local raw = val:sub(2)
+    local expected_sc_name = "@{" .. name .. "}"
+    
+    for _, sc in ipairs(data.shortcuts) do
+        if sc.name == expected_sc_name then
+            local key = sc.name:match("@{(%w+)}")
+            local s_state = copy_table(state)
+            if key then s_state[key] = raw end
+            s_state[name] = raw
+            
+            if evaluate_rules(s_state, sc.when) then
+                local fallback = nil
+                for _, v in ipairs(sc.values) do
+                    local res = v
+                    if key then res = res:gsub("{{"..key.."}}", raw) end
+                    res = res:gsub("{{"..name.."}}", raw)
+                    
+                    if item_type ~= "file" or file_exists(res) then
+                        return res
+                    end
+                    if not fallback then fallback = res end
+                end
+                if fallback then return fallback end
+            end
+        end
+    end
+    return val
+end
+
 function cli2.get_help(cmds, name, sub_or_class)
     if not name or name == '' then
         return 'Usage: gly <command> [args] [flags]\n\nAvailable commands:\n' .. cli2.list(cmds)
@@ -281,14 +373,12 @@ function cli2.get_help(cmds, name, sub_or_class)
     return 'Unknown subcommand or class "' .. sub_or_class .. '" for ' .. name
 end
 
-function cli2.parse(arg)
-    local data = cli2.load_cmds()
+function cli2.parse(data, arg)
     local cmds = data.commands
     local input = arg[1]
 
     if not input or input == 'help' then
-        print(cli2.get_help(cmds, arg[2], arg[3]))
-        return
+        return true, cli2.get_help(cmds, arg[2], arg[3]), {}
     end
 
     local matches = {}
@@ -298,12 +388,11 @@ function cli2.parse(arg)
     end
 
     if #matches == 0 then
-        print('Error:\nUnknown command "' .. input .. '"\n\nTry:\n\ngly help\n')
-        return
+        return false, 'Error:\nUnknown command "' .. input .. '"\n\nTry:\n\ngly help\n', {}
     elseif #matches > 1 then
-        print('Ambiguous command "' .. input .. '". Matches:')
-        for _, m in ipairs(matches) do print('  ' .. m.name) end
-        return
+        local lines = {'Ambiguous command "' .. input .. '". Matches:'}
+        for _, m in ipairs(matches) do table.insert(lines, '  ' .. m.name) end
+        return false, table.concat(lines, '\n'), {}
     end
 
     local base_cmd = matches[1]
@@ -312,9 +401,7 @@ function cli2.parse(arg)
     local active_help_path = base_cmd.name
     local errors = {}
 
-    for _, f in ipairs(base_cmd.flags or {}) do if f.default ~= nil then state[f.name] = f.default end end
-
-    -- Pass 1: Resolution
+    -- Pass 1: Active Target Identification
     for i = 2, #arg do
         local val = arg[i]
         local k, v = val:match("^%-%-([^=]+)=(.*)$")
@@ -324,15 +411,32 @@ function cli2.parse(arg)
             active_cmd = class
             active_help_path = base_cmd.name .. " " .. (v or val)
             state[flag_name or 'core'] = v or val
-            for _, f in ipairs(class.flags or {}) do if f.default ~= nil then state[f.name] = f.default end end
-            for vk, vv in pairs(active_cmd.values or {}) do state[vk] = vv end
             break
         end
     end
 
-    -- Pass 2: Mapping
+    -- Pipeline: 1. Populate Defaults
+    local function populate_defaults(target_cmd)
+        if not target_cmd.flags then return end
+        for _, f in ipairs(target_cmd.flags) do
+            if f.default ~= nil and state[f.name] == nil then
+                state[f.name] = f.default
+            end
+        end
+    end
+    populate_defaults(base_cmd)
+    if active_cmd ~= base_cmd then populate_defaults(active_cmd) end
+
+    -- Pipeline: 2. Apply Fixed Values
+    if active_cmd.values then
+        for k, v in pairs(active_cmd.values) do state[k] = v end
+    end
+
+    -- Pass 2: User Inputs (Mapping)
     local positional_idx = 1
     local skip_next = false
+    local user_inputs = {} -- Store raw inputs to resolve shortcuts later
+
     for i = 2, #arg do
         if skip_next then
             skip_next = false
@@ -393,29 +497,13 @@ function cli2.parse(arg)
             elseif val:sub(1, 1) ~= '-' then
                 local arg_def = base_cmd.args and base_cmd.args[positional_idx]
                 if arg_def then
-                    -- Shortcut Resolution
-                    local resolved_val = val
-                    if val:sub(1,1) == '@' and data.shortcuts then
-                        local src_name = val:sub(2)
-                        for _, sc in ipairs(data.shortcuts) do
-                            local sc_state = copy_table(state)
-                            sc_state.src = src_name
-                            if evaluate_rules(sc_state, sc.when) then
-                                local template = sc.values[1]
-                                resolved_val = template:gsub("{{src}}", src_name)
-                                break
-                            end
-                        end
-                    end
-
                     if arg_def.multiple or arg_def.array then
                         if type(state[arg_def.name]) ~= 'table' then 
                             state[arg_def.name] = {} 
                         end
-                        table.insert(state[arg_def.name], resolved_val)
-                        -- Keep positional_idx on the multiple argument
+                        table.insert(state[arg_def.name], val)
                     else
-                        state[arg_def.name] = resolved_val
+                        state[arg_def.name] = val
                         positional_idx = positional_idx + 1
                     end
                 else
@@ -425,11 +513,28 @@ function cli2.parse(arg)
         end
     end
 
+    -- Pipeline: 3. Resolve Shortcuts
+    local function resolve_all_shortcuts(definitions)
+        for _, def in ipairs(definitions or {}) do
+            local current = state[def.name]
+            if type(current) == 'table' then
+                for idx, v in ipairs(current) do
+                    current[idx] = resolve_shortcut(data, state, def.name, v, def.type)
+                end
+            else
+                state[def.name] = resolve_shortcut(data, state, def.name, current, def.type)
+            end
+        end
+    end
+
+    resolve_all_shortcuts(base_cmd.args)
+    resolve_all_shortcuts(base_cmd.flags)
+    if active_cmd ~= base_cmd then resolve_all_shortcuts(active_cmd.flags) end
+
     -- Required args check
     if base_cmd.args then
         local req_count = 0
         for _, a in ipairs(base_cmd.args) do if a.required then req_count = req_count + 1 end end
-        -- If the last argument was multiple and consumed at least one, we check total consumed
         local consumed = positional_idx - 1
         local last_arg = base_cmd.args[#base_cmd.args]
         if last_arg and (last_arg.multiple or last_arg.array) and type(state[last_arg.name]) == 'table' then
@@ -464,30 +569,31 @@ function cli2.parse(arg)
     end
 
     if #errors > 0 then
-        print('Error:')
-        for _, err in ipairs(errors) do print(err) end
-        print('\nTry:\n\ngly help ' .. active_help_path .. "\n")
-        return
+        local out_err = {'Error:'}
+        for _, err in ipairs(errors) do table.insert(out_err, err) end
+        table.insert(out_err, '\nTry:\n\ngly help ' .. active_help_path .. "\n")
+        return false, table.concat(out_err, '\n'), state
     end
 
     if base_cmd.name ~= input then
-        print('Partial match: ' .. base_cmd.name .. '\n')
-        print(cli2.get_help(cmds, base_cmd.name))
-        return
+        local out_partial = {'Partial match: ' .. base_cmd.name .. '\n'}
+        table.insert(out_partial, cli2.get_help(cmds, base_cmd.name))
+        return true, table.concat(out_partial, '\n'), state
     end
 
-    print('Command "' .. base_cmd.name .. '" validated. State:')
+    local out_final = {'Command "' .. base_cmd.name .. '" validated. State:'}
     local sorted_keys = {}
     for k in pairs(state) do table.insert(sorted_keys, k) end
     table.sort(sorted_keys)
     for _, k in ipairs(sorted_keys) do
         local v = state[k]
         if type(v) == 'table' then
-            print("  " .. k .. ": [" .. table.concat(v, ", ") .. "]")
+            table.insert(out_final, "  " .. k .. ": [" .. table.concat(v, ", ") .. "]")
         else
-            print("  " .. k .. ": " .. tostring(v))
+            table.insert(out_final, "  " .. k .. ": " .. tostring(v))
         end
     end
+    return true, table.concat(out_final, '\n'), state
 end
 
 return cli2
