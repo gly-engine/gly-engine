@@ -152,7 +152,7 @@ function cli2.render_help(cmd, display_name, all_classes)
 
     -- Arguments
     out = out .. render_section('Arguments', cmd.args, function(arg)
-        local desc = arg.description or ''
+        local desc = (arg.description or '') .. (arg.type and (' (' .. arg.type .. ')') or '')
         if arg.required then desc = desc .. ' (required)' end
         return string.format(fmt, arg.name, desc)
     end)
@@ -217,6 +217,44 @@ local function _find_class_in_flag(flag, name)
     end
 end
 
+local function evaluate_rules(state, rules)
+    if type(rules[1]) == "string" then
+        local op = rules[1]
+        if op == "and" then
+            for i = 2, #rules do if not evaluate_rules(state, rules[i]) then return false end end
+            return true
+        elseif op == "or" then
+            for i = 2, #rules do if evaluate_rules(state, rules[i]) then return true end end
+            return false
+        end
+    end
+
+    local op, key, val = rules[1], rules[2], rules[3]
+    local actual = state[key]
+    if actual == nil then actual = "false" end
+    
+    local actual_str = tostring(actual)
+    local val_str = tostring(val)
+    local actual_num = tonumber(actual)
+    local val_num = tonumber(val)
+
+    if op == "eq" or op == "==" then return actual_str == val_str
+    elseif op == "neq" or op == "!=" then return actual_str ~= val_str
+    elseif op == "gt" or op == ">" then return (actual_num and val_num and actual_num > val_num)
+    elseif op == "gte" or op == ">=" then return (actual_num and val_num and actual_num >= val_num)
+    elseif op == "lt" or op == "<" then return (actual_num and val_num and actual_num < val_num)
+    elseif op == "lte" or op == "<=" then return (actual_num and val_num and actual_num <= val_num)
+    elseif op == "like" then return (actual_str:find(val_str) ~= nil)
+    end
+    return false
+end
+
+local function file_exists(path)
+    local f = io.open(path, "r")
+    if f then f:close() return true end
+    return false
+end
+
 function cli2.get_help(cmds, name, sub_or_class)
     if not name or name == '' then
         return 'Usage: gly <command> [args] [flags]\n\nAvailable commands:\n' .. cli2.list(cmds)
@@ -241,31 +279,6 @@ function cli2.get_help(cmds, name, sub_or_class)
     if class then return cli2.render_help(class, cmd.name .. ' --' .. flag .. ' ' .. class.name, all_classes) end
 
     return 'Unknown subcommand or class "' .. sub_or_class .. '" for ' .. name
-end
-
-local function evaluate_rules(state, rules)
-    for _, rule in ipairs(rules) do
-        local op, key, val = rule[1], rule[2], rule[3]
-        local actual = state[key]
-        if actual == nil then actual = "false" end
-        
-        local actual_str = tostring(actual)
-        local val_str = tostring(val)
-        local actual_num = tonumber(actual)
-        local val_num = tonumber(val)
-
-        local matched = false
-        if op == "eq" or op == "==" then matched = (actual_str == val_str)
-        elseif op == "neq" or op == "!=" then matched = (actual_str ~= val_str)
-        elseif op == "gt" or op == ">" then matched = (actual_num and val_num and actual_num > val_num)
-        elseif op == "gte" or op == ">=" then matched = (actual_num and val_num and actual_num >= val_num)
-        elseif op == "lt" or op == "<" then matched = (actual_num and val_num and actual_num < val_num)
-        elseif op == "lte" or op == "<=" then matched = (actual_num and val_num and actual_num <= val_num)
-        elseif op == "like" then matched = (actual_str:find(val_str) ~= nil)
-        end
-        if not matched then return false end
-    end
-    return true
 end
 
 function cli2.parse(arg)
@@ -295,32 +308,30 @@ function cli2.parse(arg)
 
     local base_cmd = matches[1]
     local active_cmd = base_cmd
-    local state = {}
+    local state = { command = base_cmd.name }
     local active_help_path = base_cmd.name
     local errors = {}
 
-    -- 1. Defaults
     for _, f in ipairs(base_cmd.flags or {}) do if f.default ~= nil then state[f.name] = f.default end end
 
-    -- 2. First Pass: Context Resolution (Core/Class)
+    -- Pass 1: Resolution
     for i = 2, #arg do
         local val = arg[i]
         local k, v = val:match("^%-%-([^=]+)=(.*)$")
         if not k and val:sub(1,2) == '--' then k = val:sub(3) v = arg[i+1] end
-        
         local class, flag_name = _find_class(base_cmd, v or val)
         if class then
             active_cmd = class
             active_help_path = base_cmd.name .. " " .. (v or val)
-            state[flag_name] = v or val
+            state[flag_name or 'core'] = v or val
             for _, f in ipairs(class.flags or {}) do if f.default ~= nil then state[f.name] = f.default end end
-            for vk, vv in pairs(class.values or {}) do state[vk] = vv end
+            for vk, vv in pairs(active_cmd.values or {}) do state[vk] = vv end
             break
         end
     end
 
-    -- 3. Second Pass: State Mapping & Type Validation
-    local positional_idx = 0
+    -- Pass 2: Mapping
+    local positional_idx = 1
     local skip_next = false
     for i = 2, #arg do
         if skip_next then
@@ -332,7 +343,6 @@ function cli2.parse(arg)
                 local has_assign = (k ~= nil)
                 if not k then k = val:sub(3) end
                 
-                -- Find flag in active context or base
                 local flag_def
                 for _, f in ipairs(active_cmd.flags or {}) do if f.name == k then flag_def = f break end end
                 if not flag_def and active_cmd ~= base_cmd then
@@ -347,37 +357,83 @@ function cli2.parse(arg)
                         if current_val and current_val:sub(1,1) ~= '-' then
                             consumed_next = true
                         else
-                            current_val = "true" -- Fallback
+                            current_val = "true"
                         end
                     end
-
-                    -- Enum Validation
-                    if flag_def.type == 'enum' then
-                        if not _find_class_in_flag(flag_def, current_val) then
-                            table.insert(errors, "Invalid value for --" .. k .. ": " .. tostring(current_val))
-                        end
+                    if flag_def.type == 'enum' and not _find_class_in_flag(flag_def, current_val) then
+                        table.insert(errors, "Invalid value for --" .. k .. ": " .. tostring(current_val))
                     end
-
                     state[k] = current_val
                     if consumed_next then skip_next = true end
                 else
                     table.insert(errors, 'Unknown option: ' .. val)
                 end
             elseif val:sub(1, 1) ~= '-' then
-                positional_idx = positional_idx + 1
                 local arg_def = base_cmd.args and base_cmd.args[positional_idx]
-                if arg_def then state[arg_def.name] = val end
+                if arg_def then
+                    -- Shortcut Resolution
+                    local resolved_val = val
+                    if val:sub(1,1) == '@' and data.shortcuts then
+                        local src_name = val:sub(2)
+                        for _, sc in ipairs(data.shortcuts) do
+                            local sc_state = copy_table(state)
+                            sc_state.src = src_name
+                            if evaluate_rules(sc_state, sc.when) then
+                                local template = sc.values[1]
+                                resolved_val = template:gsub("{{src}}", src_name)
+                                break
+                            end
+                        end
+                    end
+
+                    if arg_def.multiple or arg_def.array then
+                        if type(state[arg_def.name]) ~= 'table' then 
+                            state[arg_def.name] = {} 
+                        end
+                        table.insert(state[arg_def.name], resolved_val)
+                        -- Keep positional_idx on the multiple argument
+                    else
+                        state[arg_def.name] = resolved_val
+                        positional_idx = positional_idx + 1
+                    end
+                else
+                    table.insert(errors, 'Too many arguments: ' .. val)
+                end
             end
         end
     end
 
-    -- 4. Final Validations
+    -- Required args check
     if base_cmd.args then
         local req_count = 0
         for _, a in ipairs(base_cmd.args) do if a.required then req_count = req_count + 1 end end
-        if positional_idx < req_count then table.insert(errors, 'Missing required arguments')
-        elseif positional_idx > #base_cmd.args then table.insert(errors, 'Too many arguments') end
+        -- If the last argument was multiple and consumed at least one, we check total consumed
+        local consumed = positional_idx - 1
+        local last_arg = base_cmd.args[#base_cmd.args]
+        if last_arg and (last_arg.multiple or last_arg.array) and type(state[last_arg.name]) == 'table' then
+            consumed = consumed + #state[last_arg.name]
+        end
+        if consumed < req_count then table.insert(errors, 'Missing required arguments') end
     end
+
+    -- Type Validation (File Existence)
+    local function validate_types(definitions, values)
+        for _, def in ipairs(definitions or {}) do
+            local val = values[def.name]
+            if val and def.type == "file" then
+                if type(val) == "table" then
+                    for _, v in ipairs(val) do
+                        if not file_exists(v) then table.insert(errors, "File not found: " .. def.name .. " -> " .. v) end
+                    end
+                else
+                    if not file_exists(val) then table.insert(errors, "File not found: " .. def.name .. " -> " .. val) end
+                end
+            end
+        end
+    end
+    validate_types(base_cmd.args, state)
+    validate_types(base_cmd.flags, state)
+    if active_cmd ~= base_cmd then validate_types(active_cmd.flags, state) end
 
     if data.errors then
         for _, rule in ipairs(data.errors) do
@@ -385,7 +441,6 @@ function cli2.parse(arg)
         end
     end
 
-    -- 5. Reporting
     if #errors > 0 then
         print('Error:')
         for _, err in ipairs(errors) do print(err) end
@@ -403,7 +458,14 @@ function cli2.parse(arg)
     local sorted_keys = {}
     for k in pairs(state) do table.insert(sorted_keys, k) end
     table.sort(sorted_keys)
-    for _, k in ipairs(sorted_keys) do print("  " .. k .. ": " .. tostring(state[k])) end
+    for _, k in ipairs(sorted_keys) do
+        local v = state[k]
+        if type(v) == 'table' then
+            print("  " .. k .. ": [" .. table.concat(v, ", ") .. "]")
+        else
+            print("  " .. k .. ": " .. tostring(v))
+        end
+    end
 end
 
 return cli2

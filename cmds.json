@@ -1,8 +1,35 @@
 {
+    "shortcuts": [
+        {
+            "name": "@{src}",
+            "values": [
+                "samples/{{src}}/game.lua"
+            ],
+            "when": [
+                "or",
+                [
+                    "eq",
+                    "command",
+                    "build"
+                ],
+                [
+                    "eq",
+                    "command",
+                    "meta"
+                ],
+                [
+                    "eq",
+                    "command",
+                    "run"
+                ]
+            ]
+        }
+    ],
     "errors": [
         {
             "message": "please use flag --enterprise to use commercial modules.",
             "when": [
+                "and",
                 [
                     "eq",
                     "enterprise",
@@ -50,7 +77,7 @@
             "args": [
                 {
                     "name": "src",
-                    "type": "string",
+                    "type": "file",
                     "required": true,
                     "description": "Source file or sample name"
                 }
@@ -229,7 +256,7 @@
             "args": [
                 {
                     "name": "src",
-                    "type": "string",
+                    "type": "file",
                     "required": true,
                     "description": "Source file to execute"
                 }
@@ -248,7 +275,7 @@
             "args": [
                 {
                     "name": "src",
-                    "type": "string",
+                    "type": "file",
                     "required": true,
                     "multiple": true,
                     "description": "Input source files"
@@ -291,7 +318,7 @@
             "args": [
                 {
                     "name": "src",
-                    "type": "string",
+                    "type": "file",
                     "required": true,
                     "description": "Entry point file"
                 }
@@ -311,7 +338,7 @@
             "args": [
                 {
                     "name": "src",
-                    "type": "string",
+                    "type": "file",
                     "required": true,
                     "description": "Input source file"
                 }
