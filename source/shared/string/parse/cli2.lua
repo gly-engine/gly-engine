@@ -231,7 +231,7 @@ local function evaluate_rules(state, rules)
 
     local op, key, val = rules[1], rules[2], rules[3]
     local actual = state[key]
-    if actual == nil then actual = "false" end
+    if actual == nil then actual = false end
     
     local actual_str = tostring(actual)
     local val_str = tostring(val)
@@ -348,18 +348,40 @@ function cli2.parse(arg)
                 if not flag_def and active_cmd ~= base_cmd then
                     for _, f in ipairs(base_cmd.flags or {}) do if f.name == k then flag_def = f break end end
                 end
+
+                if flag_def and active_cmd.values and active_cmd.values[k] ~= nil then
+                    flag_def = nil -- Treat as unknown if value is fixed
+                end
                 
                 if flag_def then
                     local current_val = v
                     local consumed_next = false
-                    if not has_assign and flag_def.type ~= 'boolean' then
-                        current_val = arg[i+1]
-                        if current_val and current_val:sub(1,1) ~= '-' then
-                            consumed_next = true
+                    
+                    if not has_assign then
+                        if flag_def.type == 'boolean' then
+                            current_val = true
                         else
-                            current_val = "true"
+                            local next_arg = arg[i+1]
+                            if next_arg and next_arg:sub(1,1) ~= '-' then
+                                current_val = next_arg
+                                consumed_next = true
+                            else
+                                current_val = true
+                            end
                         end
                     end
+
+                    -- Type conversion
+                    if flag_def.type == 'boolean' then
+                        if type(current_val) == 'string' then
+                            current_val = (current_val ~= 'false')
+                        end
+                    elseif flag_def.type == 'number' then
+                        if type(current_val) == 'string' then
+                            current_val = tonumber(current_val) or current_val
+                        end
+                    end
+
                     if flag_def.type == 'enum' and not _find_class_in_flag(flag_def, current_val) then
                         table.insert(errors, "Invalid value for --" .. k .. ": " .. tostring(current_val))
                     end
