@@ -26,6 +26,14 @@
 --! 8 -> 4: resume
 --! @enduml
 
+local function v2s(self, vx, vy)
+    return self.off_x + vx * self.scale, self.off_y + (vy + self.GUI_H) * self.scale
+end
+
+local function v2s_size(self, s)
+    return s * self.scale
+end
+
 local function i18n(self, std)
     return {
         ['pt-BR'] = {
@@ -69,7 +77,7 @@ end
 
 local function asteroid_fragments(self, size, level)
     -- level 1,2,3
-    if size == self.asteroid_small_mini then return 0, -1, 50 end
+    if size == self.asteroid_mini_size then return 0, -1, 50 end
     if size == self.asteroid_small_size and level <=3 then return 0, -1, 15 end
     if size == self.asteroid_mid_size and level <= 3 then return 2, self.asteroid_small_size, 10 end				
     if size == self.asteroid_large_size and level <= 3 then return 1, self.asteroid_mid_size, 5 end
@@ -90,7 +98,7 @@ end
 
 local function asteroid_nest(self, std, x, y, id)
     local index = 1
-    while index < #self.asteroid_size do
+    while index <= #self.asteroid_size do
         if index ~= id  and self.asteroid_size[index] ~= -1 then
             local size = self.asteroid_size[index] / 2
             local distance = std.math.dis(x, y, self.asteroid_pos_x[index] + size, self.asteroid_pos_y[index] + size)
@@ -103,16 +111,6 @@ local function asteroid_nest(self, std, x, y, id)
     return false
 end
 
-local function asteroids_resize(self, std)
-    if (self.width <= 400) then
-        local div = function(v) return std.math.ceil(v * (self.width/800)) end
-        self.asteroid_large = std.array.map(self.asteroid_large, div)
-        self.asteroid_mid = std.array.map(self.asteroid_mid, div)
-        self.asteroid_small = std.array.map(self.asteroid_small, div)
-        self.asteroid_mini = std.array.map(self.asteroid_mini, div)
-    end
-end
-
 local function asteroids_rain(self, std)
     local index = 1
     local attemps = 1
@@ -122,16 +120,16 @@ local function asteroids_rain(self, std)
     local n4 = 2.5 * std.math.min(self.level/3, 1)
     local hspeed = {-n1, 0, 0, 0, 0, 0, n1}
     local vspeed = {-n4, -n3, -n2, n2, n3, n4}
-    local middle_left = self.width/4
-    local middle_right = self.width/4 * 3
+    local middle_left = self.VW/4
+    local middle_right = self.VW/4 * 3
 
     while index <= self.asteroids_max and index <= 10 do
         repeat
             local success = true
             attemps = attemps + 1
             self.asteroid_size[index] = self.asteroid_large_size
-            self.asteroid_pos_x[index] = std.math.random(1, self.width)
-            self.asteroid_pos_y[index] = std.math.random(1, self.height)
+            self.asteroid_pos_x[index] = std.math.random(1, self.VW)
+            self.asteroid_pos_y[index] = std.math.random(1, self.VH)
             self.asteroid_spd_x[index] = hspeed[std.math.random(1, #hspeed)]
             self.asteroid_spd_y[index] = vspeed[std.math.random(1, #vspeed)]
 
@@ -139,7 +137,7 @@ local function asteroids_rain(self, std)
                 success = false
             end
 
-            if asteroid_nest(self, std, self.asteroid_pos_x[index], self.asteroid_pos_x[index], index) then
+            if asteroid_nest(self, std, self.asteroid_pos_x[index], self.asteroid_pos_y[index], index) then
                 success = false
             end
 
@@ -174,9 +172,21 @@ local function asteroid_destroy(self, std, id)
 end
 
 local function init(self, std)
+    -- resolution
+    self.VW, self.VH = 1680, 720
+    self.ASPECT = 16 / 9
+    self.TOTAL_VH = self.VW / self.ASPECT
+    self.GUI_H = (self.TOTAL_VH - self.VH) / 2
+
+    -- physics config
+    self.scale = std.math.min(self.width / self.VW, self.height / self.TOTAL_VH)
+    self.off_x = (self.width - self.VW * self.scale) / 2
+    self.off_y = (self.height - self.TOTAL_VH * self.scale) / 2
+
     -- game
-    self.boost = 0.12
-    self.speed_max = 5
+    self.boost = 0.15
+    self.rotation_speed = 0.06
+    self.speed_max = 8
     self.asteroids_count = 0
     -- configs
     self.state = self.state or 1
@@ -188,9 +198,9 @@ local function init(self, std)
     self.asteroids_max = self.asteroids_max or 60
     self.graphics_fastest = self.graphics_fastest or 0
     -- player
-    self.player_size = std.math.clamp(self.width/100, 1, 3)
-    self.player_pos_x = self.width/2
-    self.player_pos_y = self.height/2
+    self.player_size = 3
+    self.player_pos_x = self.VW/2
+    self.player_pos_y = self.VH/2
     self.player_spd_x = 0
     self.player_spd_y = 0
     self.player_angle = 0
@@ -204,7 +214,7 @@ local function init(self, std)
     self.laser_last_fire = 0
     self.laser_time_fire = 50
     self.laser_time_recharge = 300
-    self.laser_distance_fire = 300
+    self.laser_distance_fire = 600
     -- asteroids
     self.asteroid_pos_x = {}
     self.asteroid_pos_y = {}
@@ -217,7 +227,7 @@ local function init(self, std)
     self.asteroid_small = {3, 0, 0, 3, 3, 9, 3, 12, 0, 18, 6, 21, 12, 21, 18, 18, 21, 15, 21, 3, 12, 3, 9, 6}
     self.asteroid_mini = {6, 0, 6, 6, 0, 6, 0, 12, 3, 18, 6, 18, 6, 15, 15, 15, 18, 9, 12, 6, 12, 0}
     self.spaceship = {-2,3, 0,-2, 2,3}
-    asteroids_resize(self, std)
+    
     -- sizes
     self.asteroid_large_size = std.math.max(self.asteroid_large)
     self.asteroid_mid_size = std.math.max(self.asteroid_mid)
@@ -234,7 +244,7 @@ local function loop(self, std)
     if self.state == 1 then
         local keyh = std.key.axis.x + std.key.axis.a 
         if std.key.axis.y ~= 0 and std.milis > self.menu_time + 250 then
-            self.menu = std.math.clamp(self.menu + std.key.axis.y, self.player_pos_x == (self.width/2) and 2 or 1, 9)
+            self.menu = std.math.clamp(self.menu + std.key.axis.y, self.player_pos_x == (self.VW/2) and 2 or 1, 9)
             self.menu_time = std.milis
         end
         if keyh ~= 0 and std.milis > self.menu_time + 100 then
@@ -273,32 +283,32 @@ local function loop(self, std)
         self.state = 1
     end
     -- player move
-    self.player_angle = (self.player_angle + (std.key.axis.x * 0.1)) % (std.math.pi * 2)
+    self.player_angle = (self.player_angle + (std.key.axis.x * self.rotation_speed)) % (std.math.pi * 2)
     self.player_pos_x = self.player_pos_x + (self.player_spd_x/16 * std.delta)
     self.player_pos_y = self.player_pos_y + (self.player_spd_y/16 * std.delta)
-    if not (std.key.press.up or std.key.press.b) and (std.math.abs(self.player_spd_x) + std.math.abs(self.player_spd_y)) < 0.45 then
-        self.player_spd_x = 0
-        self.player_spd_y = 0
-    end
+    
     if std.key.press.up or std.key.press.b then
         self.player_spd_x = self.player_spd_x + (self.boost * std.math.cos(self.player_angle - std.math.pi/2))
         self.player_spd_y = self.player_spd_y + (self.boost * std.math.sin(self.player_angle - std.math.pi/2))
-        local max_spd_x = std.math.abs(self.speed_max * std.math.cos(self.player_angle - std.math.pi/2))
-        local max_spd_y = std.math.abs(self.speed_max * std.math.sin(self.player_angle - std.math.pi/2))
-        self.player_spd_x = std.math.clamp(self.player_spd_x, -max_spd_x, max_spd_x) 
-        self.player_spd_y = std.math.clamp(self.player_spd_y, -max_spd_y, max_spd_y)
     end
-    if self.player_pos_y < 3 then
-        self.player_pos_y = self.height
+    
+    -- clamp speed
+    local mag = (self.player_spd_x^2 + self.player_spd_y^2) ^ 0.5
+    if mag > self.speed_max then
+        self.player_spd_x = (self.player_spd_x / mag) * self.speed_max
+        self.player_spd_y = (self.player_spd_y / mag) * self.speed_max
     end
-    if self.player_pos_x < 3 then
-        self.player_pos_x = self.width
+    if self.player_pos_y < 0 then
+        self.player_pos_y = self.VH
     end
-    if self.player_pos_y > self.height then
-        self.player_pos_y = 3
+    if self.player_pos_x < 0 then
+        self.player_pos_x = self.VW
     end
-    if self.player_pos_x > self.width then
-        self.player_pos_x = 3
+    if self.player_pos_y > self.VH then
+        self.player_pos_y = 0
+    end
+    if self.player_pos_x > self.VW then
+        self.player_pos_x = 0
     end
     -- player teleport
     if (std.key.press.down or std.key.press.c) and std.milis > self.player_last_teleport + 1000 then
@@ -308,8 +318,8 @@ local function loop(self, std)
         self.player_spd_x = 0
         self.player_spd_y = 0
         repeat
-            self.player_pos_x = std.math.random(1, self.width)
-            self.player_pos_y = std.math.random(1, self.height)
+            self.player_pos_x = std.math.random(1, self.VW)
+            self.player_pos_y = std.math.random(1, self.VH)
         until not asteroid_nest(self, std, self.player_pos_x, self.player_pos_y, -1)
     end
     -- player shoot
@@ -359,17 +369,17 @@ local function loop(self, std)
             self.asteroids_count = self.asteroids_count + 1
             self.asteroid_pos_x[index] = self.asteroid_pos_x[index] + self.asteroid_spd_x[index]
             self.asteroid_pos_y[index] = self.asteroid_pos_y[index] + self.asteroid_spd_y[index]
-            if self.asteroid_pos_y[index] < 1 then
-                self.asteroid_pos_y[index] = self.height
+            if self.asteroid_pos_y[index] < -self.asteroid_size[index] then
+                self.asteroid_pos_y[index] = self.VH
             end
-            if self.asteroid_pos_x[index] < 1 then
-                self.asteroid_pos_x[index] = self.width
+            if self.asteroid_pos_x[index] < -self.asteroid_size[index] then
+                self.asteroid_pos_x[index] = self.VW
             end
-            if self.asteroid_pos_y[index] > self.height then
-                self.asteroid_pos_y[index] = 1
+            if self.asteroid_pos_y[index] > self.VH then
+                self.asteroid_pos_y[index] = 0
             end
-            if self.asteroid_pos_x[index] > self.width then
-                self.asteroid_pos_x[index] = 1
+            if self.asteroid_pos_x[index] > self.VW then
+                self.asteroid_pos_x[index] = 0
             end
         end
         index = index + 1
@@ -399,8 +409,9 @@ end
 local function draw(self, std)
     local death_anim = self.state == 5 and std.milis < self.menu_time + 50 
     std.draw.clear(death_anim and std.color.white or std.color.black)
+    
     if self.state == 1 then
-        local h = self.height/24
+        local h = self.VH/24
         local hmenu = (self.menu*h) + (h*11) - (h/3)
         local language = std.i18n.get_language()
         local graphics = self.graphics_fastest == 1 and 'fast' or 'pretty'
@@ -441,58 +452,77 @@ local function draw(self, std)
     local index = 1
     while index <= #self.asteroid_size do
         if self.asteroid_size[index] ~= -1 then
+            local ax, ay = v2s(self, self.asteroid_pos_x[index], self.asteroid_pos_y[index])
             if self.graphics_fastest == 1 then
-                local s = self.asteroid_size[index]
-                std.draw.rect(1, self.asteroid_pos_x[index], self.asteroid_pos_y[index], s, s)
+                local s = v2s_size(self, self.asteroid_size[index])
+                std.draw.rect(1, ax, ay, s, s)
             elseif self.asteroid_size[index] == self.asteroid_large_size then
-                std.draw.poly(1, self.asteroid_large, self.asteroid_pos_x[index], self.asteroid_pos_y[index])
+                std.draw.poly(1, self.asteroid_large, ax, ay)
             elseif self.asteroid_size[index] == self.asteroid_mid_size then
-                std.draw.poly(1, self.asteroid_mid, self.asteroid_pos_x[index], self.asteroid_pos_y[index])
+                std.draw.poly(1, self.asteroid_mid, ax, ay)
             elseif self.asteroid_size[index] == self.asteroid_small_size then
-                std.draw.poly(1, self.asteroid_small, self.asteroid_pos_x[index], self.asteroid_pos_y[index])
+                std.draw.poly(1, self.asteroid_small, ax, ay)
             else
-                std.draw.poly(1, self.asteroid_mini, self.asteroid_pos_x[index], self.asteroid_pos_y[index])
+                std.draw.poly(1, self.asteroid_mini, ax, ay)
             end
         end
         index = index + 1
     end
+
     -- draw player
     if self.state ~= 5 then
+        local px, py = v2s(self, self.player_pos_x, self.player_pos_y)
         -- triangle
         std.draw.color(std.color.yellow)
-        std.draw.poly(2, self.spaceship, self.player_pos_x, self.player_pos_y, self.player_size, self.player_angle)
+        std.draw.poly(2, self.spaceship, px, py, v2s_size(self, self.player_size), self.player_angle)
+        
         -- laser bean
         if self.laser_enabled and std.milis < self.laser_last_fire + self.laser_time_fire then
             std.draw.color(std.color.green)
-            std.draw.line(self.laser_pos_x1, self.laser_pos_y1, self.laser_pos_x2, self.laser_pos_y2)
+            local lx1, ly1 = v2s(self, self.laser_pos_x1, self.laser_pos_y1)
+            local lx2, ly2 = v2s(self, self.laser_pos_x2, self.laser_pos_y2)
+            std.draw.line(lx1, ly1, lx2, ly2)
         end
+        
         std.draw.color(std.color.red)
         -- boost
         if std.key.press.up or std.key.press.b  then
             local s = std.math.random(4, 12)
             local sin = std.math.cos(self.player_angle - std.math.pi/2)
             local cos = std.math.sin(self.player_angle - std.math.pi/2)
-            local x = self.player_pos_x - (sin * (s + 12)) - (s/2)
-            local y = self.player_pos_y - (cos * (s + 12)) - (s/2)
-            std.draw.rect(1, x, y, s, s)
+            local vx = self.player_pos_x - (sin * (s + 12)) - (s/2)
+            local vy = self.player_pos_y - (cos * (s + 12)) - (s/2)
+            local bx, by = v2s(self, vx, vy)
+            local bs = v2s_size(self, s)
+            std.draw.rect(1, bx, by, bs, bs)
         end
         -- teleport
         if std.milis < self.player_last_teleport + 100 then
-            std.draw.line(self.laser_pos_x1, self.laser_pos_y1, self.player_pos_x, self.player_pos_y)
+            local lx1, ly1 = v2s(self, self.laser_pos_x1, self.laser_pos_y1)
+            std.draw.line(lx1, ly1, px, py)
         end
     end
-    -- draw gui
-    local w, h = std.text.mensure('a')
-    local t = (self.width < 400 and not std.text.is_tui()) and (h*2) or 2
-    w = self.width/6
+
+    -- draw gui bars
     std.draw.color(std.color.black)
-    std.draw.rect(0, 0, 0, self.width, h)
+    local _, game_top_y = v2s(self, 0, 0)
+    std.draw.rect(0, 0, 0, self.width, game_top_y)
+    local _, game_bottom_y = v2s(self, 0, self.VH)
+    std.draw.rect(0, 0, game_bottom_y, self.width, self.height - game_bottom_y)
+    
     std.draw.color(std.color.white)
-    std.text.print_ex(w*1, 2, 'lifes: '..tostring(self.lifes), 0)
-    std.text.print_ex(w*2, t, 'level: '..tostring(self.level), 0)
-    std.text.print_ex(w*3, 2, 'asteroids: '..tostring(self.asteroids_count), 0)
-    std.text.print_ex(w*4, t, 'score: '..tostring(self.score), 0)
-    std.text.print_ex(w*5, 2, 'highscore: '..tostring(self.highscore), 0)
+    std.text.font_size(v2s_size(self, self.width/40))
+
+    local pw, ph = 10, 2
+    local hf = std.app.height - ph
+    local wf = std.app.width - pw
+    local wc = std.app.width / 2
+
+    std.text.print_ex(pw, ph, 'lifes: '..tostring(self.lifes), 1)
+    std.text.print_ex(wc, ph, 'asteroids: '..tostring(self.asteroids_count), 0)
+    std.text.print_ex(wf, ph, 'level: '..tostring(self.level), -1)    
+    std.text.print_ex(pw, hf, 'score: '..tostring(self.score), 1, -1)
+    std.text.print_ex(wf, hf, 'highscore: '..tostring(self.highscore), -1, -1)
 end
 
 local function exit(self, std)
@@ -510,15 +540,15 @@ end
 
 local P = {
     meta={
-        id='br.com.gamely.asteroids',
+        id='com.glyengine.asteroids',
         title='AsteroidsTV',
         author='RodrigoDornelles',
         description='similar to the original but with lasers because televisions may have limited hardware.',
         tizen_package='3202411037732',
-        version='1.0.0'
+        version='2.0.0'
     },
     config = {
-        require = 'math math.random i18n'
+        require = 'math math.random i18n?'
     },
     callbacks={
         i18n=i18n,
