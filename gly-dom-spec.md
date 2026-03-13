@@ -6,6 +6,165 @@ This is a pure Lua DOM engine for extremely constrained hardware (TV boxes, retr
 
 The engine powers a JSX transpiler (TypeScript → Lua) where frontend developers write declarative UI and the engine handles layout, scroll, and focus navigation for TV remote controls.
 
+## Data Structures
+
+Antes de qualquer implementação, é fundamental entender quais estruturas de dados existem,
+onde vivem, como se relacionam e quais suas garantias de ciclo de vida. Todo código deve
+incluir docstrings (`--!` Doxygen) explicando a estrutura que manipula.
+
+### Estruturas no objeto `engine.dom`
+
+`engine.dom` é criado por `dom.node_begin()` e persiste pela vida da aplicação.
+Vive em `source/engine/browser/dom.lua`.
+
+```lua
+--! @brief Central engine state. Created once per application via node_begin().
+--! @details All browser/* modules receive this object as first argument (self).
+--!
+--! DATA STRUCTURE OVERVIEW:
+--!
+--!   NODE TREE  ──────────────────────────────────────────────────────────────
+--!   Primary source of truth. Strong refs em ambas direções.
+--!   Árvore → node_list via rebuild_tree_from_parents().
+--!
+--!   NODE LIST  ──────────────────────────────────────────────────────────────
+--!   Array flat derivado da árvore. Bus() itera este array, não a árvore.
+--!   Reconstituído lazily (flag_relist). Root sempre na posição 1.
+--!
+--!   RENDER LIST ─────────────────────────────────────────────────────────────
+--!   Array flat compilado após layout. Entries são REUTILIZADAS entre frames
+--!   (pool). Contém apenas nodes que passam no culling de tela.
+--!
+--!   DIRTY QUEUE ─────────────────────────────────────────────────────────────
+--!   Lista de nodes com layout pendente. Presença na lista = dirty state.
+--!   SEM flag por node. Consumida e limpa por flush_dirty().
+--!
+--!   INDEX MAPS ──────────────────────────────────────────────────────────────
+--!   Lookup O(1). Refs FORTES. Limpeza manual em node_del().
+--!
+--!   SCROLL REGISTRY ─────────────────────────────────────────────────────────
+--!   Chaves FRACAS (__mode='k'): quando o slide node for GC'd, a entrada
+--!   some automaticamente. Limpeza explícita em node_del() como fallback.
+--!
+--!   FOCUS LIST ──────────────────────────────────────────────────────────────
+--!   Array de todos os nodes focusáveis. Refs fortes. Limpeza manual.
+engine.dom = {
+    -- NODE TREE (source/engine/browser/dom.lua)
+    root        = node,   -- strong ref to root node
+
+    -- NODE LIST (source/engine/browser/dom.lua)
+    node_list   = {},     -- {node, node, ...} — strong refs, ordered, root first
+
+    -- RENDER LIST (source/engine/browser/dom.lua)
+    render_list = {},     -- {{uid,x,y,w,h,node}, ...} — pooled entries, reused each frame
+
+    -- DIRTY QUEUE (source/engine/browser/dom.lua)
+    dirty_queue = {},     -- {node, node, ...} — transient, cleared after flush_dirty()
+
+    -- INDEX MAPS (source/engine/browser/dom.lua)
+    index_uid   = {},     -- [number uid]  → node        (strong)
+    index_id    = {},     -- [string id]   → node        (strong)
+    index_class = {},     -- [string name] → {node, ...} (strong)
+
+    -- SCROLL REGISTRY (source/engine/browser/scroll.lua)
+    scroll_registry = setmetatable({}, {__mode='k'}),
+    --  [node] → {mode, index, total, cols, rows, dir}   (weak key)
+
+    -- PAUSE REGISTRY (source/engine/browser/pause.lua)
+    pause_registry = {},
+    --  [uid] → { all=bool, keys=nil|{[key]=bool} }
+    --  all=true  → node ignora todos os eventos do bus e é excluído do compile()
+    --  keys[key]=true  → node ignora evento específico
+    --  keys[key]=false → resume explícito (sobrescreve all=true para essa key)
+
+    -- FOCUS (source/engine/browser/navigator.lua)
+    focus_list    = {},   -- {node, node, ...} — strong refs, all focusable nodes
+    focus_current = nil,  -- strong ref to currently focused node | nil
+
+    -- BUS CONTEXT (source/engine/browser/dom.lua)
+    current_node = nil,   -- set during bus() iteration, nil outside
+
+    -- ENGINE DIMENSIONS
+    width  = 0,
+    height = 0,
+}
+```
+
+### Cadeia de transformação de estruturas
+
+```
+NODE TREE   (node.childs[] + node.config.parent)   ← source of truth
+    │
+    │  rebuild_tree_from_parents() ← triggered by flag_reparent
+    ▼
+NODE LIST   (engine.dom.node_list[])               ← flat, ordered, bus() itera
+    │
+    │  dom() ← triggered by flush_dirty() consuming dirty_queue
+    ▼
+PER-NODE LAYOUT  (node.config.offset_x/y + node.data.width/height)
+    │
+    │  compile() ← called after dom()
+    ▼
+RENDER LIST (engine.dom.render_list[])             ← flat, culled, render loop lê
+```
+
+Cada transformação é lazy e só ocorre quando necessário:
+- **tree → node_list**: quando `flag_relist = true` (node adicionado/removido)
+- **node_list → layout**: quando `dirty_queue` não está vazio
+- **layout → render_list**: após cada `dom()` call
+
+### Referências fortes vs fracas
+
+| Estrutura | Tipo de ref | Limpeza | Motivo |
+|---|---|---|---|
+| `node_list` | forte | manual em `node_del` + `rebuild_list` | precisa iterar todo node vivo |
+| `render_list` | forte (entries pooladas) | overwrite in-place | pool para reduzir GC |
+| `index_uid/id/class` | forte | manual em `node_del` | lookup síncrono |
+| `focus_list` | forte | manual em `node_del` | nav espacial itera todos |
+| `scroll_registry` | **fraca** (key) | auto + manual em `node_del` | slide node pode ser deletado a qualquer momento |
+| `pause_registry`  | forte (uid key) | manual em `node_del` | uid é number, não table — weak não se aplica |
+| `node.childs` | forte | limpo em `node_del` + `rebuild_tree` | árvore autoritativa |
+| `node.config.parent` | forte | limpo em `node_del` | navegação tree-up |
+
+### Docstrings obrigatórias
+
+Todo módulo em `source/engine/browser/` deve abrir com um bloco descrevendo
+qual estrutura de dados manipula e qual sua invariante principal:
+
+```lua
+--! @file dom.lua
+--! @brief Core DOM engine. Owns: node_list, render_list, dirty_queue, index maps.
+--! @details
+--! INVARIANT: node_list[1] is always root.
+--! INVARIANT: All nodes in node_list have config.parent set (except root).
+--! INVARIANT: dirty_queue is empty after flush_dirty() returns.
+
+--! @file scroll.lua
+--! @brief Scroll registry. Owns: scroll_registry (weak-keyed table).
+--! @details
+--! INVARIANT: scroll_registry[node] exists iff node.config.type == 'slide'.
+--! INVARIANT: scroll_registry keys are weak — no need to nil-check after GC.
+
+--! @file navigator.lua
+--! @brief Focus and spatial navigation. Owns: focus_list, focus_current.
+--! @details
+--! INVARIANT: focus_list contains only nodes where config.focusable == true.
+--! INVARIANT: focus_current is always in focus_list, or nil.
+
+--! @file pause.lua
+--! @brief Pause registry. Owns: pause_registry (uid-keyed table).
+--! @details
+--! INVARIANT: pause_registry[uid] exists only for nodes with active pause state.
+--! INVARIANT: is_paused(uid, key) returns false for nodes not in registry.
+--! Used by dom.bus() to skip event dispatch and by compile() to skip render.
+
+--! @file query.lua
+--! @brief Selector API. Reads: index_id, index_class (owned by dom.lua).
+--! @details Does NOT modify any engine state — pure read operations only.
+```
+
+---
+
 ## Architecture
 
 ### File Structure
@@ -14,13 +173,15 @@ The engine powers a JSX transpiler (TypeScript → Lua) where frontend developer
 
 ```
 source/engine/browser/
-├── dom.lua          -- substitui tree.lua: node_begin/add/del/pause/resume, walk, dom(),
+├── dom.lua          -- substitui tree.lua: node_begin/add/del, walk, dom(),
 │                    --   bus(), resize(), rebuild_list/tree, compile(), flush_dirty(),
 │                    --   mark_dirty(), uid_counter, index_uid/id/class, parse_span
 ├── stylesheet.lua   -- extraído + estendido: parse_unit, resolve, stylesheet(),
 │                    --   css_add(), css_del(), css_scroll()
 ├── scroll.lua       -- novo: scroll_registry, scroll_register(), slide_step(),
 │                    --   ensure_visible()
+├── pause.lua        -- novo: pause_registry, node_pause(), node_resume(), is_paused()
+│                    --   lido por dom.bus() e compile() para filtrar nodes pausados
 ├── navigator.lua    -- novo: set_focus(), focus_navigate(), focus_navigate_spatial(),
 │                    --   focus_navigate_slide(), find_slide_parent(), find_focus_group(),
 │                    --   is_same_group(), is_descendant(), find_focusable()
@@ -40,8 +201,8 @@ Responsabilidades claras:
 
 Ordem de dependência dentro de browser/ (sem require circular):
 ```
-stylesheet.lua
-      ↑
+stylesheet.lua   pause.lua
+      ↑               ↑
    dom.lua ← scroll.lua ← navigator.lua
       ↑                         ↑
    query.lua ───────────────────┘
@@ -84,12 +245,14 @@ source/engine/core/bind/love/main.lua
 source/engine/api/raw/node.lua
   - local tree = require('source/shared/engine/tree')
   + local dom  = require('source/engine/browser/dom')
-  - tree.node_add / node_del / node_pause / node_resume / bus
-  + dom.node_add  / node_del / node_pause / node_resume / bus
-  - engine.offset_x = node.config.offset_x
-  + engine.offset_x = node.layout.x
-  - engine.offset_y = node.config.offset_y
-  + engine.offset_y = node.layout.y
+  - tree.node_add / node_del / tree.bus
+  + dom.node_add  / dom.node_del / dom.bus
+  + local pause = require('source/engine/browser/pause')
+  - tree.node_pause / tree.node_resume
+  + pause.node_pause / pause.node_resume
+  -- engine.offset_x/y: nome offset_x/offset_y INALTERADO (era assim em tree.lua)
+  engine.offset_x = node.config.offset_x   -- sem mudança
+  engine.offset_y = node.config.offset_y   -- sem mudança
 
 source/engine/api/draw/ui/common.lua
   - local tree = require('source/shared/engine/tree')
@@ -143,57 +306,161 @@ Dependências fluem em uma direção: `jsx` → `ui` → `navigator` + `query` �
 
 ### Node Structure
 
-Each node has three conceptual areas. Current code mixes `data` and `config`. Clarify separation:
+#### Decisões de GC na estrutura
 
-> **draw callback convention:** `draw(self, std)` where `self` is `node.data`. Developers read
-> `self.width` and `self.height` inside draw. Therefore `node.data.width` / `node.data.height`
-> **must remain** as the resolved pixel dimensions after layout. `node.layout` is the engine's
-> internal computed output and should not replace `data.width`/`data.height` as the dev-facing API.
+**`layout = {}` eliminado — evita escrita dupla no dom()**
+
+`draw(self, std)` recebe `node.data` como `self`. Logo `data.width/height` precisam existir.
+Uma tabela `layout{x,y,width,height}` separada seria redundante: `dom()` escreveria width/height
+em dois lugares a cada ciclo. Solução: `offset_x`/`offset_y` ficam direto em `config`
+(nomes já usados pelo engine atual), `data.width`/`data.height` continuam como autoridade.
+
+**Tabelas lazy — evita 600+ alocações desnecessárias por cena**
+
+`style_names` e `style_focus` são `nil` por default e alocados só no primeiro uso.
+Para cenas com 200+ nodes isso elimina centenas de tabelas vazias da heap.
+
+**`dirty` não é flag por node — é uma lista no engine**
+
+Presença em `engine.dom.dirty_queue` = dirty state. Sem campo `dirty` em config.
+Ver §9 para a implementação.
+
+**Callbacks de interação vivem em `node.callbacks`, não em `config`**
+
+O bus já chama `node.callbacks[key](node.data, std, ...)` para todos os eventos.
+`focus`, `unfocus`, `click`, `hover`, `unhover` são eventos como qualquer outro —
+não precisam de campos especiais em `config`. No JSX, **todos os atributos de `<node>`
+que são função** vão para `callbacks`; atributos não-função vão para `data`.
+
+```jsx
+<node
+  draw={(self, std) => { /* render */ }}
+  focus={(self, std) => { /* ganhou foco */ }}
+  unfocus={(self, std) => { /* perdeu foco */ }}
+  click={(self, std) => { /* pressionado (OK/Enter) */ }}
+  hover={(self, std) => { /* cursor entrou (pointer devices) */ }}
+  unhover={(self, std) => { /* cursor saiu */ }}
+  title="meu botão"
+/>
+-- ↑ title é string → vai para node.data.title
+-- ↑ draw/focus/etc são functions → vão para node.callbacks.*
+```
+
+#### Estrutura do node
 
 ```lua
+--! @brief A single DOM node. Created via std.node.load(), registered via std.node.spawn().
+--! @details
+--! LIFECYCLE: load() → spawn() [node_add()] → ... → kill() [node_del()]
+--! INVARIANT: config.css is always a table (allocated in node_add).
+--! INVARIANT: data.width and data.height are always set after first dom() pass.
 node = {
-    data = {},       -- user-defined: draw function, custom attributes, content
-                     -- ALSO holds: data.width, data.height (resolved layout, read by draw callback)
-    config = {       -- engine input: parent, css list, type, id, class, pause state
-        uid = nil,       -- number: internal incremental ID
-        id = nil,        -- string: user-defined ID for queryOne('#id')
-        class = nil,     -- table: list of class names for query('.class')
-        parent = nil,    -- node: parent reference
-        type = nil,      -- string: 'root' | 'grid' | 'slide'
-        css = {},        -- table: list of css transform functions
-        pause_key = {},
-        pause_all = false,
-        focusable = false,
-        on_focus = nil,
-        on_blur = nil,
-        on_press = nil,
-        visible = true,
-        layer = 0,       -- reserved, not implemented yet
-        -- grid/slide specific:
-        cols = nil,
-        rows = nil,
-        dir = nil,       -- 'row' | 'col'
-        scroll_mode = nil, -- 'shift' | 'page'
-        focus_mode = nil,  -- 'wrap' | 'stop' | 'escape'
-        size = 1,        -- span (number for 1D, or {x,y} for 2D in grid)
-        after = 0,
-        offset = 0,
-        -- style state:
-        style_names = {},     -- list of applied style class names
-        style_focus = {},     -- map: style_name → focus variant function
+    --! App metadata (title, version, etc.). Set by loadgame, not touched by browser/.
+    meta = {},
+
+    --! @brief Event callbacks. Bus dispatches: node.callbacks[key](node.data, std, ...).
+    --! @details
+    --! Engine events (dispatched by bus): draw, loop, init, load, resize, exit, rkey
+    --! Interaction events (dispatched by navigator/browser):
+    --!   focus(self,std)   — node gained focus (TV remote / spatial nav)
+    --!   unfocus(self,std) — node lost focus
+    --!   click(self,std)   — OK/Enter pressed while focused
+    --!   hover(self,std)   — pointer entered node bounds (mouse/touch devices)
+    --!   unhover(self,std) — pointer left node bounds
+    --! Presence of focus/unfocus/click/hover implies focusable = true (see node_add).
+    callbacks = {},
+
+    --! @brief Developer-facing data. First arg to all callbacks as `self`.
+    --! @details
+    --! data.width  — resolved pixel width after layout (written by dom(), read by draw)
+    --! data.height — resolved pixel height after layout (written by dom(), read by draw)
+    --! All non-function JSX attributes on <node> land here.
+    data = {},
+
+    --! @brief Engine configuration and computed layout position.
+    config = {
+        -- IDENTIFICATION
+        uid   = nil,  -- number: internal incremental ID, never exposed to dev
+        id    = nil,  -- string: '#id' selector key
+        class = nil,  -- nil | table of strings: '.class' selector keys (lazy alloc)
+
+        -- TREE POSITION
+        parent = nil, -- node | nil: strong ref to parent
+        type   = nil, -- 'root' | 'grid' | 'slide'
+
+        -- LAYOUT INPUT (set by grid/slide component, read by dom())
+        css    = {},  -- {fn, fn, ...}: css transform functions (allocated in node_add)
+        size   = 1,   -- number | string '2x3': span in parent grid
+        after  = 0,   -- gap after this node (in cells)
+        offset = 0,   -- gap before this node (in cells)
+        cols   = nil, -- number: horizontal cell count (grid/slide only)
+        rows   = nil, -- number: vertical cell count (grid/slide only)
+        dir    = nil, -- 'row' | 'col': fill direction
+        scroll_mode = nil, -- 'shift' | 'page' (slide only)
+        focus_mode  = nil, -- 'wrap' | 'stop' | 'escape'
+
+        -- LAYOUT OUTPUT (written by dom(), read by compile() and navigator)
+        offset_x = 0, -- absolute screen X (was cfg.offset_x in tree.lua — name unchanged)
+        offset_y = 0, -- absolute screen Y (was cfg.offset_y in tree.lua — name unchanged)
+        -- data.width / data.height are the output dimensions (see data above)
+        -- NO dirty flag here — dirty state = presence in engine.dom.dirty_queue
+
+        -- PAUSE STATE: não armazenado aqui — vive em engine.dom.pause_registry (pause.lua)
+        -- Verificar: pause.is_paused(engine.dom, node.config.uid, key)
+
+        -- FOCUS BEHAVIOUR (callbacks.focus/unfocus/click are the handlers, not stored here)
+        focusable = false, -- bool: true if node participates in focus navigation
+        visible   = true,  -- bool: false = excluded from render list and spatial nav
+
+        -- STYLE STATE (lazy — nil until first style applied)
+        style_names = nil, -- nil | {string, ...}: applied named stylesheet classes
+        style_focus = nil, -- nil | {[name]=fn}: :focus variant functions by class name
     },
-    layout = {       -- engine output: computed by dom(), read by render
-        x = 0,
-        y = 0,
-        width = 0,
-        height = 0,
-        dirty = false,
-    },
-    childs = nil,    -- table or nil
+
+    --! @brief Child nodes. nil until first child is added (lazy alloc in node_add).
+    childs = nil,
 }
 ```
 
-> **Note**: The separation into `data`/`config`/`layout` is the ideal structure. If keeping backward compatibility is preferred, at minimum move computed position out of `config` — currently `config.offset_x`/`config.offset_y` are output values stored alongside input values.
+#### Regras de alocação lazy
+
+```lua
+-- style_names / style_focus: alocar só no primeiro uso em add_style()
+node.config.style_names = node.config.style_names or {}
+node.config.style_names[#node.config.style_names + 1] = stylesheet_name
+
+if self.stylesheet_func[focus_name] then
+    node.config.style_focus = node.config.style_focus or {}
+    node.config.style_focus[stylesheet_name] = self.stylesheet_func[focus_name]
+end
+
+-- childs: alocar só em node_add quando primeiro filho é inserido
+if not parent.childs then parent.childs = {} end
+```
+
+#### Referências de layout em código
+
+```lua
+-- dom() escreve (um único lugar, sem redundância):
+cfg.offset_x = cx    -- posição
+cfg.offset_y = cy
+dat.width    = w     -- dimensões (lidas pelo draw callback via self.width)
+dat.height   = h
+
+-- engine bus (node.lua) — nome offset_x/y INALTERADO em relação ao tree.lua atual:
+engine.offset_x = node.config.offset_x
+engine.offset_y = node.config.offset_y
+
+-- compile() render list:
+entry.x = cfg.offset_x
+entry.y = cfg.offset_y
+entry.w = node.data.width
+entry.h = node.data.height
+
+-- spatial navigation — lê de config (posição) e data (dimensão):
+local px = candidate.config.offset_x + candidate.data.width / 2
+local py = candidate.config.offset_y + candidate.data.height / 2
+```
 
 ---
 
@@ -396,30 +663,34 @@ end
 local function set_focus(self, node)
     local old = self.focus_current
     if old == node then return end
-    
-    -- remove :focus styles from old
+
+    -- remove :focus styles from old node + fire unfocus callback
     if old then
-        for name, focus_func in pairs(old.config.style_focus) do
+        for name, focus_func in pairs(old.config.style_focus or {}) do
             css_del(self, focus_func, old)
             css_add(self, self.stylesheet_func[name], old)
         end
-        if old.config.on_blur then old.config.on_blur() end
+        if old.callbacks.unfocus then
+            old.callbacks.unfocus(old.data, std)
+        end
     end
-    
+
     self.focus_current = node
-    
-    -- apply :focus styles to new
-    for name, focus_func in pairs(node.config.style_focus) do
+
+    -- apply :focus styles to new node + fire focus callback
+    for name, focus_func in pairs(node.config.style_focus or {}) do
         css_del(self, self.stylesheet_func[name], node)
         css_add(self, focus_func, node)
     end
-    if node.config.on_focus then node.config.on_focus() end
-    
+    if node.callbacks.focus then
+        node.callbacks.focus(node.data, std)
+    end
+
     -- slide follow
     local slide = find_slide_parent(self, node)
     if slide then ensure_visible(self, slide, node) end
-    
-    self.flag_reposition = true
+
+    mark_dirty(self, node)
 end
 ```
 
@@ -481,43 +752,57 @@ end
 
 ### 9. Dirty Tracking Granular
 
-Replace global `flag_reposition` with per-node dirty marking. Only recompute layout for dirty subtrees.
+Replace global `flag_reposition` with a dirty queue at engine level. **Sem flag por node** —
+presença em `dirty_queue` é o dirty state. Só recomputa layout para subárvores afetadas.
 
 ```lua
---- Mark a node and its ancestors as dirty
+--! @brief Enqueue a node for layout recomputation.
+--! @details No per-node dirty flag. Duplicates in queue are handled by flush_dirty.
+--!   Callers: css_add, css_del, stylesheet (on options change), node_add,
+--!            ensure_visible, resize (passes self.root).
+--- @param self engine
 --- @param node table
-local function mark_dirty(node)
-    while node do
-        if node.layout.dirty then break end  -- ancestors already marked
-        node.layout.dirty = true
-        node = node.config.parent
-    end
+local function mark_dirty(self, node)
+    self.dirty_queue[#self.dirty_queue + 1] = node
 end
 
---- Flush dirty nodes: recompute only dirty subtrees
+--! @brief Process all pending dirty nodes.
+--! @details Deduplicates via a temporary uid set built during iteration.
+--!   If root is in the queue, performs a full recompute and exits early.
+--!   Clears queue by reusing the table (avoids allocating a new one each flush).
 --- @param self engine
 local function flush_dirty(self)
-    if self.root.layout.dirty then
-        -- root dirty = full recompute (same as before)
-        dom(self.root, 0, 0, self.width, self.height)
-        walk(self.root, function(n) n.layout.dirty = false end)
-    else
-        -- partial: find top-level dirty nodes and recompute subtrees
-        for i = 1, #self.dirty_queue do
-            local node = self.dirty_queue[i]
-            if node.layout.dirty then
-                dom(node, node.layout.x, node.layout.y, node.layout.width, node.layout.height)
-                walk(node, function(n) n.layout.dirty = false end)
-            end
+    local queue = self.dirty_queue
+    if #queue == 0 then return end
+
+    -- fast path: root in queue = full recompute
+    for i = 1, #queue do
+        if queue[i] == self.root then
+            dom(self.root, 0, 0, self.width, self.height)
+            for j = #queue, 1, -1 do queue[j] = nil end  -- reuse table
+            return
         end
     end
-    self.dirty_queue = {}
+
+    -- partial: skip nodes whose ancestor was already recomputed
+    local processed = {}  -- uid → true (temporary, GC'd after flush)
+    for i = 1, #queue do
+        local node = queue[i]
+        local uid  = node.config.uid
+        if not processed[uid] then
+            dom(node, node.config.offset_x, node.config.offset_y,
+                node.data.width, node.data.height)
+            walk(node, function(n) processed[n.config.uid] = true end)
+        end
+    end
+    for i = #queue, 1, -1 do queue[i] = nil end  -- reuse table
 end
 ```
 
-Use `mark_dirty(node)` instead of `self.flag_reposition = true` in: `css_add`, `css_del`, `stylesheet` (when options change), `node_add`, `resize`.
+Use `mark_dirty(self, node)` instead of `self.flag_reposition = true` in:
+`css_add`, `css_del`, `stylesheet` (when options change), `node_add`, `ensure_visible`.
 
-`resize` still marks root dirty (full recompute).
+`resize` calls `mark_dirty(self, self.root)` → triggers full recompute.
 
 ### 10. Render List (compile)
 
@@ -538,11 +823,11 @@ local function compile(self)
         
         -- culling: skip nodes outside screen bounds
         local visible = cfg.visible ~= false
-            and layout.x + layout.width > 0
-            and layout.x < sw
-            and layout.y + layout.height > 0
-            and layout.y < sh
-        
+            and cfg.offset_x + node.data.width > 0
+            and cfg.offset_x < sw
+            and cfg.offset_y + node.data.height > 0
+            and cfg.offset_y < sh
+
         if visible then
             index = index + 1
             local entry = list[index]
@@ -551,10 +836,10 @@ local function compile(self)
                 list[index] = entry
             end
             entry.uid = cfg.uid
-            entry.x = layout.x
-            entry.y = layout.y
-            entry.w = layout.width
-            entry.h = layout.height
+            entry.x   = cfg.offset_x
+            entry.y   = cfg.offset_y
+            entry.w   = node.data.width
+            entry.h   = node.data.height
             entry.node = node
         end
     end
@@ -737,11 +1022,14 @@ elseif element == 'slide' then
 
 ### 14. Focusable Implicit
 
-Nodes with `onPress`, `onFocus`, or `onBlur` are automatically focusable. Explicit `focusable={false}` overrides.
+Nodes com `callbacks.focus`, `callbacks.unfocus`, `callbacks.click`, ou `callbacks.hover` são automaticamente focusable. `focusable={false}` explícito no JSX sobrescreve.
 
 ```lua
 -- in node_add:
-local has_handler = options.onFocus or options.onBlur or options.onPress
+-- callbacks.focus / unfocus / click / hover imply focusable = true
+-- explicit focusable=false in JSX overrides this
+local has_handler = node.callbacks.focus   or node.callbacks.unfocus
+                 or node.callbacks.click   or node.callbacks.hover
 local focusable = options.focusable
 if focusable == nil then
     focusable = has_handler ~= nil
@@ -749,14 +1037,13 @@ end
 
 if focusable then
     node.config.focusable = true
-    node.config.on_focus = options.onFocus
-    node.config.on_blur = options.onBlur
-    node.config.on_press = options.onPress
     self.focus_list[#self.focus_list + 1] = node
-    
+
     if not self.focus_current then
         self.focus_current = node
-        if node.config.on_focus then node.config.on_focus() end
+        if node.callbacks.focus then
+            node.callbacks.focus(node.data, std)
+        end
     end
 end
 ```
@@ -777,20 +1064,20 @@ For nodes NOT inside a slide, use position-based scoring to find the best candid
 --- @param self engine
 --- @param direction string 'up'|'down'|'left'|'right'
 local function focus_navigate_spatial(self, current, direction)
-    local cx = current.layout.x + current.layout.width / 2
-    local cy = current.layout.y + current.layout.height / 2
-    
+    local cx = current.config.offset_x + current.data.width / 2
+    local cy = current.config.offset_y + current.data.height / 2
+
     local best_node = nil
     local best_score = math.huge
-    
+
     for i = 1, #self.focus_list do
         local candidate = self.focus_list[i]
-        if candidate ~= current 
+        if candidate ~= current
            and candidate.config.visible ~= false
            and candidate.config.focusable then
-            
-            local px = candidate.layout.x + candidate.layout.width / 2
-            local py = candidate.layout.y + candidate.layout.height / 2
+
+            local px = candidate.config.offset_x + candidate.data.width / 2
+            local py = candidate.config.offset_y + candidate.data.height / 2
             local dx, dy = px - cx, py - cy
             
             local valid, score = false, 0
@@ -1006,12 +1293,13 @@ function std.ui.focus(target)
 end
 ```
 
-**Bus context** — during bus iteration, `self.current_node` is set to the node being processed, so `std.ui.focus()` with no args knows who called it:
+**Bus context** — during bus iteration, `self.current_node` is set to the node being processed,
+so `std.ui.focus()` with no args knows who called it:
 
 ```lua
--- in bus:
+-- in bus() (dom.lua):
 self.current_node = node
-handler_func(node)
+node.callbacks[key](node.data, std, a, b, c, d, e, f)
 self.current_node = nil
 ```
 
@@ -1020,9 +1308,9 @@ self.current_node = nil
 ```lua
 function std.ui.press()
     local node = self.focus_current
-    if node and node.config.on_press then
+    if node and node.callbacks.click then
         self.current_node = node
-        node.config.on_press()
+        node.callbacks.click(node.data, std)
         self.current_node = nil
     end
 end
@@ -1182,9 +1470,104 @@ local function create_h(std, engine)
 end
 ```
 
-### 26. node_pause / node_resume (keep existing)
+### 26. pause.lua — Pause Registry
 
-Keep current `node_pause` and `node_resume` implementation. These use `walk()` to propagate pause state to children. No changes needed for v1.
+Estado de pausa centralizado em `source/engine/browser/pause.lua`. Nenhum campo
+de pausa vive em `node.config` — toda consulta passa por `pause.is_paused()`.
+
+```lua
+--! @file pause.lua
+--! @brief Central pause registry. Owns engine.dom.pause_registry.
+--! @details
+--! node_pause() and node_resume() walk the subtree (propagate to children).
+--! is_paused() is called by bus() for event dispatch and compile() for render.
+--! pause_registry entries are created lazily and removed in node_del().
+
+--- @param self engine
+--- @param node_root table root of subtree to pause
+--- @param key string|nil  nil = pause all events; string = pause specific event
+local function node_pause(self, node_root, key)
+    walk(node_root, function(node)
+        local uid = node.config.uid
+        local entry = self.pause_registry[uid]
+        if not entry then
+            entry = { all = false, keys = nil }
+            self.pause_registry[uid] = entry
+        end
+        if key then
+            entry.keys = entry.keys or {}
+            entry.keys[key] = true
+        else
+            entry.all  = true
+            entry.keys = nil  -- all paused, key overrides irrelevant
+        end
+    end)
+end
+
+--- @param self engine
+--- @param node_root table
+--- @param key string|nil  nil = resume all; string = resume specific key
+local function node_resume(self, node_root, key)
+    local parent_uid = node_root.config.parent
+                       and node_root.config.parent.config.uid
+    local parent_all = parent_uid and self.pause_registry[parent_uid]
+                       and self.pause_registry[parent_uid].all
+    if parent_all and not key then return end  -- parent still paused, ignore
+
+    walk(node_root, function(node)
+        local uid   = node.config.uid
+        local entry = self.pause_registry[uid]
+        if not entry then return end
+        if key then
+            entry.keys = entry.keys or {}
+            entry.keys[key] = false  -- false = explicit resume (overrides all)
+        else
+            self.pause_registry[uid] = nil  -- fully resumed: remove entry
+        end
+    end)
+end
+
+--- @param self engine
+--- @param uid number  node.config.uid
+--- @param key string  event key being dispatched
+--- @return boolean true if node should be skipped
+local function is_paused(self, uid, key)
+    local entry = self.pause_registry[uid]
+    if not entry then return false end
+    -- explicit key resume overrides all-pause
+    if entry.keys and entry.keys[key] == false then return false end
+    if entry.keys and entry.keys[key] == true  then return true  end
+    return entry.all
+end
+```
+
+**Uso em `bus()` (dom.lua):**
+```lua
+-- substituir o bloco de ignore atual:
+local ignore = index ~= 1 and pause.is_paused(self, node.config.uid, key)
+if not ignore then
+    self.current_node = node
+    node.callbacks[key](node.data, std, a, b, c, d, e, f)
+    self.current_node = nil
+end
+```
+
+**Uso em `compile()` (dom.lua):**
+```lua
+-- nodes com pause all=true são excluídos do render list
+local paused_all = pause.is_paused(self, cfg.uid, '*')  -- '*' = all-pause check
+local visible = cfg.visible ~= false and not paused_all
+    and cfg.offset_x + node.data.width > 0  -- culling
+    ...
+```
+
+**Limpeza em `node_del()` (dom.lua):**
+```lua
+walk(node_root, function(node)
+    self.pause_registry[node.config.uid] = nil  -- remove pause entry if any
+    ...
+end)
+```
 
 ---
 
@@ -1297,29 +1680,47 @@ declare namespace JSX {
       & { after?: number }
       & { style?: string }
     ) & { children: JSX.Element };
-    node: (
-      { children?: JSX.Element | Array<JSX.Element> }
-      | { [key: string]: Function }
-    ) & {
-      id?: string,
-      class?: string | string[],
-      focusable?: boolean,
-      onFocus?: () => void,
-      onBlur?: () => void,
-      onPress?: () => void,
-      draw?: (w: number, h: number) => void,
-    };
-    style: ({
-      class?: `${string}${FocusState}`,
-      width?: CSSUnit,
-      height?: CSSUnit,
-      left?: CSSUnit,
-      right?: CSSUnit,
-      top?: CSSUnit,
-      bottom?: CSSUnit,
-      margin?: CSSUnit,
-      children?: JSX.Element,
-    });
+    // <node> segue o padrão estrito: ou children, ou tudo-função.
+    // Nunca misture atributos não-função com callbacks no mesmo node.
+    // Atributos não-função (dados customizados) vão em node.data via loadgame,
+    // não como atributos JSX diretos.
+    node:
+      // Modo children: node container com filhos JSX
+      | { children?: JSX.Element | Array<JSX.Element> }
+      // Modo callback: todos os atributos são funções → node.callbacks.*
+      | {
+          // Engine callbacks
+          draw?:    (self: object, std: object) => void,
+          loop?:    (self: object, std: object) => void,
+          init?:    (self: object, std: object) => void,
+          resize?:  (self: object, std: object) => void,
+          // Interaction callbacks (any of these → focusable = true implicitly)
+          focus?:   (self: object, std: object) => void,
+          unfocus?: (self: object, std: object) => void,
+          click?:   (self: object, std: object) => void,
+          hover?:   (self: object, std: object) => void,
+          unhover?: (self: object, std: object) => void,
+          // Custom callbacks (any additional function attribute)
+          [key: string]: Function,
+        };
+    // <style> segue o padrão estrito: ou named (com class), ou anonymous (tudo CSSUnit).
+    style:
+      // Modo named: define/atualiza uma classe de stylesheet
+      | { class: `${string}${FocusState}`, children?: never }
+      // Modo named com child: aplica style nomeado a um node filho
+      | { class: `${string}${FocusState}`, children: JSX.Element }
+      // Modo anonymous: todos os atributos são CSSUnit → implicit name por chaves ordenadas
+      | {
+          width?:  CSSUnit,
+          height?: CSSUnit,
+          left?:   CSSUnit,
+          right?:  CSSUnit,
+          top?:    CSSUnit,
+          bottom?: CSSUnit,
+          margin?: CSSUnit,
+          children: JSX.Element,   // obrigatório no modo anonymous — sem child não faz sentido
+          [key: string]: CSSUnit | JSX.Element,
+        };
   }
   interface ElementChildrenAttribute {
     children: {};
@@ -1334,20 +1735,21 @@ declare namespace JSX {
 Suggested order (each step builds on the previous):
 
 1. **Bugfixes** — fix `has_right` (§1); fix `cells()` ROWSxCOLS (§2)
-2. **dir='row'|'col'** — migrate from 0/1 to strings; update auto-detect in `grid.lua` (§11)
-3. **Units** — `parse_unit`, `resolve`, update `stylesheet()` with alphabetical key closure (§3, §4, §5)
-4. **Anonymous style + implicit name** — update `h()` factory for `<style>` without class (§7)
-5. **span 2D** — `parse_span`, update grid layout in `dom()` (§12)
-6. **`<slide>` rewrite** — new `slide.lua` (mirrors grid API), scroll registry, step calc, offset in DOM (§13)
-7. **Render list** — `compile()` with culling in `tree.lua` (§10)
-8. **Dirty tracking** — `mark_dirty`, `flush_dirty`, replace `flag_reposition` (§9)
-9. **UID + ID/class indexes** — `uid_counter`, `index_id`, `index_class` in `node_begin`/`node_add`/`node_del` (§1 features, §2 features)
-10. **Focus system** — focusable implicit in `node_add`; spatial nav; index nav inside slide (§14, §16, §17)
-11. **Focus modes** — wrap/stop/escape (§15)
-12. **Slide follows focus** — `ensure_visible` (§18)
-13. **Style :focus** — swap on focus change in `set_focus` (§6)
-14. **Query API** — queryOne, query, wrap with chainable methods (§23, §24)
-15. **Browser UI** — criar `source/engine/browser/ui.lua` e `browser/jsx.lua`; instalar tudo em `std.ui.*` e `std.h` (§19)
-16. **css_scroll** — render-time offset for slide (§8)
-17. **TypeScript typings** — update `npm/gly-jsx/index.d.ts` with new types (§JSX Typings)
-18. **h() closure** — optimization pass (§25)
+2. **dir='row'|'col'** — migrate from 0/1 to strings; update auto-detect em `grid.lua` (§11)
+3. **pause.lua** — `pause_registry`, `node_pause`, `node_resume`, `is_paused`; atualizar `bus()` e `compile()` (§26)
+4. **Units** — `parse_unit`, `resolve`, update `stylesheet()` com chave alfabética (§3, §4, §5)
+5. **Anonymous style + implicit name** — update `h()` factory para `<style>` sem class (§7)
+6. **span 2D** — `parse_span`, update grid layout em `dom()` (§12)
+7. **`<slide>` rewrite** — novo `slide.lua` (espelha API de grid), scroll registry, step calc, offset no DOM (§13)
+8. **Render list** — `compile()` com culling em `dom.lua` (§10)
+9. **Dirty tracking** — `mark_dirty`, `flush_dirty`, substituir `flag_reposition` (§9)
+10. **UID + ID/class indexes** — `uid_counter`, `index_id`, `index_class` em `node_begin`/`node_add`/`node_del` (§1 feat, §2 feat)
+11. **Focus system** — focusable implicit em `node_add`; nav espacial; nav índice dentro de slide (§14, §16, §17)
+12. **Focus modes** — wrap/stop/escape (§15)
+13. **Slide follows focus** — `ensure_visible` (§18)
+14. **Style :focus** — swap em `set_focus` (§6)
+15. **Query API** — queryOne, query, wrap com métodos encadeáveis (§23, §24)
+16. **Browser UI** — criar `browser/ui.lua` e `browser/jsx.lua`; instalar `std.ui.*` e `std.h` (§19)
+17. **css_scroll** — offset em render time para slide (§8)
+18. **TypeScript typings** — atualizar `npm/gly-jsx/index.d.ts` (§JSX Typings)
+19. **h() closure** — optimization pass (§25)
