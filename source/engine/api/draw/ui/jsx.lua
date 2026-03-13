@@ -34,8 +34,8 @@ local function h(std, engine, element, attribute, childs)
             if c.node then
                 local is_invalid = (c.span or 1) > 1 or c.offset or c.after
                 if is_invalid then error('[error] JSX forbidden attributes in \'node\' child') end
-                if c.style then add_style(std, c.node, c.style) end
                 std.node.spawn(c.node, parent)
+                if c.style then add_style(std, c.node, c.style) end
             else
                 std.node.spawn(c, parent)
             end
@@ -57,6 +57,7 @@ local function h(std, engine, element, attribute, childs)
         end
         grid.span = attribute.span
         grid.after = attribute.after
+        grid.style = attribute.style
         grid.offset = attribute.offset
         return grid
     elseif element == 'item' then
