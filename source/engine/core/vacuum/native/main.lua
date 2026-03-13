@@ -1,7 +1,7 @@
 local version = require('source/version')
 local util_decorator = require('source/shared/functional/decorator')
 --
-local tree = require('source/shared/engine/tree')
+local dom = require('source/engine/browser/dom')
 local loadcore = require('source/shared/engine/loadcore')
 local loadgame = require('source/shared/engine/loadgame')
 --
@@ -229,7 +229,7 @@ function native_callback_init(width, height, game_lua)
 
     std.app.title(application.meta.title..' - '..application.meta.version)
 
-    engine.dom = tree.node_begin(application, std.app.width, std.app.height)
+    engine.dom = dom.node_begin(application, std.app.width, std.app.height)
     engine.root, engine.current = application, application
 
     std.bus.emit_next('load')

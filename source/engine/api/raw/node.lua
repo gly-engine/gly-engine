@@ -1,4 +1,5 @@
-local tree = require('source/shared/engine/tree')
+local dom      = require('source/engine/browser/dom')
+local pause    = require('source/engine/browser/pause')
 local loadgame = require('source/shared/engine/loadgame')
 local node_default = require('source/shared/var/object/node')
 
@@ -43,8 +44,8 @@ local node_default = require('source/shared/var/object/node')
 --! artifact node_1 as "Node 1"
 --! artifact node_2 as "Node 2"
 --! artifact node_3 as "Node 3"
---! 
---! process event_bus as "Event Bus" 
+--!
+--! process event_bus as "Event Bus"
 --! node_1 .> node_2: spawn
 --! event_bus --> node_2
 --! event_bus <-- node_3
@@ -63,7 +64,7 @@ local node_default = require('source/shared/var/object/node')
 --! process event_bus as "Event Bus"
 --! artifact node_1 as "Node 1"
 --! artifact node_2 as "Node 2"
---! 
+--!
 --! love2d -> event_bus: event
 --! event_bus --> node_2: event
 --! node_1 .> node_2:spawn
@@ -103,7 +104,7 @@ end
 --! @endcode
 local function spawn(engine)
     return function(application, parent)
-        tree.node_add(engine.dom, application, {parent=parent or engine.current})
+        dom.node_add(engine.dom, application, {parent=parent or engine.current})
         return application
     end
 end
@@ -118,7 +119,7 @@ end
 --! @endcode
 local function kill(engine)
     return function(application)
-        tree.node_del(engine.dom, application)
+        dom.node_del(engine.dom, application)
     end
 end
 
@@ -131,9 +132,9 @@ end
 --!     std.node.pause(minigame, 'loop')
 --! end
 --! @endcode
-local function pause(engine)
+local function node_pause(engine)
     return function(application, key)
-        tree.node_pause(engine.dom, application, key)
+        pause.node_pause(engine.dom, application, key)
     end
 end
 
@@ -146,9 +147,9 @@ end
 --!     std.node.resume(minigame, 'loop')
 --! end
 --! @endcode
-local function resume(engine)
+local function node_resume(engine)
     return function(application, key)
-        tree.node_resume(engine.dom, application, key)
+        pause.node_resume(engine.dom, application, key)
     end
 end
 --! @}
@@ -157,18 +158,18 @@ end
 local function install(std, engine)
     std.node = std.node or {}
 
-    std.node.kill = kill(engine)
-    std.node.pause = pause(engine)
-    std.node.spawn = spawn(engine)
-    std.node.resume = resume(engine)
-    std.node.load = load
+    std.node.kill   = kill(engine)
+    std.node.pause  = node_pause(engine)
+    std.node.spawn  = spawn(engine)
+    std.node.resume = node_resume(engine)
+    std.node.load   = load
 
     std.node.emit = function(application, key, a, b, c, d, e, f)
         return emit(std, application, key, a, b, c, e, f)
     end
 
     std.bus.listen_all(function(key, a, b, c, d, e, f)
-        tree.bus(engine.dom, key, function(node)
+        dom.bus(engine.dom, key, function(node)
             engine.current = node
             engine.offset_x = node.config.offset_x
             engine.offset_y = node.config.offset_y
@@ -178,8 +179,9 @@ local function install(std, engine)
         end)
     end)
 end
+
 local P = {
-    install=install
+    install = install
 }
 
 return P
