@@ -8,31 +8,152 @@ The engine powers a JSX transpiler (TypeScript → Lua) where frontend developer
 
 ## Architecture
 
-### File Structure (suggested)
+### File Structure
 
-Files MAY be split into modules or kept as a single file — implementer's discretion. If split, suggested boundaries:
+#### CREATE — `source/engine/browser/` (todos novos)
 
 ```
-source/browser/
-├── dom.lua          -- core: node lifecycle, tree, layout calc, render list
-├── stylesheet.lua   -- css: parse_unit, resolve, stylesheet, css_add/del
-├── scroll.lua       -- slide/scroll registry, offset calc, virtualisation
-├── navigator.lua    -- focus system, spatial navigation, index navigation
-├── query.lua        -- queryOne, query, wrap with chainable methods
-└── bus.lua          -- event dispatch, dirty flush, pause/resume
+source/engine/browser/
+├── dom.lua          -- substitui tree.lua: node_begin/add/del/pause/resume, walk, dom(),
+│                    --   bus(), resize(), rebuild_list/tree, compile(), flush_dirty(),
+│                    --   mark_dirty(), uid_counter, index_uid/id/class, parse_span
+├── stylesheet.lua   -- extraído + estendido: parse_unit, resolve, stylesheet(),
+│                    --   css_add(), css_del(), css_scroll()
+├── scroll.lua       -- novo: scroll_registry, scroll_register(), slide_step(),
+│                    --   ensure_visible()
+├── navigator.lua    -- novo: set_focus(), focus_navigate(), focus_navigate_spatial(),
+│                    --   focus_navigate_slide(), find_slide_parent(), find_focus_group(),
+│                    --   is_same_group(), is_descendant(), find_focusable()
+├── query.lua        -- novo: queryOne(), query(), wrap() (métodos encadeáveis)
+├── jsx.lua          -- MOVIDO de ui/jsx.lua + reescrito como closure via create_h();
+│                    --   instala std.h; pode utilizar ui.lua para elementos grid/slide/style
+└── ui.lua           -- novo: install(std, engine) instala std.ui.*:
+                     --   std.ui.grid, slide, style      ← componentes de layout
+                     --   std.ui.focus, press, isFocused ← navegação/foco
+                     --   std.ui.queryOne, query         ← seletores
 ```
 
-If single file: organize with section comments, ~800-900 lines estimated.
+Responsabilidades claras:
+- `ui.lua`  → resolve `std.ui.*()` (todos os métodos do namespace ui)
+- `jsx.lua` → resolve `std.h()` (factory JSX); pode requerer `ui.lua` para delegar
+             elementos como `grid`, `slide`, `style` sem duplicar lógica
 
-Dependencies flow one direction: `bus` → `dom` → `scroll` + `navigator` + `query` → `stylesheet`. Avoid circular requires.
+Ordem de dependência dentro de browser/ (sem require circular):
+```
+stylesheet.lua
+      ↑
+   dom.lua ← scroll.lua ← navigator.lua
+      ↑                         ↑
+   query.lua ───────────────────┘
+      ↑
+   ui.lua
+      ↑
+   jsx.lua
+```
+
+#### DELETE — código morto
+
+```
+source/shared/engine/tree.lua        ← DELETAR após browser/dom.lua +
+                                       browser/stylesheet.lua absorverem toda a lógica.
+                                       Requerido por 6 arquivos (ver UPDATE abaixo).
+
+source/engine/api/draw/ui/jsx.lua    ← DELETAR após mover lógica para browser/jsx.lua.
+```
+
+#### REWRITE — mesmo caminho, conteúdo completamente novo
+
+```
+source/engine/api/draw/ui/slide.lua  -- novo std.ui.slide() espelhando a API de grid.lua,
+                                     -- integra com browser/scroll + browser/dom.
+                                     -- Remove: :next(), :back(), :apply(), classlist_selected.
+```
+
+#### UPDATE — mudanças de require + migrações de lógica
+
+```
+source/engine/core/vacuum/native/main.lua
+  - local tree = require('source/shared/engine/tree')
+  + local dom  = require('source/engine/browser/dom')
+  - engine.dom = tree.node_begin(...)
+  + engine.dom = dom.node_begin(...)
+
+source/engine/core/bind/love/main.lua
+  mesma mudança acima
+
+source/engine/api/raw/node.lua
+  - local tree = require('source/shared/engine/tree')
+  + local dom  = require('source/engine/browser/dom')
+  - tree.node_add / node_del / node_pause / node_resume / bus
+  + dom.node_add  / node_del / node_pause / node_resume / bus
+  - engine.offset_x = node.config.offset_x
+  + engine.offset_x = node.layout.x
+  - engine.offset_y = node.config.offset_y
+  + engine.offset_y = node.layout.y
+
+source/engine/api/draw/ui/common.lua
+  - local tree = require('source/shared/engine/tree')
+  + local dom  = require('source/engine/browser/dom')
+  - tree.node_add → dom.node_add
+
+source/engine/api/draw/ui/grid.lua
+  - local tree = require('source/shared/engine/tree')
+  + local dom  = require('source/engine/browser/dom')
+  - tree.node_add → dom.node_add
+  + migrar dir auto-detect de 0/1 para 'row'/'col' (§11)
+
+source/engine/api/draw/ui/style.lua
+  - local tree = require('source/shared/engine/tree')
+  + local ss   = require('source/engine/browser/stylesheet')
+  - tree.css_add / tree.css_del / tree.stylesheet
+  + ss.css_add   / ss.css_del   / ss.stylesheet
+
+source/engine/api/draw/ui.lua          ← passa a ser apenas o ponto de entrada
+  - local ui_jsx   = require('source/engine/api/draw/ui/jsx')
+  - local ui_grid  = require('source/engine/api/draw/ui/grid')
+  - local ui_slide = require('source/engine/api/draw/ui/slide')
+  - local ui_style = require('source/engine/api/draw/ui/style')
+  + local browser_ui  = require('source/engine/browser/ui')
+  + local browser_jsx = require('source/engine/browser/jsx')
+  dentro de install():
+  - (toda a instalação manual de std.h, std.ui.grid, etc.)
+  + browser_ui.install(std, engine)    -- instala std.ui.*
+  + browser_jsx.install(std, engine)   -- instala std.h
+```
+
+#### UNCHANGED — sem modificações
+
+```
+source/shared/engine/loadcore.lua
+source/shared/engine/loadgame.lua
+source/engine/api/draw/ui/common.lua   (apenas mudança de require acima)
+source/engine/api/raw/bus.lua
+source/engine/api/raw/memory.lua
+```
+
+`engine.dom` é inicializado em `source/engine/core/vacuum/native/main.lua`:
+```lua
+-- atual:
+engine.dom = tree.node_begin(application, std.app.width, std.app.height)
+-- após migração:
+engine.dom = dom.node_begin(application, std.app.width, std.app.height)
+```
+
+Dependências fluem em uma direção: `jsx` → `ui` → `navigator` + `query` → `dom` → `stylesheet`. Sem circular requires.
 
 ### Node Structure
 
 Each node has three conceptual areas. Current code mixes `data` and `config`. Clarify separation:
 
+> **draw callback convention:** `draw(self, std)` where `self` is `node.data`. Developers read
+> `self.width` and `self.height` inside draw. Therefore `node.data.width` / `node.data.height`
+> **must remain** as the resolved pixel dimensions after layout. `node.layout` is the engine's
+> internal computed output and should not replace `data.width`/`data.height` as the dev-facing API.
+
 ```lua
 node = {
     data = {},       -- user-defined: draw function, custom attributes, content
+                     -- ALSO holds: data.width, data.height (resolved layout, read by draw callback)
     config = {       -- engine input: parent, css list, type, id, class, pause state
         uid = nil,       -- number: internal incremental ID
         id = nil,        -- string: user-defined ID for queryOne('#id')
@@ -47,7 +168,7 @@ node = {
         on_blur = nil,
         on_press = nil,
         visible = true,
-        layer = 0,
+        layer = 0,       -- reserved, not implemented yet
         -- grid/slide specific:
         cols = nil,
         rows = nil,
@@ -92,32 +213,38 @@ local css_right, has_right = css.right or 0, css.right ~= nil
 
 ### BUG 2: `cells()` has cols/rows inverted
 
+**Class string convention: `ROWSxCOLS`** — the first number is rows (vertical count), the second is cols (horizontal count).
+Examples: `'3x2'` = 3 rows, 2 columns. `'1x5'` = 1 row, 5 columns. `'5x1'` = 5 rows, 1 column.
+
+The parser in `grid.lua` is correct — first capture → `node.config.rows`, second → `node.config.cols`.
+The bug is in `cells()` which then uses them with width/height swapped:
+
 ```lua
--- BEFORE (confusing/wrong):
+-- BEFORE (bug):
 local function cells(node)
     local cfg = node.config
     local dat = node.data
     if cfg.type == 'grid' then
         local cols, rows = cfg.cols, cfg.rows
-        local w = dat.width / rows    -- divides width by rows??
-        local h = dat.height / cols   -- divides height by cols??
+        local w = dat.width / rows    -- wrong: divides width by rows
+        local h = dat.height / cols   -- wrong: divides height by cols
         return w, h
     end
     return dat.width, dat.height
 end
 
--- AFTER (clear):
--- cols = number of columns (horizontal divisions)
--- rows = number of rows (vertical divisions)
+-- AFTER (correct):
+-- rows = number of rows (vertical divisions) → divides height
+-- cols = number of columns (horizontal divisions) → divides width
 local function cells(node)
     local cfg = node.config
-    local layout = node.layout
+    local dat = node.data
     if cfg.type == 'grid' or cfg.type == 'slide' then
-        local w = layout.width / cfg.cols
-        local h = layout.height / cfg.rows
+        local w = dat.width / cfg.cols
+        local h = dat.height / cfg.rows
         return w, h
     end
-    return layout.width, layout.height
+    return dat.width, dat.height
 end
 ```
 
@@ -211,6 +338,12 @@ end
 
 The `stylesheet()` function parses units once on creation, generates a closure that resolves `%` at layout time. The closure signature remains `function(x, y, w, h) → x, y, w, h`.
 
+**Closure identity / implicit names:** Each unique set of options produces a distinct closure. The closure key (used internally) is the options table serialized with keys in **alphabetical order**:
+```lua
+-- options {width=500, height=100, top=0}  →  key = "height=100top=0width=500"
+```
+This same key is used for anonymous style names in JSX (see §7). When `stylesheet()` is called with the same options, it MUST return the same closure (lookup by key). When called with different options, a new closure is created.
+
 Anchor logic (already correct in original, just fix the bug):
 - `width` set + `left` + `right` → center between margins
 - `width` set + `left` only → anchor left
@@ -300,19 +433,35 @@ end
 </style>
 ```
 
-In the `h()` factory, when `element == 'style'` and `childs` has content:
+**Implicit name generation:** When `class` is absent, serialize the attributes in **alphabetical key order** to produce a stable implicit name:
+```
+{width='50%', height=200}  →  "height=200width=50%"
+```
+This implicit name is used as the stylesheet key, so the same anonymous style block always reuses the same closure.
+
+In the `h()` factory, when `element == 'style'`:
 ```lua
 elseif element == 'style' then
+    local name = attribute.class
+    if not name then
+        -- build implicit name from sorted keys
+        local keys = {}
+        for k in pairs(attribute) do keys[#keys+1] = k end
+        table.sort(keys)
+        local parts = {}
+        for _, k in ipairs(keys) do parts[#parts+1] = k..'='..tostring(attribute[k]) end
+        name = table.concat(parts)
+    end
     if childs and #childs > 0 then
-        -- anonymous: build css function, apply to child
-        local func = build_css(attribute)
+        -- anonymous: register and apply directly to child node
+        local style_obj = std.ui.style(name, attribute)
         local child = childs[1]
         local target = child.node or child
-        css_add(self, func, target)
+        style_obj:add(target)
         return child
     else
-        -- named: register in stylesheet dict
-        return std.ui.style(attribute.class, attribute)
+        -- named: register in stylesheet dict only
+        return std.ui.style(name, attribute)
     end
 ```
 
@@ -426,7 +575,18 @@ Replace numeric `dir` (0/1) with string names.
 - `'row'` — fill horizontally first (left to right, then next row). Equivalent to old `dir=0`.
 - `'col'` — fill vertically first (top to bottom, then next column). Equivalent to old `dir=1`.
 
-Default: `'row'`
+**Auto-detect in `grid.lua` (keep existing logic, migrate to strings):**
+```lua
+-- ROWSxCOLS format: '1x5' = 1 row, 5 cols; '5x1' = 5 rows, 1 col
+if node.config.rows == 1 and node.config.cols > 1 then
+    node.config.dir = 'col'   -- was: 1
+elseif node.config.cols == 1 and node.config.rows > 1 then
+    node.config.dir = 'row'   -- was: 0 (default anyway)
+else
+    node.config.dir = 'row'   -- NxN default
+end
+```
+Explicit `dir` attribute in JSX/API overrides the auto-detect.
 
 In JSX: `<grid class='3x3' dir='row'>` or `<slide class='1x5' dir='col'>`
 
@@ -473,7 +633,9 @@ end
 
 ### 13. `<slide>` Element
 
-A grid that supports scrolling. Separated from `<grid>` for explicit semantics. The `class` defines the **visible window** (e.g. `'1x5'` shows 5 items at a time).
+A grid that supports scrolling. Separated from `<grid>` for explicit semantics. The `class` defines the **visible window** (e.g. `'1x5'` = 1 row, 5 cols visible at a time).
+
+**`slide.lua` is a complete rewrite.** The old `slide.lua` (with `:next()`, `:back()`, `:apply()`, `classlist_selected`) is dead code and must be replaced. The new `std.ui.slide()` API mirrors `std.ui.grid()` — same `:add()`, `:add_items()`, `:dir()` interface — the scroll behavior is handled internally by the scroll registry and DOM layout, not by imperative methods.
 
 **Props:**
 ```typescript
@@ -781,7 +943,41 @@ local function ensure_visible(self, slide_node, focus_node)
 end
 ```
 
-### 19. std.ui.focus() — Polymorphic
+### 19. Browser UI — `source/engine/browser/ui.lua`
+
+`ui.lua` é o ponto central que instala todo o namespace `std.ui`. Reúne componentes de layout
+(grid, slide, style) e as funções de navegação/query. Aceita node direto ou query selector,
+delegando para navigator/query/dom — sem lógica de layout própria.
+
+```lua
+-- source/engine/browser/ui.lua
+local function install(std, engine)
+    std.ui = std.ui or {}
+    -- componentes de layout (delegam para ui/grid.lua, ui/slide.lua, ui/style.lua)
+    std.ui.grid      = ...   -- §grid
+    std.ui.slide     = ...   -- §13
+    std.ui.style     = ...   -- §5
+    -- navegação e foco
+    std.ui.focus     = ...   -- §20
+    std.ui.press     = ...   -- §21
+    std.ui.isFocused = ...   -- §22
+    -- seletores
+    std.ui.queryOne  = ...   -- §23
+    std.ui.query     = ...   -- §23
+end
+```
+
+`jsx.lua` instala `std.h` separadamente e pode requerer `ui.lua` para delegar a criação
+de elementos `grid`, `slide`, `style` sem duplicar lógica:
+```lua
+-- source/engine/browser/jsx.lua
+local ui = require('source/engine/browser/ui')
+local function install(std, engine)
+    std.h = create_h(std, engine)  -- closure, std/engine como upvalues
+end
+```
+
+### 20. std.ui.focus() — Polymorphic
 
 Single function handles all focus operations.
 
@@ -819,7 +1015,7 @@ handler_func(node)
 self.current_node = nil
 ```
 
-### 20. std.ui.press()
+### 21. std.ui.press()
 
 ```lua
 function std.ui.press()
@@ -832,7 +1028,7 @@ function std.ui.press()
 end
 ```
 
-### 21. std.ui.isFocused()
+### 22. std.ui.isFocused()
 
 ```lua
 --- @param target table|nil  node to check, or nil for current bus context
@@ -845,7 +1041,7 @@ function std.ui.isFocused(target)
 end
 ```
 
-### 22. queryOne / query
+### 23. queryOne / query
 
 ```lua
 --- @param selector string  '#id' or '.class'
@@ -886,7 +1082,7 @@ function std.ui.query(selector)
 end
 ```
 
-### 23. wrap() — Chainable Methods
+### 24. wrap() — Chainable Methods
 
 ```lua
 --- @param self engine
@@ -969,7 +1165,7 @@ local function wrap(self, node)
 end
 ```
 
-### 24. h() as Closure
+### 25. h() as Closure
 
 Reduce stack overhead by capturing `std`/`engine` in closure instead of passing every call.
 
@@ -986,7 +1182,7 @@ local function create_h(std, engine)
 end
 ```
 
-### 25. node_pause / node_resume (keep existing)
+### 26. node_pause / node_resume (keep existing)
 
 Keep current `node_pause` and `node_resume` implementation. These use `walk()` to propagate pause state to children. No changes needed for v1.
 
@@ -1137,19 +1333,21 @@ declare namespace JSX {
 
 Suggested order (each step builds on the previous):
 
-1. **Bugfixes** — fix `has_right`, fix `cells()` cols/rows
-2. **Node structure** — add `layout` field, uid, id/class indexes
-3. **Units** — `parse_unit`, `resolve`, update `stylesheet`
-4. **dir='row'|'col'** — string replacement in DOM calc
-5. **span 2D** — `parse_span`, update grid layout
-6. **Render list** — `compile()` with culling
-7. **Dirty tracking** — `mark_dirty`, `flush_dirty`
-8. **`<slide>`** — scroll registry, step calc, offset in DOM
-9. **Focus system** — focusable implicit, spatial nav, index nav
-10. **Focus modes** — wrap/stop/escape
-11. **Style :focus** — swap on focus change
-12. **Query API** — queryOne, query, wrap
-13. **std.ui.focus()** — polymorphic dispatch
-14. **Anonymous style** — update h() factory
-15. **css_scroll** — render-time offset
-16. **h() closure** — optimization pass
+1. **Bugfixes** — fix `has_right` (§1); fix `cells()` ROWSxCOLS (§2)
+2. **dir='row'|'col'** — migrate from 0/1 to strings; update auto-detect in `grid.lua` (§11)
+3. **Units** — `parse_unit`, `resolve`, update `stylesheet()` with alphabetical key closure (§3, §4, §5)
+4. **Anonymous style + implicit name** — update `h()` factory for `<style>` without class (§7)
+5. **span 2D** — `parse_span`, update grid layout in `dom()` (§12)
+6. **`<slide>` rewrite** — new `slide.lua` (mirrors grid API), scroll registry, step calc, offset in DOM (§13)
+7. **Render list** — `compile()` with culling in `tree.lua` (§10)
+8. **Dirty tracking** — `mark_dirty`, `flush_dirty`, replace `flag_reposition` (§9)
+9. **UID + ID/class indexes** — `uid_counter`, `index_id`, `index_class` in `node_begin`/`node_add`/`node_del` (§1 features, §2 features)
+10. **Focus system** — focusable implicit in `node_add`; spatial nav; index nav inside slide (§14, §16, §17)
+11. **Focus modes** — wrap/stop/escape (§15)
+12. **Slide follows focus** — `ensure_visible` (§18)
+13. **Style :focus** — swap on focus change in `set_focus` (§6)
+14. **Query API** — queryOne, query, wrap with chainable methods (§23, §24)
+15. **Browser UI** — criar `source/engine/browser/ui.lua` e `browser/jsx.lua`; instalar tudo em `std.ui.*` e `std.h` (§19)
+16. **css_scroll** — render-time offset for slide (§8)
+17. **TypeScript typings** — update `npm/gly-jsx/index.d.ts` with new types (§JSX Typings)
+18. **h() closure** — optimization pass (§25)
