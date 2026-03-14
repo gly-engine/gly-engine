@@ -1,8 +1,9 @@
 local os = require('os')
 --
-local dom = require('source/engine/browser/dom')
-local loadgame = require('source/shared/engine/loadgame')
-local loadcore = require('source/shared/engine/loadcore')
+local dom          = require('source/engine/browser/dom')
+local loadgame     = require('source/shared/engine/loadgame')
+local loadcore     = require('source/shared/engine/loadcore')
+local error_module = require('source/engine/core/error')
 --
 local core_text = require('source/engine/core/bind/love/text')
 local core_draw = require('source/engine/core/bind/love/draw')
@@ -129,11 +130,9 @@ function love.load(args)
     engine.dom = dom.node_begin(application, std.app.width, std.app.height, engine.dom)
     engine.root, engine.current = application, application
 
-    engine.handler = function(msg)
-        if select(2, pcall(engine.root.callbacks.error or function() end, engine.root.data, std, tostring(msg))) == true then
-            love.event.quit(1)
-        end
-    end
+    engine.handler = error_module.make_handler(engine, std, function()
+        love.event.quit(1)
+    end)
 
     std.app.title(application.meta.title..' - '..application.meta.version)
 

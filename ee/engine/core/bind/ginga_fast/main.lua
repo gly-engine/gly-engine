@@ -4,6 +4,7 @@ local version = require('source/version')
 --
 local tree = require('source/shared/engine/tree')
 local loadcore = require('source/shared/engine/loadcore')
+local error_module = require('source/engine/core/error')
 local loadgame = require('source/shared/engine/loadgame')
 --
 local core_draw = require('ee/engine/core/bind/ginga/draw')
@@ -124,11 +125,9 @@ local function main(evt, gamefile)
     if evt.class and evt.class ~= 'ncl' or evt.action ~= 'start' and evt.type ~= 'presentation' then return end
 
     engine.envs = evt
-    engine.handler = function(msg) 
-        if select(2, pcall(engine.root.callbacks.error or function() end, engine.root.data, std, tostring(msg))) == true then
-            os.exit()
-        end
-    end
+    engine.handler = error_module.make_handler(engine, std, function()
+        os.exit()
+    end)
     application = loadgame.script(gamefile, application_default)
 
     loadcore.setup(std, application, engine)
