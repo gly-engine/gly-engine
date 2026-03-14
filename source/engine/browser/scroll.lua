@@ -15,8 +15,9 @@ local dom    = require('source/engine/browser/dom')
 --! @param options table  {mode, focus, dir, cols, rows} — all optional, read from node.config
 local function scroll_register(self, node, options)
     options = options or {}
+    local default_mode = (node.config.cols > 1 and node.config.rows > 1) and 'page' or 'shift'
     self.scroll_registry[node] = {
-        mode  = options.mode or 'shift',
+        mode  = options.mode or default_mode,
         index = 0,
         total = 0,  -- updated as children are added (currently informational)
         cols  = node.config.cols,

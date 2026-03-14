@@ -189,15 +189,30 @@ local function focus_navigate_slide(self, slide_node, current, direction)
     local next_idx = idx
     local total    = #childs
 
+    local scroll_state = self.scroll_registry and self.scroll_registry[slide_node]
+    local mode = scroll_state and scroll_state.mode or 'shift'
+
     if dir == 'col' then
-        if direction == 'down'  then next_idx = idx + 1
-        elseif direction == 'up'    then next_idx = idx - 1
+        -- col-major: items fill top→bottom then right. row = (idx-1) % rows
+        local current_row = (idx - 1) % rows
+        if direction == 'down' then
+            if mode == 'page' and current_row == rows - 1 then return nil end
+            next_idx = idx + 1
+        elseif direction == 'up' then
+            if mode == 'page' and current_row == 0 then return nil end
+            next_idx = idx - 1
         elseif direction == 'right' then next_idx = idx + rows
         elseif direction == 'left'  then next_idx = idx - rows
         end
     else  -- 'row'
-        if direction == 'right' then next_idx = idx + 1
-        elseif direction == 'left'  then next_idx = idx - 1
+        -- row-major: items fill left→right then down. col = (idx-1) % cols
+        local current_col = (idx - 1) % cols
+        if direction == 'right' then
+            if mode == 'page' and current_col == cols - 1 then return nil end
+            next_idx = idx + 1
+        elseif direction == 'left' then
+            if mode == 'page' and current_col == 0 then return nil end
+            next_idx = idx - 1
         elseif direction == 'down'  then next_idx = idx + cols
         elseif direction == 'up'    then next_idx = idx - cols
         end

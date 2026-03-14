@@ -84,11 +84,18 @@ local function dom_layout(self, node, parent_x, parent_y, parent_w, parent_h)
         if cfg.type == 'slide' then
             local scroll = self.scroll_registry[node]
             if scroll then
-                local offset = scroll.index * slide_step(scroll)
-                if dir_val == 'col' then
-                    x = -offset  -- col-major fills across X, scroll shifts X
+                if scroll.mode == 'page' then
+                    if dir_val == 'col' then
+                        x = -(scroll.index * scroll.cols)
+                    else
+                        y = -(scroll.index * scroll.rows)
+                    end
                 else
-                    y = -offset  -- row-major fills down Y, scroll shifts Y
+                    if dir_val == 'col' then
+                        x = -scroll.index
+                    else
+                        y = -scroll.index
+                    end
                 end
             end
         end
