@@ -23,10 +23,10 @@ end
 --! @param engine table
 --! @return function h(element, attribute, childs)
 local function create_h(std, engine)
-    local function h(element, attribute, childs)
+    local function h(element, attribute, ...)
         local el_type = type(element)
         attribute = attribute or {}
-        childs    = childs or {}
+        local childs = {...}
 
         if element == std then
             return error
