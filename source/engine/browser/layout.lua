@@ -86,9 +86,9 @@ local function dom_layout(self, node, parent_x, parent_y, parent_w, parent_h)
             if scroll then
                 local offset = scroll.index * slide_step(scroll)
                 if dir_val == 'col' then
-                    y = -offset
+                    x = -offset  -- col-major fills across X, scroll shifts X
                 else
-                    x = -offset
+                    y = -offset  -- row-major fills down Y, scroll shifts Y
                 end
             end
         end

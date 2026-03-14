@@ -6,8 +6,9 @@
 --! set_focus() swaps :focus style variants and fires focus/unfocus callbacks.
 --! focus_navigate() dispatches to slide-index navigation or spatial scoring.
 
-local ss     = require('source/engine/browser/stylesheet')
-local scroll = require('source/engine/browser/scroll')
+local ss        = require('source/engine/browser/stylesheet')
+local scroll    = require('source/engine/browser/scroll')
+local lifecycle = require('source/engine/browser/lifecycle')
 
 -- ─── Helper functions ───────────────────────────────────────────────────────
 
@@ -83,9 +84,7 @@ local function set_focus(self, node)
             local base_func = self.stylesheet_func[name]
             if base_func then ss.css_add(self, base_func, old) end
         end
-        if old.callbacks.unfocus and std then
-            old.callbacks.unfocus(old.data, std)
-        end
+        lifecycle.unfocus(self, old)
     end
 
     self.focus_current = node
@@ -96,9 +95,7 @@ local function set_focus(self, node)
         if base_func then ss.css_del(self, base_func, node) end
         ss.css_add(self, focus_func, node)
     end
-    if node.callbacks.focus and std then
-        node.callbacks.focus(node.data, std)
-    end
+    lifecycle.focus(self, node)
 
     -- ensure slide follows focus
     local slide = find_slide_parent(self, node)

@@ -37,6 +37,7 @@ local application = application_default
 local engine = {
     current = application_default,
     root = application_default,
+    dom = {},
     offset_x = 0,
     offset_y = 0
 }
@@ -194,6 +195,9 @@ function native_callback_init(width, height, game_lua)
         end
     end
 
+    engine.dom = dom.node_begin(application, width, height, engine.dom, std)
+    engine.root, engine.current = application, application
+
     loadcore.setup(std, application, engine)
         :package('@bus', engine_raw_bus)
         :package('@node', engine_raw_node)
@@ -229,7 +233,7 @@ function native_callback_init(width, height, game_lua)
 
     std.app.title(application.meta.title..' - '..application.meta.version)
 
-    engine.dom = dom.node_begin(application, std.app.width, std.app.height)
+    engine.dom = dom.node_begin(application, std.app.width, std.app.height, engine.dom)
     engine.root, engine.current = application, application
 
     std.bus.emit_next('load')

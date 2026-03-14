@@ -1,6 +1,11 @@
 local dom      = require('source/engine/browser/dom')
 local pause    = require('source/engine/browser/pause')
 local loadgame = require('source/shared/engine/loadgame')
+
+-- lifecycle events are fired by dom/navigator directly, not via the bus.
+-- root (uid=0) is the exception: its init/exit are still bus-driven since
+-- root bypasses node_add and never gets lifecycle.spawn called.
+local LIFECYCLE = { init=true, exit=true, focus=true, unfocus=true, hover=true, unhover=true }
 local node_default = require('source/shared/var/object/node')
 
 --! @defgroup std
@@ -173,7 +178,8 @@ local function install(std, engine)
             engine.current = node
             engine.offset_x = node.config.offset_x
             engine.offset_y = node.config.offset_y
-            if node.callbacks[key] then
+
+            if node.callbacks[key] and (node.config.uid == 0 or not LIFECYCLE[key]) then
                 xpcall(function() node.callbacks[key](node.data, std, a, b, c, d, e, f) end, engine.handler)
             end
         end)

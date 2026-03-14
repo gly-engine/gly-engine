@@ -7,9 +7,10 @@
 --! Replaces source/shared/engine/tree.lua.
 --! Grid/slide layout computation lives in layout.lua.
 
-local ss     = require('source/engine/browser/stylesheet')
-local pause  = require('source/engine/browser/pause')
-local layout = require('source/engine/browser/layout')
+local ss        = require('source/engine/browser/stylesheet')
+local pause     = require('source/engine/browser/pause')
+local layout    = require('source/engine/browser/layout')
+local lifecycle = require('source/engine/browser/lifecycle')
 
 --! @brief Module-level UID counter. Incremented on every node_add.
 local uid_counter = 0
@@ -155,20 +156,21 @@ end
 --! @param width number  initial viewport width
 --! @param height number  initial viewport height
 --! @return table  engine.dom
-local function node_begin(node, width, height)
-    local self = {}
+local function node_begin(node, width, height, self, std)
+    self = self or {}
     self.width  = width
     self.height = height
     self.root   = node
+    self.std    = std or self.std
 
     -- node list
     self.node_list = { node }
 
     -- render list (pooled)
-    self.render_list = {}
+    self.render_list = self.render_list or {}
 
     -- dirty queue
-    self.dirty_queue = {}
+    self.dirty_queue = self.dirty_queue or {}
 
     -- index maps
     self.index_uid   = {}
@@ -176,10 +178,10 @@ local function node_begin(node, width, height)
     self.index_class = {}
 
     -- scroll registry (weak keys so GC'd slide nodes auto-clean)
-    self.scroll_registry = setmetatable({}, { __mode = 'k' })
+    self.scroll_registry = setmetatable(self.scroll_registry or {}, { __mode = 'k' })
 
     -- pause registry
-    self.pause_registry = {}
+    self.pause_registry = self.pause_registry or {}
 
     -- focus
     self.focus_list    = {}
@@ -189,9 +191,9 @@ local function node_begin(node, width, height)
     self.current_node = nil
 
     -- stylesheet storage
-    self.stylesheet_dict = {}
-    self.stylesheet_func = {}
-    self.stylesheet_key  = {}
+    self.stylesheet_dict = self.stylesheet_dict or {}
+    self.stylesheet_func = self.stylesheet_func or {}
+    self.stylesheet_key  = self.stylesheet_key or {}
 
     -- tree rebuild flags (kept for compatibility)
     self.flag_relist   = false
@@ -286,6 +288,9 @@ local function node_add(self, node, options)
     cfg.after  = options.after  or 0
     cfg.offset = options.offset or 0
 
+    -- lifecycle: init
+    lifecycle.spawn(self, node)
+
     -- focusable detection
     local has_handler = node.callbacks.focus   or node.callbacks.unfocus
                      or node.callbacks.click   or node.callbacks.hover
@@ -299,9 +304,7 @@ local function node_add(self, node, options)
         self.focus_list[#self.focus_list + 1] = node
         if not self.focus_current then
             self.focus_current = node
-            if node.callbacks.focus and self.std then
-                node.callbacks.focus(node.data, self.std)
-            end
+            lifecycle.focus(self, node)
         end
     end
 
@@ -316,6 +319,9 @@ end
 --! @param node_root table  root of subtree to remove
 local function node_del(self, node_root)
     walk(node_root, function(node)
+        -- lifecycle: exit
+        lifecycle.kill(self, node)
+
         local uid = node.config.uid
         if uid then
             self.index_uid[uid] = nil

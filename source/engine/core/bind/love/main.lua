@@ -98,7 +98,7 @@ function love.load(args)
         })
     end
 
-    loadcore.setup(std, application, engine)
+    local loader = loadcore.setup(std, application, engine)
         :package('@bus', lib_raw_bus)
         :package('@node', lib_raw_node)
         :package('@memory', lib_raw_memory)
@@ -126,10 +126,10 @@ function love.load(args)
         :run()
 
     std.bus.listen('resize', function(w, h) dom.resize(engine.dom, w, h) end)
-    engine.dom = dom.node_begin(application, std.app.width, std.app.height)
+    engine.dom = dom.node_begin(application, std.app.width, std.app.height, engine.dom)
     engine.root, engine.current = application, application
 
-    engine.handler = function(msg) 
+    engine.handler = function(msg)
         if select(2, pcall(engine.root.callbacks.error or function() end, engine.root.data, std, tostring(msg))) == true then
             love.event.quit(1)
         end

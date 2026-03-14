@@ -8,6 +8,7 @@
 
 local dom            = require('source/engine/browser/dom')
 local grid           = require('source/engine/browser/grid')
+local scroll         = require('source/engine/browser/scroll')
 local util_decorator = require('source/shared/functional/decorator')
 
 --! @brief Set the fill direction of the slide.
@@ -42,6 +43,8 @@ local function component(std, engine, layout)
     else
         node.config.dir = 'row'
     end
+
+    scroll.scroll_register(engine.dom, node)
 
     return {
         node      = node,
