@@ -26,8 +26,9 @@ end
 --! @param std table
 --! @param engine table
 --! @param layout string  'COLSxROWS', e.g. '5x1', '1x5'
+--! @param options table|nil  {scroll, anchor, focus} forwarded to scroll_register
 --! @return table  slide object with :add, :add_items, :dir, .node
-local function component(std, engine, layout)
+local function component(std, engine, layout, options)
     local cols, rows = layout:match('(%d+)x(%d+)')
 
     local node = std.node.load({})
@@ -44,7 +45,7 @@ local function component(std, engine, layout)
         node.config.dir = 'row'
     end
 
-    scroll.scroll_register(engine.dom, node)
+    scroll.scroll_register(engine.dom, node, options)
 
     return {
         node      = node,

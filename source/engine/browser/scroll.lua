@@ -15,14 +15,24 @@ local dom    = require('source/engine/browser/dom')
 --! @param options table  {mode, focus, dir, cols, rows} — all optional, read from node.config
 local function scroll_register(self, node, options)
     options = options or {}
-    local default_mode = (node.config.cols > 1 and node.config.rows > 1) and 'page' or 'shift'
+    local cols = node.config.cols
+    local rows = node.config.rows
+    local default_mode = (cols > 1 and rows > 1) and 'page' or 'shift'
+    local mode = options.mode or default_mode
+    -- flow anchor: slot1 by default, slot0 when the 1D dimension is exactly 2
+    local default_anchor
+    if mode == 'flow' then
+        local dim = (rows == 1) and cols or rows
+        default_anchor = dim >= 3 and 1 or 0
+    end
     self.scroll_registry[node] = {
-        mode  = options.mode or default_mode,
-        index = 0,
-        total = 0,  -- updated as children are added (currently informational)
-        cols  = node.config.cols,
-        rows  = node.config.rows,
-        dir   = node.config.dir,
+        mode   = mode,
+        index  = 0,
+        anchor = options.anchor or default_anchor,
+        total  = 0,  -- updated as children are added (currently informational)
+        cols   = cols,
+        rows   = rows,
+        dir    = node.config.dir,
     }
     if options.focus then
         node.config.focus_mode = options.focus
@@ -63,6 +73,14 @@ local function ensure_visible(self, slide_node, focus_node, mark_dirty_fn)
     end
 
     if child_index < 0 then return end
+
+    -- flow: scroll.index = focused item index, layout handles all positioning
+    if scroll.mode == 'flow' then
+        if scroll.index == child_index then return end
+        scroll.index = child_index
+        mark(self, slide_node)
+        return
+    end
 
     local step          = layout.slide_step(scroll)
     local visible_count = scroll.cols * scroll.rows

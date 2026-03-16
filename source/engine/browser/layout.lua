@@ -45,6 +45,8 @@ end
 local function slide_step(scroll)
     if scroll.mode == 'page' then
         return scroll.cols * scroll.rows
+    elseif scroll.mode == 'flow' then
+        return 1
     elseif scroll.dir == 'row' then
         return scroll.cols
     else
@@ -89,6 +91,17 @@ local function dom_layout(self, node, parent_x, parent_y, parent_w, parent_h)
                         x = -(scroll.index * scroll.cols)
                     else
                         y = -(scroll.index * scroll.rows)
+                    end
+                elseif scroll.mode == 'flow' then
+                    -- first and last items are permanent peeks (never navigable).
+                    -- x_start capped at 0 (item[0] never goes right of slot0).
+                    -- x_start floor at -(total-N) (item[total-1] always at last slot).
+                    local total  = node.childs and #node.childs or 0
+                    local anchor = scroll.anchor or 1
+                    if dir_val == 'col' then
+                        x = math.max(math.min(anchor - scroll.index, 0), -(total - cols))
+                    else
+                        y = math.max(math.min(anchor - scroll.index, 0), -(total - rows))
                     end
                 else
                     if dir_val == 'col' then

@@ -83,8 +83,9 @@ local function create_h(std, engine)
 
             -- register scroll
             scroll_mod.scroll_register(engine.dom, grid.node, {
-                mode  = attribute.scroll,
-                focus = attribute.focus,
+                mode   = attribute.scroll,
+                focus  = attribute.focus,
+                anchor = attribute.anchor,
             })
 
             for i = 1, #childs do
