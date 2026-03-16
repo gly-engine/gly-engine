@@ -119,8 +119,9 @@ local function dom_layout(self, node, parent_x, parent_y, parent_w, parent_h)
                 local offset_val = cc.offset or 0
                 local after_val  = cc.after  or 0
                 local span_x, span_y = parse_span(cc.size or 1)
-
                 if dir_val == 'row' and type(cc.size) == 'number' then
+                    span_x, span_y = span_x, 1
+                elseif dir_val == 'col' and type(cc.size) == 'number' then
                     span_x, span_y = 1, span_x
                 end
 
@@ -131,8 +132,8 @@ local function dom_layout(self, node, parent_x, parent_y, parent_w, parent_h)
                     w  = span_x * cell_w
                     h  = span_y * cell_h
                 else  -- 'row' default
-                    cx = parent_x + cell_w * (x + offset_val)
-                    cy = parent_y + cell_h * y
+                    cx = parent_x + cell_w * x
+                    cy = parent_y + cell_h * (y + offset_val)
                     w  = span_x * cell_w
                     h  = span_y * cell_h
                 end
@@ -143,10 +144,10 @@ local function dom_layout(self, node, parent_x, parent_y, parent_w, parent_h)
                 dom_layout(self, child, cx, cy, w, h)
 
                 if dir_val == 'col' then
-                    y = y + span_y + offset_val + after_val
+                    y = y + span_y + after_val
                     if y >= rows then y = 0; x = x + span_x end
                 else
-                    x = x + span_x + offset_val + after_val
+                    x = x + span_x + after_val
                     if x >= cols then x = 0; y = y + span_y end
                 end
             end
