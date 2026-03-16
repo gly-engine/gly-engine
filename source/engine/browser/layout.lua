@@ -120,8 +120,6 @@ local function dom_layout(self, node, parent_x, parent_y, parent_w, parent_h)
                 local after_val  = cc.after  or 0
                 local span_x, span_y = parse_span(cc.size or 1)
                 if dir_val == 'row' and type(cc.size) == 'number' then
-                    span_x, span_y = span_x, 1
-                elseif dir_val == 'col' and type(cc.size) == 'number' then
                     span_x, span_y = 1, span_x
                 end
 
