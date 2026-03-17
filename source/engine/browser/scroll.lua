@@ -18,7 +18,7 @@ local function scroll_register(self, node, options)
     local cols = node.config.cols
     local rows = node.config.rows
     local default_mode = (cols > 1 and rows > 1) and 'page' or 'shift'
-    local mode = options.mode or default_mode
+    local mode = options.mode or options.scroll or default_mode
     -- flow anchor: slot1 by default, slot0 when the 1D dimension is exactly 2
     local default_anchor
     if mode == 'flow' then

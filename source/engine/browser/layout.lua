@@ -93,15 +93,16 @@ local function dom_layout(self, node, parent_x, parent_y, parent_w, parent_h)
                         y = -(scroll.index * scroll.rows)
                     end
                 elseif scroll.mode == 'flow' then
-                    -- first and last items are permanent peeks (never navigable).
-                    -- x_start capped at 0 (item[0] never goes right of slot0).
-                    -- x_start floor at -(total-N) (item[total-1] always at last slot).
+                    -- focused item sits at slot [anchor] (0-based).
+                    -- symmetric empty peeks: [anchor] empty slots before first item
+                    -- and [anchor] empty slots after last item.
+                    -- offset range: [-(total - dim + anchor), anchor]
                     local total  = node.childs and #node.childs or 0
                     local anchor = scroll.anchor or 1
                     if dir_val == 'col' then
-                        x = math.max(math.min(anchor - scroll.index, 0), -(total - cols))
+                        x = math.max(math.min(anchor - scroll.index, anchor), -(total - cols + anchor))
                     else
-                        y = math.max(math.min(anchor - scroll.index, 0), -(total - rows))
+                        y = math.max(math.min(anchor - scroll.index, anchor), -(total - rows + anchor))
                     end
                 else
                     if dir_val == 'col' then
