@@ -4,11 +4,12 @@
 --! INVARIANT: focus_list contains only nodes where config.focusable == true.
 --! INVARIANT: focus_current is always in focus_list, or nil.
 --! set_focus() swaps :focus style variants and fires focus/unfocus callbacks.
---! focus_navigate() dispatches to slide-index navigation or spatial scoring.
+--! focus_navigate() dispatches to grid-index navigation or spatial scoring.
 
 local ss        = require('source/engine/browser/stylesheet')
-local scroll    = require('source/engine/browser/scroll')
+local layout    = require('source/engine/browser/layout')
 local lifecycle = require('source/engine/browser/lifecycle')
+local dom       = require('source/engine/browser/dom')
 
 -- ─── Helper functions ───────────────────────────────────────────────────────
 
@@ -35,11 +36,11 @@ local function find_focusable(node)
     return nil
 end
 
---! @brief Find the nearest slide ancestor of node.
-local function find_slide_parent(self, node)
+--! @brief Find the nearest scroll-enabled grid ancestor of node.
+local function find_scroll_parent(self, node)
     local current = node.config.parent
     while current do
-        if current.config.type == 'slide' then return current end
+        if self.scroll_registry[current] then return current end
         current = current.config.parent
     end
     return nil
@@ -63,6 +64,72 @@ local function is_same_group(group, node)
         current = current.config.parent
     end
     return false
+end
+
+-- ─── ensure_visible ──────────────────────────────────────────────────────────
+
+--! @brief Adjust the scroll index so that focus_node is within the visible window.
+--! @param self engine.dom
+--! @param grid_node table  the scroll-enabled grid container
+--! @param focus_node table  the newly focused node
+local function ensure_visible(self, grid_node, focus_node)
+    local scroll = self.scroll_registry[grid_node]
+    if not scroll then return end
+
+    local childs = grid_node.childs
+    if not childs then return end
+
+    local function is_desc(root, needle)
+        if root == needle then return true end
+        if root.childs then
+            for _, c in ipairs(root.childs) do
+                if is_desc(c, needle) then return true end
+            end
+        end
+        return false
+    end
+
+    local child_index = -1
+    for i, child in ipairs(childs) do
+        if is_desc(child, focus_node) then
+            child_index = i - 1  -- 0-based
+            break
+        end
+    end
+
+    if child_index < 0 then return end
+
+    -- flow: scroll.index = focused item index, layout handles all positioning
+    if scroll.mode == 'flow' then
+        if scroll.index == child_index then return end
+        scroll.index = child_index
+        dom.mark_dirty(self, grid_node)
+        return
+    end
+
+    local step          = layout.slide_step(scroll)
+    local visible_count = scroll.cols * scroll.rows
+    local first_visible = scroll.index * step
+    local last_visible  = first_visible + visible_count - 1
+
+    if child_index < first_visible then
+        if scroll.mode == 'page' then
+            scroll.index = math.floor(child_index / step)
+        else
+            scroll.index = child_index
+        end
+    elseif child_index > last_visible then
+        if scroll.mode == 'page' then
+            scroll.index = math.floor(child_index / step)
+        else
+            scroll.index = child_index - visible_count + 1
+        end
+    else
+        return  -- already visible, no change needed
+    end
+
+    if scroll.index < 0 then scroll.index = 0 end
+    dom.mark_dirty(self, grid_node)
 end
 
 -- ─── set_focus ──────────────────────────────────────────────────────────────
@@ -97,10 +164,10 @@ local function set_focus(self, node)
     end
     lifecycle.focus(self, node)
 
-    -- ensure slide follows focus
-    local slide = find_slide_parent(self, node)
-    if slide then
-        scroll.ensure_visible(self, slide, node)
+    -- ensure scroll grid follows focus
+    local scroll_parent = find_scroll_parent(self, node)
+    if scroll_parent then
+        ensure_visible(self, scroll_parent, node)
     end
 end
 
@@ -160,17 +227,17 @@ local function focus_navigate_spatial(self, current, direction)
     if best_node then set_focus(self, best_node) end
 end
 
--- ─── Index navigation (inside slide) ────────────────────────────────────────
+-- ─── Index navigation (inside scroll grid) ──────────────────────────────────
 
---! @brief Navigate focus within a slide using logical child index.
+--! @brief Navigate focus within a scroll grid using logical child index.
 --! @param self engine.dom
---! @param slide_node table  the slide container
+--! @param grid_node table  the scroll-enabled grid container
 --! @param current table  currently focused node
 --! @param direction string  'up'|'down'|'left'|'right'
 --! @return table|nil  next focusable node, or nil if at boundary
-local function focus_navigate_slide(self, slide_node, current, direction)
-    local cfg    = slide_node.config
-    local childs = slide_node.childs
+local function focus_navigate_grid(self, grid_node, current, direction)
+    local cfg    = grid_node.config
+    local childs = grid_node.childs
     if not childs then return nil end
 
     local cols = cfg.cols
@@ -189,7 +256,7 @@ local function focus_navigate_slide(self, slide_node, current, direction)
     local next_idx = idx
     local total    = #childs
 
-    local scroll_state = self.scroll_registry and self.scroll_registry[slide_node]
+    local scroll_state = self.scroll_registry[grid_node]
     local mode = scroll_state and scroll_state.mode or 'shift'
 
     if dir == 'col' then
@@ -236,14 +303,14 @@ local function focus_navigate(self, direction)
     local current = self.focus_current
     if not current then return end
 
-    local slide = find_slide_parent(self, current)
-    if slide then
-        local next_node = focus_navigate_slide(self, slide, current, direction)
+    local scroll_parent = find_scroll_parent(self, current)
+    if scroll_parent then
+        local next_node = focus_navigate_grid(self, scroll_parent, current, direction)
         if next_node then
             set_focus(self, next_node)
             return
         end
-        if slide.config.focus_mode == 'escape' then
+        if scroll_parent.config.focus_mode == 'escape' then
             focus_navigate_spatial(self, current, direction)
         end
         return
@@ -280,8 +347,8 @@ local P = {
     set_focus              = set_focus,
     focus_navigate         = focus_navigate,
     focus_navigate_spatial = focus_navigate_spatial,
-    focus_navigate_slide   = focus_navigate_slide,
-    find_slide_parent      = find_slide_parent,
+    focus_navigate_grid    = focus_navigate_grid,
+    find_scroll_parent     = find_scroll_parent,
     find_focus_group       = find_focus_group,
     find_focusable         = find_focusable,
     is_same_group          = is_same_group,

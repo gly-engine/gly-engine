@@ -1,21 +1,22 @@
 --! @file layout.lua
---! @brief Grid/slide layout computation. No external browser dependencies.
+--! @brief Grid layout computation. No external browser dependencies.
 --! @details
 --! Owns: cells(), parse_span(), slide_step(), dom_layout().
 --! All functions are pure or receive engine.dom as explicit 'self'.
---! Required by dom.lua and scroll.lua — must NOT require any other browser/ module
+--! Required by dom.lua and grid.lua — must NOT require any other browser/ module
 --! to avoid circular dependencies.
+--! Scroll offset is applied when engine.dom.scroll_registry[node] is set.
 
 -- ─── Cell geometry ───────────────────────────────────────────────────────────
 
---! @brief Compute cell dimensions for a grid or slide node.
+--! @brief Compute cell dimensions for a grid node.
 --! @details COLSxROWS convention: cfg.cols divides width, cfg.rows divides height.
 --! @param node table
 --! @return number cell_w, number cell_h
 local function cells(node)
     local cfg = node.config
     local dat = node.data
-    if cfg.type == 'grid' or cfg.type == 'slide' then
+    if cfg.type == 'grid' then
         return dat.width / cfg.cols, dat.height / cfg.rows
     end
     return dat.width, dat.height
@@ -40,7 +41,7 @@ end
 -- ─── Scroll step ─────────────────────────────────────────────────────────────
 
 --! @brief Compute the number of items to skip per scroll step.
---! @param scroll table  scroll_state from scroll_registry
+--! @param scroll table  scroll state from scroll_registry
 --! @return number
 local function slide_step(scroll)
     if scroll.mode == 'page' then
@@ -58,8 +59,9 @@ end
 
 --! @brief Recursively compute layout for a node and its children.
 --! @details Writes cfg.offset_x/y and dat.width/height for every node in the subtree.
---!   grid/slide: lays out children into cells respecting dir, span, offset, after.
---!   slide:      applies scroll index so pre-offset items are placed off-screen.
+--!   grid: lays out children into cells respecting dir, span, offset, after.
+--!   grid with scroll_registry entry: applies scroll index so pre-offset items
+--!   are placed off-screen.
 --! @param self engine.dom  (read-only: scroll_registry)
 --! @param node table
 --! @param parent_x number
@@ -75,41 +77,39 @@ local function dom_layout(self, node, parent_x, parent_y, parent_w, parent_h)
     dat.width    = parent_w
     dat.height   = parent_h
 
-    if cfg.type == 'grid' or cfg.type == 'slide' then
+    if cfg.type == 'grid' then
         local cols    = cfg.cols
         local rows    = cfg.rows
         local dir_val = cfg.dir
         local cell_w, cell_h = cells(node)
         local x, y = 0, 0
 
-        -- slide: shift accumulator so items before scroll.index are off-screen
-        if cfg.type == 'slide' then
-            local scroll = self.scroll_registry[node]
-            if scroll then
-                if scroll.mode == 'page' then
-                    if dir_val == 'col' then
-                        x = -(scroll.index * scroll.cols)
-                    else
-                        y = -(scroll.index * scroll.rows)
-                    end
-                elseif scroll.mode == 'flow' then
-                    -- focused item sits at slot [anchor] (0-based).
-                    -- symmetric empty peeks: [anchor] empty slots before first item
-                    -- and [anchor] empty slots after last item.
-                    -- offset range: [-(total - dim + anchor), anchor]
-                    local total  = node.childs and #node.childs or 0
-                    local anchor = scroll.anchor or 1
-                    if dir_val == 'col' then
-                        x = math.max(math.min(anchor - scroll.index, anchor), -(total - cols + anchor))
-                    else
-                        y = math.max(math.min(anchor - scroll.index, anchor), -(total - rows + anchor))
-                    end
+        -- scroll: shift accumulator so items before scroll.index are off-screen
+        local scroll = self.scroll_registry[node]
+        if scroll then
+            if scroll.mode == 'page' then
+                if dir_val == 'col' then
+                    x = -(scroll.index * scroll.cols)
                 else
-                    if dir_val == 'col' then
-                        x = -scroll.index
-                    else
-                        y = -scroll.index
-                    end
+                    y = -(scroll.index * scroll.rows)
+                end
+            elseif scroll.mode == 'flow' then
+                -- focused item sits at slot [anchor] (0-based).
+                -- symmetric empty peeks: [anchor] empty slots before first item
+                -- and [anchor] empty slots after last item.
+                -- offset range: [-(total - dim + anchor), anchor]
+                local total  = node.childs and #node.childs or 0
+                local anchor = scroll.anchor or 1
+                if dir_val == 'col' then
+                    x = math.max(math.min(anchor - scroll.index, anchor), -(total - cols + anchor))
+                else
+                    y = math.max(math.min(anchor - scroll.index, anchor), -(total - rows + anchor))
+                end
+            else
+                if dir_val == 'col' then
+                    x = -scroll.index
+                else
+                    y = -scroll.index
                 end
             end
         end

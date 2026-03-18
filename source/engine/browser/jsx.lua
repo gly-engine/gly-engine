@@ -2,11 +2,9 @@
 --! @brief JSX element factory. Installs std.h as a closure with std/engine upvalues.
 --! @details
 --! create_h(std, engine) returns h(element, attribute, childs).
---! Handles: 'node', 'grid', 'slide', 'item', 'style', function, table elements.
+--! Handles: 'node', 'grid', 'item', 'style', function, table elements.
 --! Anonymous <style> generates implicit name from sorted attribute keys.
---! <slide> validates no 2D span and registers scroll via scroll.lua.
-
-local scroll_mod = require('source/engine/browser/scroll')
+--! <grid scroll=...> enables scroll behaviour and validates no 2D span.
 
 --! @brief Add one or more named stylesheet classes to a node.
 --! @param std table
@@ -58,11 +56,21 @@ local function create_h(std, engine)
             return parent
 
         elseif element == 'grid' then
-            local grid = std.ui.grid(attribute.class)
+            local has_scroll = attribute.scroll or attribute.focus or attribute.anchor
+            local scroll_opts = has_scroll and {
+                scroll = attribute.scroll,
+                focus  = attribute.focus,
+                anchor = attribute.anchor,
+            } or nil
+            local grid = std.ui.grid(attribute.class, scroll_opts)
             if attribute.dir then grid:dir(attribute.dir) end
             if attribute.style then add_style(std, grid.node, attribute.style) end
             for i = 1, #childs do
                 local item = childs[i]
+                -- validate: no 2D span when scroll is enabled
+                if has_scroll and item.span and type(item.span) == 'string' then
+                    error('[error] scrollable grid does not support 2D span, use number')
+                end
                 if item.node then
                     grid:add(item.node, {span=item.span, offset=item.offset, after=item.after})
                     if item.style then add_style(std, grid:get_item(i), item.style) end
@@ -73,36 +81,6 @@ local function create_h(std, engine)
             grid.span   = attribute.span
             grid.after  = attribute.after
             grid.style  = attribute.style
-            grid.offset = attribute.offset
-            return grid
-
-        elseif element == 'slide' then
-            local grid = std.ui.slide(attribute.class)
-            if attribute.dir then grid:dir(attribute.dir) end
-            if attribute.style then add_style(std, grid.node, attribute.style) end
-
-            -- register scroll
-            scroll_mod.scroll_register(engine.dom, grid.node, {
-                mode   = attribute.scroll,
-                focus  = attribute.focus,
-                anchor = attribute.anchor,
-            })
-
-            for i = 1, #childs do
-                local item = childs[i]
-                -- validate: no 2D span in slide
-                if item.span and type(item.span) == 'string' then
-                    error('[error] slide does not support 2D span, use number')
-                end
-                if item.node then
-                    grid:add(item.node, {span=item.span, offset=item.offset, after=item.after})
-                    if item.style then add_style(std, grid:get_item(i), item.style) end
-                else
-                    grid:add(item)
-                end
-            end
-            grid.span   = attribute.span
-            grid.after  = attribute.after
             grid.offset = attribute.offset
             return grid
 

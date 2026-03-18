@@ -1,13 +1,12 @@
 --! @file ui.lua
 --! @brief Browser UI installer. Owns std.ui namespace installation.
---! @details Delegates layout to ui/grid.lua, ui/slide.lua, ui/style.lua.
+--! @details Delegates layout to grid.lua and style.lua.
 --! Delegates navigation to navigator.lua and query to query.lua.
 --! Does NOT duplicate layout logic.
 
 local nav      = require('source/engine/browser/navigator')
 local query    = require('source/engine/browser/query')
 local ui_grid  = require('source/engine/browser/grid')
-local ui_slide = require('source/engine/browser/slide')
 local ui_style = require('source/engine/api/draw/ui/style')
 local util_decorator = require('source/shared/functional/decorator')
 
@@ -22,7 +21,6 @@ local function install(std, engine)
 
     -- layout components
     std.ui.grid  = util_decorator.prefix2(std, engine, ui_grid.component)
-    std.ui.slide = util_decorator.prefix2(std, engine, ui_slide.component)
     std.ui.style = util_decorator.prefix1(engine, ui_style.component)
 
     -- focus and navigation

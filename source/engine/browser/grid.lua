@@ -1,19 +1,21 @@
 --! @file grid.lua
---! @brief std.ui.grid() component.
---! @details Grid layout container. Layout string is 'ROWSxCOLS'.
+--! @brief std.ui.grid() component. Optionally scrollable via options.scroll.
+--! @details Layout string is 'COLSxROWS'.
 --!   Auto-detects dir: 1xN → 'col', Nx1 → 'row', NxN → 'row'.
 --!   Nested grids are supported via re-parenting in dom.node_add.
+--!   Scroll behaviour (flow/page/shift) is enabled by passing options.scroll;
+--!   scroll state lives in engine.dom.scroll_registry — no extra cost when absent.
 
 local dom            = require('source/engine/browser/dom')
 local util_decorator = require('source/shared/functional/decorator')
 
--- ─── Child management (shared with slide.lua) ───────────────────────────────
+-- ─── Child management ────────────────────────────────────────────────────────
 
---! @brief Add a child node or data table to a grid/slide container.
+--! @brief Add a child node or data table to a grid container.
 --! @param std table
 --! @param engine table
---! @param self grid/slide object
---! @param application table  data table, node, or nested grid/slide object
+--! @param self grid object
+--! @param application table  data table, node, or nested grid object
 --! @param options number|table|nil  span size or {span, after, offset}
 local function add(std, engine, self, application, options)
     if not application then return self end
@@ -30,7 +32,7 @@ local function add(std, engine, self, application, options)
     return self
 end
 
---! @brief Add a list of children to a grid/slide container.
+--! @brief Add a list of children to a grid container.
 local function add_items(std, engine, self, applications)
     local index = 1
     while applications and index <= #applications do
@@ -50,6 +52,37 @@ local function get_items(self)
     return self.node.childs
 end
 
+-- ─── Scroll registration (only used when options.scroll is present) ──────────
+
+--! @brief Register scroll state for a grid node.
+--! @param dom_obj engine.dom
+--! @param node table  the grid node (cols/rows/dir already set)
+--! @param options table  {scroll, anchor, focus} — all optional
+local function scroll_register(dom_obj, node, options)
+    options = options or {}
+    local cols = node.config.cols
+    local rows = node.config.rows
+    local default_mode = (cols > 1 and rows > 1) and 'page' or 'shift'
+    local mode = options.mode or options.scroll or default_mode
+    local default_anchor
+    if mode == 'flow' then
+        local dim = (rows == 1) and cols or rows
+        default_anchor = dim >= 3 and 1 or 0
+    end
+    dom_obj.scroll_registry[node] = {
+        mode   = mode,
+        index  = 0,
+        anchor = options.anchor or default_anchor,
+        total  = 0,
+        cols   = cols,
+        rows   = rows,
+        dir    = node.config.dir,
+    }
+    if options.focus then
+        node.config.focus_mode = options.focus
+    end
+end
+
 -- ─── Grid component ──────────────────────────────────────────────────────────
 
 --! @brief Set the fill direction.
@@ -64,11 +97,13 @@ end
 --! @brief Create a grid component and register it in the DOM.
 --! @details Layout string is 'COLSxROWS' — first number cols, second rows.
 --!   e.g. '6x2' = 6 columns, 2 rows. '1x5' = 1 column, 5 rows.
+--!   Pass options.scroll to enable scrollable behaviour (flow/page/shift).
 --! @param std table
 --! @param engine table
 --! @param layout string  'COLSxROWS', e.g. '6x2', '1x5'
+--! @param options table|nil  {scroll, anchor, focus} — enables scroll when present
 --! @return table  grid object with :add, :add_items, :dir, .node
-local function component(std, engine, layout)
+local function component(std, engine, layout, options)
     local cols, rows = layout:match('(%d+)x(%d+)')
 
     local node = std.node.load({})
@@ -85,6 +120,10 @@ local function component(std, engine, layout)
         node.config.dir = 'row'
     end
 
+    if options then
+        scroll_register(engine.dom, node, options)
+    end
+
     return {
         node      = node,
         add       = util_decorator.prefix2(std, engine, add),
@@ -96,12 +135,12 @@ local function component(std, engine, layout)
 end
 
 local P = {
-    component = component,
-    -- exported for slide.lua reuse
-    add       = add,
-    add_items = add_items,
-    get_item  = get_item,
-    get_items = get_items,
+    component       = component,
+    scroll_register = scroll_register,
+    add             = add,
+    add_items       = add_items,
+    get_item        = get_item,
+    get_items       = get_items,
 }
 
 return P

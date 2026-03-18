@@ -5,7 +5,7 @@
 --! INVARIANT: All nodes in node_list have config.parent set (except root).
 --! INVARIANT: dirty_queue is empty after flush_dirty() returns.
 --! Replaces source/shared/engine/tree.lua.
---! Grid/slide layout computation lives in layout.lua.
+--! Grid layout computation lives in layout.lua.
 
 local ss        = require('source/engine/browser/stylesheet')
 local pause     = require('source/engine/browser/pause')
@@ -177,7 +177,7 @@ local function node_begin(node, width, height, self, std)
     self.index_id    = {}
     self.index_class = {}
 
-    -- scroll registry (weak keys so GC'd slide nodes auto-clean)
+    -- scroll registry (weak keys so GC'd grid nodes auto-clean)
     self.scroll_registry = setmetatable(self.scroll_registry or {}, { __mode = 'k' })
 
     -- pause registry
