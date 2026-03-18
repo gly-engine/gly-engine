@@ -316,6 +316,9 @@ interface GlyStdUi {
   grid(classlist: string): GlyUi;
   style(classlist: string): GlyUi;
   style(classlist: string, stylesheet: object): GlyUi;
+  focus(target?: 'left' | 'right' | 'up' | 'down' | `#${string}` | GlyApp): void;
+  isFocused(target?: `#${string}` | GlyApp): boolean;
+  press(): void;
 }
 
 /** @noSelf **/

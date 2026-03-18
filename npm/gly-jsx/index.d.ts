@@ -1,4 +1,4 @@
-type SpanUnit = `${bigint}x${bigint}`
+type SpanUnit = `${number}x${number}`
 type CSSUnit = `${number}px` | `${number}%` | `${number}vw` | `${number}vh` | number;
 
 type FocusState = '' | ':focus';
@@ -25,7 +25,7 @@ declare namespace JSX {
     };
 
     item: (
-      & { id: string }
+      & { id?: string }
       & { span?: number | SpanUnit }
       & { offset?: number }
       & { after?: number }
