@@ -124,15 +124,31 @@ local function dom_layout(self, node, parent_x, parent_y, parent_w, parent_h)
                     span_x, span_y = 1, span_x
                 end
 
+                if dir_val == 'col' then
+                    y = y + offset_val
+                    if y >= rows then
+                        local wrap = math.floor(y / rows)
+                        y = y % rows
+                        x = x + wrap
+                    end
+                else
+                    x = x + offset_val
+                    if x >= cols then
+                        local wrap = math.floor(x / cols)
+                        x = x % cols
+                        y = y + wrap
+                    end
+                end
+
                 local cx, cy, w, h
                 if dir_val == 'col' then
                     cx = parent_x + cell_w * x
-                    cy = parent_y + cell_h * (y + offset_val)
+                    cy = parent_y + cell_h * y
                     w  = span_x * cell_w
                     h  = span_y * cell_h
                 else  -- 'row' default
                     cx = parent_x + cell_w * x
-                    cy = parent_y + cell_h * (y + offset_val)
+                    cy = parent_y + cell_h * y
                     w  = span_x * cell_w
                     h  = span_y * cell_h
                 end
@@ -144,10 +160,22 @@ local function dom_layout(self, node, parent_x, parent_y, parent_w, parent_h)
 
                 if dir_val == 'col' then
                     y = y + span_y + after_val
-                    if y >= rows then y = 0; x = x + span_x end
+                    if y >= rows then
+                        -- First wrap must honor item width (span_x). Extra wraps
+                        -- come from `after` overflow and advance by one column.
+                        local wrap = math.floor(y / rows)
+                        y = y % rows
+                        x = x + span_x + (wrap - 1)
+                    end
                 else
                     x = x + span_x + after_val
-                    if x >= cols then x = 0; y = y + span_y end
+                    if x >= cols then
+                        -- First wrap must honor item height (span_y). Extra wraps
+                        -- come from `after` overflow and advance by one row.
+                        local wrap = math.floor(x / cols)
+                        x = x % cols
+                        y = y + span_y + (wrap - 1)
+                    end
                 end
             end
         end
