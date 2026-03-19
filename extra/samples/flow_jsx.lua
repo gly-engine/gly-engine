@@ -1,6 +1,6 @@
 local App = {
     meta = {
-        title = 'Flow Carousel',
+        title = 'Peek Carousel',
         version = '0.3.0'
     }
 }
@@ -36,7 +36,7 @@ end
 --! </grid>
 --! @endcode
 function App.load(self, std)
-    std.h('grid', {class='7x1', scroll="flow"},
+    std.h('grid', {class='7x1', scroll='peek'},
         std.h(Card, {label='Noticias',   color=0x1A6FD4FF, idx=1}),
         std.h(Card, {label='Esportes',   color=0xCC2222FF, idx=2}),
         std.h(Card, {label='Filmes',     color=0x7722CCFF, idx=3}),

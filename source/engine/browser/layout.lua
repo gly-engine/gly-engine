@@ -46,7 +46,7 @@ end
 local function slide_step(scroll)
     if scroll.mode == 'page' then
         return scroll.cols * scroll.rows
-    elseif scroll.mode == 'flow' then
+    elseif scroll.mode == 'peek' then
         return 1
     elseif scroll.dir == 'row' then
         return scroll.cols
@@ -101,7 +101,7 @@ local function dom_layout(self, node, parent_x, parent_y, parent_w, parent_h)
                 else
                     y = -(scroll.index * scroll.rows)
                 end
-            elseif scroll.mode == 'flow' then
+            elseif scroll.mode == 'peek' then
                 -- focused item sits at slot [anchor] (0-based).
                 -- anchor=0: focused item always at slot 0; last item shows empty slots after.
                 -- anchor>0: view clamps at end so no empty slots after last item.

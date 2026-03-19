@@ -80,7 +80,7 @@ local function ensure_visible(self, grid_node, focus_node)
     if child_index < 0 then return end
 
     -- flow: scroll.index = focused item index, layout handles all positioning
-    if scroll.mode == 'flow' then
+    if scroll.mode == 'peek' then
         if scroll.index == child_index then return end
         scroll.index = child_index
         dom.mark_dirty(self, grid_node)

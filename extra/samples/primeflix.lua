@@ -75,8 +75,8 @@ function App.load(self, std)
                 sub   = '- 2001 - 5 estrelas'
             })
         ),
-        std.h('grid', { class='1x2', scroll='flow', span = 6, style = 'top10pct'},
-            std.h('grid', { class='6x1', scroll='flow', style = 'overflow'  },
+        std.h('grid', { class='1x2', scroll='peek', span = 6, style = 'top10pct'},
+            std.h('grid', { class='6x1', scroll='peek', style = 'overflow'  },
                 std.h(Card, { title='Cozinhando Mal',  color=0x1A3060FF }),
                 std.h(Card, { title='Os Caras',        color=0x601A1AFF }),
                 std.h(Card, { title='Alcancador',      color=0x1A6030FF }),
@@ -84,7 +84,7 @@ function App.load(self, std)
                 std.h(Card, { title='Fortaleza',       color=0x3A1A60FF }),
                 std.h(Card, { title='Joao Ryan',       color=0x1A5060FF })
             ),
-            std.h('grid', { class='6x1', scroll='flow', style = 'overflow' },
+            std.h('grid', { class='6x1', scroll='peek', style = 'overflow' },
                 std.h(Card, { title='Areia',           color=0x50401AFF }),
                 std.h(Card, { title='Openheimer',      color=0x1A1A50FF }),
                 std.h(Card, { title='Avatarao 2',      color=0x1A5050FF }),
@@ -92,7 +92,7 @@ function App.load(self, std)
                 std.h(Card, { title='Bonecao',         color=0x601A40FF }),
                 std.h(Card, { title='Nops',            color=0x401A20FF })
             ),
-            std.h('grid', { class='6x1', scroll='flow', style = 'overflow' },
+            std.h('grid', { class='6x1', scroll='peek', style = 'overflow' },
                 std.h(Card, { title='O Fio',           color=0x2A1A50FF }),
                 std.h(Card, { title='Sucessao',        color=0x501A2AFF }),
                 std.h(Card, { title='Pedra Amarela',   color=0x1A4020FF }),
@@ -100,7 +100,7 @@ function App.load(self, std)
                 std.h(Card, { title='Euforiasso',      color=0x1A3050FF }),
                 std.h(Card, { title='Ando',            color=0x203A20FF })
             ),
-            std.h('grid', { class='6x1', scroll='flow', style = 'overflow' },
+            std.h('grid', { class='6x1', scroll='peek', style = 'overflow' },
                 std.h(Card, { title='Encantasso',      color=0x60401AFF }),
                 std.h(Card, { title='Lucao',           color=0x1A6050FF }),
                 std.h(Card, { title='Moanassa',        color=0x1A4060FF }),

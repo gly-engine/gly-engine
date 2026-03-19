@@ -1,5 +1,5 @@
 local App = {
-    meta = { title = 'Flow Carousel', version = '0.3.0' }
+    meta = { title = 'Peek Carousel', version = '0.3.0' }
 }
 
 local ITEMS = {
@@ -44,7 +44,7 @@ end
 
 function App.load(self, std)
     std.ui.style('carousel', { top = 80, height = CARD })
-    local s = std.ui.slide('7x1', { scroll = 'flow' })
+    local s = std.ui.slide('7x1', { scroll = 'peek' })
     std.ui.style('carousel'):add(s.node)
     for i, item in ipairs(ITEMS) do s:add(make_card(item, i)) end
 end

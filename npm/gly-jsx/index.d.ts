@@ -19,7 +19,7 @@ declare namespace JSX {
       after?: number,
       style?: string,
       dir?: 'row' | 'col',
-      scroll?: 'shift' | 'page' | 'flow',
+      scroll?: 'shift' | 'page' | 'peek',
       focus?: 'wrap' | 'stop' | 'escape',
       children?: JSX.Element | Array<JSX.Element>
     };

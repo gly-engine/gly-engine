@@ -65,7 +65,7 @@ local function scroll_register(dom_obj, node, options)
     local default_mode = (cols > 1 and rows > 1) and 'page' or 'shift'
     local mode = options.mode or options.scroll or default_mode
     local default_anchor
-    if mode == 'flow' then
+    if mode == 'peek' then
         local dim = (rows == 1) and cols or rows
         default_anchor = dim >= 3 and 1 or 0
     end
