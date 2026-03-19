@@ -46,26 +46,6 @@ local function find_scroll_parent(self, node)
     return nil
 end
 
---! @brief Find the nearest container ancestor that has focus_mode set.
-local function find_focus_group(self, node)
-    local current = node.config.parent
-    while current do
-        if current.config.focus_mode then return current end
-        current = current.config.parent
-    end
-    return nil
-end
-
---! @brief Check if node is inside the given group container.
-local function is_same_group(group, node)
-    local current = node.config.parent
-    while current do
-        if current == group then return true end
-        current = current.config.parent
-    end
-    return false
-end
-
 -- ─── ensure_visible ──────────────────────────────────────────────────────────
 
 --! @brief Adjust the scroll index so that focus_node is within the visible window.
@@ -164,10 +144,11 @@ local function set_focus(self, node)
     end
     lifecycle.focus(self, node)
 
-    -- ensure scroll grid follows focus
+    -- ensure all scroll ancestors reveal this node (inner → outer)
     local scroll_parent = find_scroll_parent(self, node)
-    if scroll_parent then
+    while scroll_parent do
         ensure_visible(self, scroll_parent, node)
+        scroll_parent = find_scroll_parent(self, scroll_parent)
     end
 end
 
@@ -180,6 +161,10 @@ end
 local function focus_navigate_spatial(self, current, direction)
     local cx = current.config.offset_x + current.data.width  / 2
     local cy = current.config.offset_y + current.data.height / 2
+    local c_left   = current.config.offset_x
+    local c_right  = current.config.offset_x + current.data.width
+    local c_top    = current.config.offset_y
+    local c_bottom = current.config.offset_y + current.data.height
 
     local best_node  = nil
     local best_score = math.huge
@@ -188,33 +173,34 @@ local function focus_navigate_spatial(self, current, direction)
         local candidate = self.focus_list[i]
         if candidate ~= current
            and candidate.config.visible ~= false
+           and not candidate.config._scroll_clipped
            and candidate.config.focusable then
 
             local px = candidate.config.offset_x + candidate.data.width  / 2
             local py = candidate.config.offset_y + candidate.data.height / 2
             local dx, dy = px - cx, py - cy
 
+            -- require no overlap on the navigation axis so same-row/col items
+            -- are never picked when pressing up/down or left/right
             local valid = false
             local score = 0
 
-            if direction == 'right' and dx > 0 then
-                valid = true; score = dx + math.abs(dy) * 3
-            elseif direction == 'left' and dx < 0 then
-                valid = true; score = -dx + math.abs(dy) * 3
-            elseif direction == 'down' and dy > 0 then
-                valid = true; score = dy + math.abs(dx) * 3
-            elseif direction == 'up' and dy < 0 then
-                valid = true; score = -dy + math.abs(dx) * 3
-            end
+            local p_left   = candidate.config.offset_x
+            local p_right  = p_left + candidate.data.width
+            local p_top    = candidate.config.offset_y
+            local p_bottom = p_top  + candidate.data.height
+            local y_overlap = p_top < c_bottom and p_bottom > c_top
 
-            -- check container focus_mode constraints
-            if valid then
-                local group = find_focus_group(self, current)
-                if group and not is_same_group(group, candidate) then
-                    if group.config.focus_mode == 'stop' then
-                        valid = false
-                    end
-                end
+            -- left/right: no X overlap + must share the same Y band
+            -- up/down:    no Y overlap (any X is fine, score handles proximity)
+            if direction == 'right' and p_left >= c_right and y_overlap then
+                valid = true; score = dx + math.abs(dy) * 3
+            elseif direction == 'left' and p_right <= c_left and y_overlap then
+                valid = true; score = -dx + math.abs(dy) * 3
+            elseif direction == 'down' and p_top >= c_bottom then
+                valid = true; score = dy + math.abs(dx) * 3
+            elseif direction == 'up' and p_bottom <= c_top then
+                valid = true; score = -dy + math.abs(dx) * 3
             end
 
             if valid and score < best_score then
@@ -260,7 +246,11 @@ local function focus_navigate_grid(self, grid_node, current, direction)
     local mode = scroll_state and scroll_state.mode or 'shift'
 
     if dir == 'col' then
-        -- col-major: items fill top→bottom then right. row = (idx-1) % rows
+        -- col-major (horizontal list): left/right are the primary axis
+        -- up/down escape to spatial — single row has nothing above or below
+        if rows == 1 and (direction == 'down' or direction == 'up') then
+            return nil
+        end
         local current_row = (idx - 1) % rows
         if direction == 'down' then
             if mode == 'page' and current_row == rows - 1 then return nil end
@@ -272,7 +262,11 @@ local function focus_navigate_grid(self, grid_node, current, direction)
         elseif direction == 'left'  then next_idx = idx - rows
         end
     else  -- 'row'
-        -- row-major: items fill left→right then down. col = (idx-1) % cols
+        -- row-major (vertical list): up/down are the primary axis
+        -- left/right escape to spatial — single column has nothing beside it
+        if cols == 1 and (direction == 'left' or direction == 'right') then
+            return nil
+        end
         local current_col = (idx - 1) % cols
         if direction == 'right' then
             if mode == 'page' and current_col == cols - 1 then return nil end
@@ -303,17 +297,16 @@ local function focus_navigate(self, direction)
     local current = self.focus_current
     if not current then return end
 
+    -- walk scroll parents from nearest to farthest: each off-axis nil bubbles
+    -- up to the next outer grid until one handles it or spatial takes over.
     local scroll_parent = find_scroll_parent(self, current)
-    if scroll_parent then
+    while scroll_parent do
         local next_node = focus_navigate_grid(self, scroll_parent, current, direction)
         if next_node then
             set_focus(self, next_node)
             return
         end
-        if scroll_parent.config.focus_mode == 'escape' then
-            focus_navigate_spatial(self, current, direction)
-        end
-        return
+        scroll_parent = find_scroll_parent(self, scroll_parent)
     end
 
     focus_navigate_spatial(self, current, direction)
@@ -349,9 +342,7 @@ local P = {
     focus_navigate_spatial = focus_navigate_spatial,
     focus_navigate_grid    = focus_navigate_grid,
     find_scroll_parent     = find_scroll_parent,
-    find_focus_group       = find_focus_group,
     find_focusable         = find_focusable,
-    is_same_group          = is_same_group,
     is_descendant          = is_descendant,
     is_focused             = is_focused,
     press                  = press,

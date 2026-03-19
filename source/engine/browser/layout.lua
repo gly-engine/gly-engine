@@ -55,6 +55,11 @@ local function slide_step(scroll)
     end
 end
 
+-- ─── Scroll clip depth ───────────────────────────────────────────────────────
+-- Tracks how many clipped scroll-grid ancestors the current recursion is inside.
+-- Incremented before recursing into an out-of-bounds child, decremented after.
+local _clip = 0
+
 -- ─── Layout engine ───────────────────────────────────────────────────────────
 
 --! @brief Recursively compute layout for a node and its children.
@@ -71,6 +76,9 @@ end
 local function dom_layout(self, node, parent_x, parent_y, parent_w, parent_h)
     local cfg = node.config
     local dat = node.data
+
+    -- inherit scroll-clip state from parent's decision (set before this call)
+    cfg._scroll_clipped = _clip > 0 or nil
 
     cfg.offset_x = parent_x
     cfg.offset_y = parent_y
@@ -156,7 +164,14 @@ local function dom_layout(self, node, parent_x, parent_y, parent_w, parent_h)
                 for _, css_fn in ipairs(cc.css) do
                     cx, cy, w, h = css_fn(cx, cy, w, h)
                 end
+
+                -- clip children that fall fully outside a scroll grid viewport
+                local outside = scroll
+                    and (cx + w <= parent_x or cx >= parent_x + parent_w
+                      or cy + h <= parent_y or cy >= parent_y + parent_h)
+                if outside then _clip = _clip + 1 end
                 dom_layout(self, child, cx, cy, w, h)
+                if outside then _clip = _clip - 1 end
 
                 if dir_val == 'col' then
                     y = y + span_y + after_val

@@ -95,6 +95,7 @@ local function compile(self)
 
         local visible = cfg.visible ~= false
             and not paused_all
+            and not cfg._scroll_clipped
             and cfg.offset_x + node.data.width  > 0
             and cfg.offset_x < sw
             and cfg.offset_y + node.data.height > 0
