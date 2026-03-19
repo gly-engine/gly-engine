@@ -5,6 +5,10 @@ local App = {
 local PAD    = 10
 local CARD_H = 90
 
+local banner_title = 'O Senhor dos Aneis de Cebola'
+local banner_fobar = 'Animes'
+local banner_color = 0x1A3A6AFF
+
 local Tab = function(props, std)
     return std.h('node', {
         draw = function(self)
@@ -16,21 +20,23 @@ local Tab = function(props, std)
                 std.draw.rect(1, 0, self.height - 3, self.width, 3)
             end
         end,
-        click = function() std.ui.press() end
+        click = function()
+            banner_fobar = props.label
+        end
     })
 end
 
 local Banner = function(props, std)
     return std.h('node', {
         draw = function(self)
-            std.draw.color(props.color)
+            std.draw.color(banner_color)
             std.draw.rect(1, 0, 0, self.width, self.height)
             std.draw.color(0x000000CC)
             std.draw.rect(1, 0, self.height - 54, self.width / 2, 54)
             std.draw.color(0xFFFFFFFF)
-            std.text.print(PAD, self.height - 34, props.title)
+            std.text.print(PAD, self.height - 34, banner_title)
             std.draw.color(0xCCCCCCFF)
-            std.text.print(PAD, self.height - 16, props.sub)
+            std.text.print(PAD, self.height - 16, banner_fobar..props.sub)
         end
     })
 end
@@ -45,16 +51,20 @@ local Card = function(props, std)
             std.draw.color(on and 0xFFFFFFFF or 0xCCCCCCFF)
             std.text.print(PAD, self.height / 2 - 6 + lift, props.title)
         end,
-        click = function() end
+        focus = function()
+            banner_title = props.title
+            banner_color = props.color
+        end
     })
 end
 
 function App.load(self, std)
     std.h('style', { class = 'overflow', width = '120vw' })
+    std.h('style', { class = 'top10pct', top = '10%' })
 
     std.h('grid', { class='1x12' },
         std.h('grid', { class='5x1'},
-            std.h(Tab, { label='Inicio'   }),
+            std.h(Tab, { label='Animes'   }),
             std.h(Tab, { label='Series'   }),
             std.h(Tab, { label='Filmes'   }),
             std.h(Tab, { label='Esportes' }),
@@ -62,12 +72,10 @@ function App.load(self, std)
         ),
         std.h('item', { span = 5 },
             std.h(Banner, {
-                title = 'O Senhor dos Aneis de Cebola',
-                sub   = 'Fantasia - 2001 - 5 estrelas',
-                color = 0x1A3A6AFF
+                sub   = '- 2001 - 5 estrelas'
             })
         ),
-        std.h('grid', { class='1x2', scroll='shift', span = 6},
+        std.h('grid', { class='1x2', scroll='flow', span = 6, style = 'top10pct'},
             std.h('grid', { class='6x1', scroll='flow', style = 'overflow'  },
                 std.h(Card, { title='Cozinhando Mal',  color=0x1A3060FF }),
                 std.h(Card, { title='Os Caras',        color=0x601A1AFF }),

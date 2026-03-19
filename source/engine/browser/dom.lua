@@ -405,7 +405,7 @@ local function bus(self, key, handler_func)
     local i = 1
     while i <= #self.node_list do
         local node = self.node_list[i]
-        local skip = i ~= 1 and pause.is_paused(self, node.config.uid, key)
+        local skip = i ~= 1 and (pause.is_paused(self, node.config.uid, key) or node.config._scroll_clipped)
         if not skip then
             self.current_node = node
             handler_func(node)

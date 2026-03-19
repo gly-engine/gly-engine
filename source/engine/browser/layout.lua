@@ -103,15 +103,16 @@ local function dom_layout(self, node, parent_x, parent_y, parent_w, parent_h)
                 end
             elseif scroll.mode == 'flow' then
                 -- focused item sits at slot [anchor] (0-based).
-                -- symmetric empty peeks: [anchor] empty slots before first item
-                -- and [anchor] empty slots after last item.
-                -- offset range: [-(total - dim + anchor), anchor]
+                -- anchor=0: focused item always at slot 0; last item shows empty slots after.
+                -- anchor>0: view clamps at end so no empty slots after last item.
                 local total  = node.childs and #node.childs or 0
                 local anchor = scroll.anchor or 1
                 if dir_val == 'col' then
-                    x = math.max(math.min(anchor - scroll.index, anchor), -(total - cols + anchor))
+                    local lo = anchor == 0 and -(total - 1) or -(total - cols + anchor)
+                    x = math.max(math.min(anchor - scroll.index, anchor), lo)
                 else
-                    y = math.max(math.min(anchor - scroll.index, anchor), -(total - rows + anchor))
+                    local lo = anchor == 0 and -(total - 1) or -(total - rows + anchor)
+                    y = math.max(math.min(anchor - scroll.index, anchor), lo)
                 end
             else
                 if dir_val == 'col' then
