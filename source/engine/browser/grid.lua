@@ -21,13 +21,17 @@ local function add(std, engine, self, application, options)
     if not application then return self end
     local node   = application.node or std.node.load(application)
     local size   = (type(options) == 'number' and options) or (options or {}).span
-    local after  = options ~= size and (options or {}).after
-    local offset = options ~= size and (options or {}).offset
+    local after  = type(options) == 'table' and options.after
+    local offset = type(options) == 'table' and options.offset
+    local id     = type(options) == 'table' and options.id
+    local class  = type(options) == 'table' and options.class
     dom.node_add(engine.dom, node, {
         parent = self.node,
         offset = offset,
         after  = after,
         size   = size,
+        id     = id,
+        class  = class,
     })
     return self
 end
@@ -107,7 +111,11 @@ local function component(std, engine, layout, options)
     local cols, rows = layout:match('(%d+)x(%d+)')
 
     local node = std.node.load({})
-    dom.node_add(engine.dom, node, { parent = engine.current })
+    dom.node_add(engine.dom, node, {
+        parent = engine.current,
+        id     = options and options.id,
+        class  = options and options.class,
+    })
     node.config.type = 'grid'
     node.config.cols = tonumber(cols)
     node.config.rows = tonumber(rows)

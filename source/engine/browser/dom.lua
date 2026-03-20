@@ -96,6 +96,7 @@ local function compile(self)
         local visible = cfg.visible ~= false
             and not paused_all
             and not cfg._scroll_clipped
+            and not cfg._span_hidden
             and cfg.offset_x + node.data.width  > 0
             and cfg.offset_x < sw
             and cfg.offset_y + node.data.height > 0
@@ -245,6 +246,10 @@ local function node_add(self, node, options)
         cfg.size   = options.size   or cfg.size   or 1
         cfg.after  = options.after  or cfg.after  or 0
         cfg.offset = options.offset or cfg.offset or 0
+        if options.id and not cfg.id then
+            cfg.id = options.id
+            self.index_id[options.id] = node
+        end
         self.flag_reparent = true
         mark_dirty(self, parent)
         return
@@ -405,7 +410,7 @@ local function bus(self, key, handler_func)
     local i = 1
     while i <= #self.node_list do
         local node = self.node_list[i]
-        local skip = i ~= 1 and (pause.is_paused(self, node.config.uid, key) or node.config._scroll_clipped)
+        local skip = i ~= 1 and (pause.is_paused(self, node.config.uid, key) or node.config._scroll_clipped or node.config._span_hidden)
         if not skip then
             self.current_node = node
             handler_func(node)

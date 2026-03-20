@@ -6,9 +6,27 @@
 
 local nav      = require('source/engine/browser/navigator')
 local query    = require('source/engine/browser/query')
+local dom_mod  = require('source/engine/browser/dom')
 local ui_grid  = require('source/engine/browser/grid')
 local ui_style = require('source/engine/api/draw/ui/style')
 local util_decorator = require('source/shared/functional/decorator')
+
+-- ─── Node resolution ──────────────────────────────────────────────────────────
+
+--! @brief Resolve a target (nil / '#id' / node / grid-object) to a raw node.
+--! @param dom_obj engine.dom
+--! @param target nil|string|table
+--! @return table|nil  raw node
+local function resolve_node(dom_obj, target)
+    if target == nil then
+        return dom_obj.current_node
+    elseif type(target) == 'string' and target:sub(1, 1) == '#' then
+        return dom_obj.index_id[target:sub(2)]
+    elseif type(target) == 'table' then
+        -- raw node (has .config) or grid/slide object (has .node)
+        return target.config and target or target.node
+    end
+end
 
 --! @brief Install std.ui.* methods onto std.
 --! @param std table
@@ -39,7 +57,19 @@ local function install(std, engine)
             end
         end
         if target then
-            nav.set_focus(dom_obj, target)
+            -- if the target is not directly focusable (e.g. a grid), descend
+            -- into its subtree; if still nothing found, walk up one level so
+            -- siblings (e.g. the cards row next to a title row) are also searched
+            if type(target) == 'table' and not target.config.focusable then
+                local found = nav.find_focusable(target)
+                if not found and target.config.parent then
+                    found = nav.find_focusable(target.config.parent)
+                end
+                target = found
+            end
+            if target then
+                nav.set_focus(dom_obj, target)
+            end
         end
     end
 
@@ -53,6 +83,42 @@ local function install(std, engine)
             target = dom_obj.current_node
         end
         return nav.is_focused(dom_obj, target)
+    end
+
+    -- span / layout mutation
+    std.ui.span = function(span_value, target)
+        local node = resolve_node(engine.dom, target)
+        if not node then return end
+        node.config.size = span_value
+        local parent = node.config.parent
+        if parent then
+            dom_mod.mark_dirty(engine.dom, parent)
+        end
+    end
+
+    std.ui.class = function(layout, target)
+        local node = resolve_node(engine.dom, target)
+        if not node then return end
+        -- if target is not a grid, try its parent grid
+        if node.config.type ~= 'grid' then
+            local p = node.config.parent
+            if p and p.config.type == 'grid' then
+                node = p
+            else
+                return
+            end
+        end
+        local cols, rows = layout:match('(%d+)x(%d+)')
+        if not cols then return end
+        node.config.cols = tonumber(cols)
+        node.config.rows = tonumber(rows)
+        -- keep scroll_registry in sync when present
+        local scroll = engine.dom.scroll_registry[node]
+        if scroll then
+            scroll.cols = node.config.cols
+            scroll.rows = node.config.rows
+        end
+        dom_mod.mark_dirty(engine.dom, node)
     end
 
     -- selector API

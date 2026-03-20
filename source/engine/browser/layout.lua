@@ -60,6 +60,11 @@ end
 -- Incremented before recursing into an out-of-bounds child, decremented after.
 local _clip = 0
 
+-- ─── Span-hidden depth ───────────────────────────────────────────────────────
+-- Tracks how many span=0 ancestors the current recursion is inside.
+-- Incremented before recursing into a span=0 child, decremented after.
+local _hide = 0
+
 -- ─── Layout engine ───────────────────────────────────────────────────────────
 
 --! @brief Recursively compute layout for a node and its children.
@@ -77,8 +82,9 @@ local function dom_layout(self, node, parent_x, parent_y, parent_w, parent_h)
     local cfg = node.config
     local dat = node.data
 
-    -- inherit scroll-clip state from parent's decision (set before this call)
+    -- inherit scroll-clip / span-hidden state from parent's decision
     cfg._scroll_clipped = _clip > 0 or nil
+    cfg._span_hidden    = _hide > 0 or nil
 
     cfg.offset_x = parent_x
     cfg.offset_y = parent_y
@@ -125,72 +131,70 @@ local function dom_layout(self, node, parent_x, parent_y, parent_w, parent_h)
 
         if node.childs then
             for _, child in ipairs(node.childs) do
-                local cc         = child.config
-                local offset_val = cc.offset or 0
-                local after_val  = cc.after  or 0
-                local span_x, span_y = parse_span(cc.size or 1)
-                if dir_val == 'row' and type(cc.size) == 'number' then
-                    span_x, span_y = 1, span_x
-                end
+                local cc = child.config
 
-                if dir_val == 'col' then
-                    y = y + offset_val
-                    if y >= rows then
-                        local wrap = math.floor(y / rows)
-                        y = y % rows
-                        x = x + wrap
-                    end
+                -- span=0: hidden — takes no grid space, draw() never called
+                if cc.size == 0 then
+                    _hide = _hide + 1
+                    dom_layout(self, child, parent_x, parent_y, 0, 0)
+                    _hide = _hide - 1
+                    -- cursor NOT advanced
+
                 else
-                    x = x + offset_val
-                    if x >= cols then
-                        local wrap = math.floor(x / cols)
-                        x = x % cols
-                        y = y + wrap
+                    local offset_val = cc.offset or 0
+                    local after_val  = cc.after  or 0
+                    local span_x, span_y = parse_span(cc.size or 1)
+                    if dir_val == 'row' and type(cc.size) == 'number' then
+                        span_x, span_y = 1, span_x
                     end
-                end
 
-                local cx, cy, w, h
-                if dir_val == 'col' then
-                    cx = parent_x + cell_w * x
-                    cy = parent_y + cell_h * y
-                    w  = span_x * cell_w
-                    h  = span_y * cell_h
-                else  -- 'row' default
-                    cx = parent_x + cell_w * x
-                    cy = parent_y + cell_h * y
-                    w  = span_x * cell_w
-                    h  = span_y * cell_h
-                end
-
-                for _, css_fn in ipairs(cc.css) do
-                    cx, cy, w, h = css_fn(cx, cy, w, h)
-                end
-
-                -- clip children that fall fully outside a scroll grid viewport
-                local outside = scroll
-                    and (cx + w <= parent_x or cx >= parent_x + parent_w
-                      or cy + h <= parent_y or cy >= parent_y + parent_h)
-                if outside then _clip = _clip + 1 end
-                dom_layout(self, child, cx, cy, w, h)
-                if outside then _clip = _clip - 1 end
-
-                if dir_val == 'col' then
-                    y = y + span_y + after_val
-                    if y >= rows then
-                        -- First wrap must honor item width (span_x). Extra wraps
-                        -- come from `after` overflow and advance by one column.
-                        local wrap = math.floor(y / rows)
-                        y = y % rows
-                        x = x + span_x + (wrap - 1)
+                    if dir_val == 'col' then
+                        y = y + offset_val
+                        if y >= rows then
+                            local wrap = math.floor(y / rows)
+                            y = y % rows
+                            x = x + wrap
+                        end
+                    else
+                        x = x + offset_val
+                        if x >= cols then
+                            local wrap = math.floor(x / cols)
+                            x = x % cols
+                            y = y + wrap
+                        end
                     end
-                else
-                    x = x + span_x + after_val
-                    if x >= cols then
-                        -- First wrap must honor item height (span_y). Extra wraps
-                        -- come from `after` overflow and advance by one row.
-                        local wrap = math.floor(x / cols)
-                        x = x % cols
-                        y = y + span_y + (wrap - 1)
+
+                    local cx = parent_x + cell_w * x
+                    local cy = parent_y + cell_h * y
+                    local w  = span_x * cell_w
+                    local h  = span_y * cell_h
+
+                    for _, css_fn in ipairs(cc.css) do
+                        cx, cy, w, h = css_fn(cx, cy, w, h)
+                    end
+
+                    -- clip children that fall fully outside a scroll grid viewport
+                    local outside = scroll
+                        and (cx + w <= parent_x or cx >= parent_x + parent_w
+                          or cy + h <= parent_y or cy >= parent_y + parent_h)
+                    if outside then _clip = _clip + 1 end
+                    dom_layout(self, child, cx, cy, w, h)
+                    if outside then _clip = _clip - 1 end
+
+                    if dir_val == 'col' then
+                        y = y + span_y + after_val
+                        if y >= rows then
+                            local wrap = math.floor(y / rows)
+                            y = y % rows
+                            x = x + span_x + (wrap - 1)
+                        end
+                    else
+                        x = x + span_x + after_val
+                        if x >= cols then
+                            local wrap = math.floor(x / cols)
+                            x = x % cols
+                            y = y + span_y + (wrap - 1)
+                        end
                     end
                 end
             end

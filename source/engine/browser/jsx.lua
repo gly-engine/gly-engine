@@ -57,12 +57,14 @@ local function create_h(std, engine)
 
         elseif element == 'grid' then
             local has_scroll = attribute.scroll or attribute.focus or attribute.anchor
-            local scroll_opts = has_scroll and {
+            local has_opts   = has_scroll or attribute.id
+            local grid_opts  = has_opts and {
                 scroll = attribute.scroll,
                 focus  = attribute.focus,
                 anchor = attribute.anchor,
+                id     = attribute.id,
             } or nil
-            local grid = std.ui.grid(attribute.class, scroll_opts)
+            local grid = std.ui.grid(attribute.class, grid_opts)
             if attribute.dir then grid:dir(attribute.dir) end
             if attribute.style then add_style(std, grid.node, attribute.style) end
             for i = 1, #childs do
@@ -72,7 +74,7 @@ local function create_h(std, engine)
                     error('[error] scrollable grid does not support 2D span, use number')
                 end
                 if item.node then
-                    grid:add(item.node, {span=item.span, offset=item.offset, after=item.after})
+                    grid:add(item.node, {span=item.span, offset=item.offset, after=item.after, id=item.id})
                     if item.style then add_style(std, grid:get_item(i), item.style) end
                 else
                     grid:add(item)
@@ -92,6 +94,7 @@ local function create_h(std, engine)
                 after  = attribute.after,
                 style  = attribute.style,
                 offset = attribute.offset,
+                id     = attribute.id,
             }
 
         elseif element == 'style' then
