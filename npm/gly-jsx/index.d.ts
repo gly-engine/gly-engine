@@ -13,6 +13,7 @@ declare namespace JSX {
 
   interface IntrinsicElements {
     grid: {
+      id?: string,
       class: SpanUnit,
       span?: number | `${number}x${number}`,
       offset?: number,

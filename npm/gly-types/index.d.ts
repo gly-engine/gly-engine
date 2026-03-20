@@ -318,6 +318,8 @@ interface GlyStdUi {
   style(classlist: string, stylesheet: object): GlyUi;
   focus(target?: 'left' | 'right' | 'up' | 'down' | `#${string}` | GlyApp): void;
   isFocused(target?: `#${string}` | GlyApp): boolean;
+  span(size: number | `${number}x${number}`, target?: `#${string}` | GlyApp): void;
+  class(size: `${number}x${number}`, target?: `#${string}` | GlyApp): void;
   press(): void;
 }
 
