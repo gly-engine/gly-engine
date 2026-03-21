@@ -10,6 +10,7 @@ local ss        = require('source/engine/browser/stylesheet')
 local layout    = require('source/engine/browser/layout')
 local lifecycle = require('source/engine/browser/lifecycle')
 local dom       = require('source/engine/browser/dom')
+local pause     = require('source/engine/browser/pause')
 
 -- ─── Helper functions ───────────────────────────────────────────────────────
 
@@ -119,6 +120,7 @@ end
 --! @param node table  node to receive focus
 local function set_focus(self, node)
     if not node then return end
+    if pause.is_paused(self, node.config.uid, '*') then return end
     local old = self.focus_current
     if old == node then return end
 
@@ -174,7 +176,8 @@ local function focus_navigate_spatial(self, current, direction)
         if candidate ~= current
            and candidate.config.visible ~= false
            and not candidate.config._scroll_clipped
-           and candidate.config.focusable then
+           and candidate.config.focusable
+           and not pause.is_paused(self, candidate.config.uid, '*') then
 
             local px = candidate.config.offset_x + candidate.data.width  / 2
             local py = candidate.config.offset_y + candidate.data.height / 2
@@ -326,7 +329,7 @@ end
 --! @param self engine.dom
 local function press(self)
     local node = self.focus_current
-    if node and node.callbacks.click then
+    if node and not pause.is_paused(self, node.config.uid, '*') and node.callbacks.click then
         local prev = self.current_node
         self.current_node = node
         if self.std then
