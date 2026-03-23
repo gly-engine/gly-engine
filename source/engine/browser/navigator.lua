@@ -138,6 +138,13 @@ local function set_focus(self, node)
 
     self.focus_current = node
 
+    -- record as last focus for all ancestor containers
+    local ancestor = node.config.parent
+    while ancestor do
+        self.focus_memory[ancestor] = node
+        ancestor = ancestor.config.parent
+    end
+
     -- apply :focus styles to new node and fire focus callback
     for name, focus_func in pairs(node.config.style_focus or {}) do
         local base_func = self.stylesheet_func[name]
@@ -288,7 +295,12 @@ local function focus_navigate_grid(self, grid_node, current, direction)
     end
 
     if next_idx < 1 or next_idx > total then return nil end
-    return find_focusable(childs[next_idx])
+    local target = childs[next_idx]
+    local remembered = self.focus_memory[target]
+    if remembered and remembered.config.focusable and remembered.config.parent then
+        return remembered
+    end
+    return find_focusable(target)
 end
 
 -- ─── Top-level navigation dispatch ──────────────────────────────────────────

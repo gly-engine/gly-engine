@@ -188,6 +188,7 @@ local function node_begin(node, width, height, self, std)
     -- focus
     self.focus_list    = {}
     self.focus_current = nil
+    self.focus_memory  = setmetatable(self.focus_memory or {}, { __mode = 'kv' })
 
     -- bus context
     self.current_node = nil
