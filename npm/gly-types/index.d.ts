@@ -312,6 +312,19 @@ interface GlyStdText {
 }
 
 /** @noSelf **/
+interface GlyQueryResult {
+  setScroll(value: number | string | 'end' | `+${number}` | `-${number}`): GlyQueryResult;
+  getScroll(): { index: number; progress: number; visible: [number, number] } | undefined;
+  focus(index?: number): GlyQueryResult;
+  count(): number;
+  addStyle(name: string): GlyQueryResult;
+  delStyle(name: string): GlyQueryResult;
+  setAttr(key: string, value: unknown): GlyQueryResult;
+  getAttr(key: string): unknown;
+  isVisible(): boolean;
+}
+
+/** @noSelf **/
 interface GlyStdUi {
   grid(classlist: string): GlyUi;
   style(classlist: string): GlyUi;
@@ -320,6 +333,8 @@ interface GlyStdUi {
   isFocused(target?: `#${string}` | GlyApp): boolean;
   span(size: number | `${number}x${number}`, target?: `#${string}` | GlyApp): void;
   class(size: `${number}x${number}`, target?: `#${string}` | GlyApp): void;
+  queryOne(selector: `#${string}` | `.${string}`): GlyQueryResult | undefined;
+  query(selector: `.${string}`): GlyQueryResult[];
   press(): void;
 }
 
