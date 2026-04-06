@@ -1,0 +1,142 @@
+.pad {
+    width: min(50svh, 50svw);
+    aspect-ratio: 1;
+    position: relative;
+    font-weight: 800;
+}
+
+.pad button {
+    border: 1px solid var(--stroke);
+    position: absolute;
+    display: grid;
+    place-items: center;
+    width: 33%;
+    height: 33%;
+    font-size: 1.5rem;
+}
+
+.up {
+    top: 5%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--blue);
+}
+
+.left {
+    top: 50%;
+    left: 5%;
+    transform: translateY(-50%);
+    background: var(--yellow);
+}
+
+.right {
+    top: 50%;
+    right: 5%;
+    transform: translateY(-50%);
+    background: var(--green);
+}
+
+.down {
+    bottom: 5%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--red);
+}
+
+.center {
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    z-index: 1;
+}
+
+.dpad {
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .04);
+    border: 1px solid var(--stroke);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+
+.dpad .center {
+    overflow: visible;
+    background: #1d222b;
+    border: 1px solid var(--stroke);
+    font-weight: 600;
+    width: 40%;
+    height: 40%;
+}
+
+.dpad::before,
+.dpad::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100%;
+    height: 1px;
+    background: var(--stroke2);
+}
+
+.dpad::before {
+    transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.dpad::after {
+    transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+.dpad button {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+.opad button {
+    border-radius: 50%;
+}
+
+@media (orientation: landscape) {
+    .dpad .center {
+        display: none;
+    }
+}
+
+@media (orientation: portrait) {
+    .opad {
+        min-width: unset;
+        aspect-ratio: unset;
+        position: static;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        gap: clamp(12px, 4vw, 24px);
+        flex-direction: row-reverse;
+    }
+
+    .opad button {
+        position: static;
+        transform: none;
+        width: clamp(48px, 14vw, 72px);
+        height: clamp(48px, 14vw, 72px);
+        flex-shrink: 0;
+    }
+
+    .up {
+        top: 0;
+    }
+
+    .left {
+        left: 0;
+    }
+
+    .right {
+        right: 0;
+    }
+
+    .down {
+        bottom: 0;
+    }
+
+}

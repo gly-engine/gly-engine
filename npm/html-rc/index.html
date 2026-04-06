@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>gly_remote-control_beta</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body class="remote" role="application">
+
+  <section class="on_off">
+    <button class="power" style="background: rgb(185, 0, 0);">
+      ⏻
+    </button>
+
+    <button class="menu">MENU</button>
+  </section>
+
+  <section class="triggers">
+    <button class="trigger e">E</button>
+    <button class="trigger f">F</button>
+  </section>
+
+  <section class="remote-body">
+
+    <div class="pad dpad">
+      <button class="up">▲</button>
+      <button class="left">◀</button>
+      <button class="center" data-label="A">A</button>
+      <button class="right">▶</button>
+      <button class="down">▼</button>
+    </div>
+
+    <section class="actions-wrapper">
+      <div class="pad opad">
+        <button class="up">D</button>
+        <button class="left">C</button>
+        <button class="right">B</button>
+      </div>
+
+      <div class="options">
+
+        <div class="pill channel">
+          <button class="channel"> CH+ </button>
+          <hr/>
+          <button class="channel"> CH- </button>
+        </div>
+
+        <button class="pill">
+          MUTE
+        </button>
+
+        <div class="pill">
+          <button> VOL+ </button>
+          <hr />
+          <button> VOL- </button>
+        </div>
+      </div>
+    </section>
+  </section>
+
+  <script>
+    const landscape = window.matchMedia('(orientation: landscape)');
+    const opad = document.querySelector('.opad');
+
+    function update(e) {
+      opad.querySelector('[data-label="A"]')?.remove();
+      if (e.matches) {
+        opad.insertAdjacentHTML('beforeend', '<button class="down" data-label="A">A</button>');
+      }
+    }
+
+    landscape.addEventListener('change', update);
+    update(landscape);
+  </script>
+</body>
+
+</html>
