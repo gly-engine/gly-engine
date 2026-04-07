@@ -69,6 +69,9 @@
 --!    }
 --! }
 --! @endjson
+
+debug_do_juca = debug_do_juca or {}
+
 local str_http = require('source/shared/string/encode/http')
 local str_url = require('source/shared/string/encode/url')
 
@@ -91,6 +94,8 @@ local function http_connect(self)
         .add_imutable_header('Connection', 'close')
         .add_body_content(self.body_content)
         .to_http_protocol()
+
+    table.insert(debug_do_juca, "HTTP fsb09: "..self.method.." "..self.p_host..self.p_uri..params)
 
     event.post({
         class      = 'tcp',
@@ -424,6 +429,8 @@ local function fixed_loop()
                 state = 4
             end
         end
+
+        table.insert(debug_do_juca, "HTTP fsb09 connecting to: "..self.p_host.." (state: "..state..")")
 
         event.post({
             class = 'tcp',
