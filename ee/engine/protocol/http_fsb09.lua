@@ -97,6 +97,8 @@ local function http_connect(self)
 
     table.insert(debug_do_juca, "HTTP fsb09: "..self.method.." "..self.p_host..self.p_uri..params)
 
+    print( "aaa" .. request)
+
     event.post({
         class      = 'tcp',
         type       = 'data',

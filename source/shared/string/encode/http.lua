@@ -103,7 +103,6 @@ local function create_request(method, uri)
             request = request..self.body_content..'\r\n\r\n'
         end
 
-        print ("AAA" .. request)
         return request, function() end
     end
 
@@ -134,7 +133,6 @@ local function create_request(method, uri)
 
         request = request..uri
 
-        print ("BBB" .. request)
         return request, function() end
     end
 
@@ -162,7 +160,6 @@ local function create_request(method, uri)
     
         request = request..' '..uri
     
-        print ("CCC" .. request)
         return request, function() end
     end
 
