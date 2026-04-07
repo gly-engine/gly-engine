@@ -102,6 +102,7 @@ local function create_request(method, uri)
         if method ~= 'GET' and method ~= 'HEAD' and #self.body_content > 0 then
             request = request..self.body_content..'\r\n\r\n'
         end
+        print (request)
 
         return request, function() end
     end
