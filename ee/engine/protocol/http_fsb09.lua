@@ -430,8 +430,6 @@ local function fixed_loop()
             end
         end
 
-        table.insert(debug_do_juca, "HTTP fsb09 connecting to: "..self.p_host.." (state: "..state..")")
-
         event.post({
             class = 'tcp',
             type  = 'connect',
