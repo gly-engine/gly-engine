@@ -8,6 +8,7 @@ on:
 
 permissions:
   id-token: write
+  contents: read
 
 jobs:
   npm: 
@@ -22,8 +23,10 @@ jobs:
       -
         uses: actions/setup-node@v2
         with:
-          node-version: "22"
+          node-version: "24"
           registry-url: "https://registry.npmjs.org"
+      -
+        run: npm install -g npm@latest
       -
         if: matrix.package != 'gly-cli'
         working-directory: ./npm/${{ matrix.package }}
@@ -33,7 +36,4 @@ jobs:
         run: npm run build
       - 
         working-directory: ./dist
-        run: |
-          npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish
