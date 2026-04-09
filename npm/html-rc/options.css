@@ -1,0 +1,46 @@
+.options {
+    display: flex;
+    width: 100%;
+    padding: 0 var(--padding);
+    gap: 10px;
+}
+
+.pill {
+    padding: 10px 12px;
+    margin: auto;
+    border-radius: 999px;
+    overflow: hidden;
+    border: 1px solid var(--stroke2);
+    background: rgba(255, 255, 255, .04);
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.pill button {
+    padding: var(--padding) 0;
+    margin: auto;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+    font-weight: 600;
+}
+
+hr {
+    border: 1px solid var(--stroke2);
+}
+
+@media (orientation: landscape) {
+    .options {
+        padding: 0;
+        width: 50%;
+        flex-direction: column;
+    }
+
+    .pill {
+        display: flex;
+        flex-direction: row;
+        gap: 10px;
+        padding: 3px 12px;
+    }
+}

@@ -1,0 +1,92 @@
+@import './triggers.css';
+@import './pad.css';
+@import './options.css';
+
+:root {
+    --bg: #000;
+    --txt: #FFF;
+    --padding: 12px;
+    --muted: rgba(255, 255, 255, .62);
+    --panel: #161b24;
+    --panel2: #111521;
+    --stroke: rgba(255, 255, 255, .12);
+    --stroke2: rgba(255, 255, 255, .08);
+    --shadow: 0 10px 10px rgba(0, 0, 0, .25);
+    --radius: 18px;
+    --gap: 40px;
+
+    --red:    #D64545;
+    --yellow: #D4A72C;
+    --green:  #3FB950;
+    --blue:   #3A86D6;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    color: white;
+}
+
+body {
+    width: 100svw;
+    height: 100svh;
+    font-family: system-ui, -apple-system, Roboto, Arial, sans-serif;
+    overflow: hidden;
+    background: linear-gradient(160deg, var(--panel), var(--panel2));
+    touch-action: manipulation;
+    user-select: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1.5rem;
+}
+
+.remote-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    flex: 1;
+}
+
+.actions-wrapper {
+    display: flex;
+    flex-direction: column;
+
+}
+
+button:active {
+    scale: 0.97;
+}
+
+@media (orientation: landscape) {
+    body {
+        padding: 0;
+    }
+
+    .remote-body {
+        flex-direction: row;
+        padding: var(--padding);
+        align-items: center;
+        justify-content: space-around;
+        width: 100%;
+    }
+
+    .actions-wrapper {
+        flex-direction: row-reverse;
+        align-items: center;
+        flex: 1;
+    }
+}
+
+@media (orientation: portrait) {
+    .remote-body {
+        padding-top: var(--gap);
+        gap: var(--gap);
+    }
+
+    .actions-wrapper {
+        gap: var(--gap);
+    }
+}

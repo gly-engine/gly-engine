@@ -1,0 +1,60 @@
+.triggers {
+    display: none;
+}
+
+.on_off {
+    width: 100%;
+    display: flex;
+    justify-content: space-around;
+}
+
+.on_off button {
+    color: white;
+    padding: 10px 12px;
+    margin: auto;
+    border-radius: 999px;
+    overflow: hidden;
+    border: 1px solid var(--stroke2);
+    background: rgba(255, 255, 255, .04);
+    font-weight: 600;
+    font-size: 1rem;
+
+}
+
+@media (orientation: landscape) {
+    .on_off {
+        display: none;
+    }
+
+    .triggers {
+        display: flex;
+        justify-content: space-between;
+        flex-shrink: 0;
+        width: 100%;
+    }
+
+    .trigger {
+        width: clamp(20%, 30vw, 130px);
+        padding: var(--padding);
+        font-size: 1.5rem;
+        border: none;
+        color: white;
+        background: rgba(255, 255, 255, .05);
+        box-shadow: var(--shadow);
+        cursor: pointer;
+
+    }
+
+    .trigger.e {
+        border-bottom-right-radius: var(--radius);
+    }
+
+    .trigger.f {
+        border-bottom-left-radius: var(--radius);
+    }
+
+    .trigger:active {
+        scale: .96;
+    }
+
+}
