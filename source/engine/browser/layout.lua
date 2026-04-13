@@ -55,6 +55,20 @@ local function slide_step(scroll)
     end
 end
 
+--! @brief Shortest signed delta to go from current to target in a circular list.
+--! @param current number
+--! @param target  number
+--! @param total   number  size of the list
+--! @return number
+local function peek_cycle_delta(current, target, total)
+    if total <= 0 then return target - current end
+    local delta = (target - current) % total
+    if delta > total / 2 then
+        delta = delta - total
+    end
+    return delta
+end
+
 -- ─── Scroll clip depth ───────────────────────────────────────────────────────
 -- Tracks how many clipped scroll-grid ancestors the current recursion is inside.
 -- Incremented before recursing into an out-of-bounds child, decremented after.
@@ -99,7 +113,11 @@ local function dom_layout(self, node, parent_x, parent_y, parent_w, parent_h)
         local x, y = 0, 0
 
         -- scroll: shift accumulator so items before scroll.index are off-screen
-        local scroll = self.scroll_registry[node]
+        local scroll      = self.scroll_registry[node]
+        local peek_total  = 0
+        local peek_anchor = 1
+        local peek_loop   = false
+
         if scroll then
             if scroll.mode == 'page' then
                 if dir_val == 'col' then
@@ -111,14 +129,21 @@ local function dom_layout(self, node, parent_x, parent_y, parent_w, parent_h)
                 -- focused item sits at slot [anchor] (0-based).
                 -- anchor=0: focused item always at slot 0; last item shows empty slots after.
                 -- anchor>0: view clamps at end so no empty slots after last item.
-                local total  = node.childs and #node.childs or 0
-                local anchor = scroll.anchor or 1
-                if dir_val == 'col' then
-                    local lo = anchor == 0 and -(total - 1) or -(total - cols + anchor)
-                    x = math.max(math.min(anchor - scroll.index, anchor), lo)
-                else
-                    local lo = anchor == 0 and -(total - 1) or -(total - rows + anchor)
-                    y = math.max(math.min(anchor - scroll.index, anchor), lo)
+                peek_total  = node.childs and #node.childs or 0
+                peek_anchor = scroll.anchor or 1
+
+                if peek_total > 0 then
+                    if dir_val == 'col' then
+                        local lo  = peek_anchor == 0 and -(peek_total - 1) or -(peek_total - cols + peek_anchor)
+                        local raw = peek_anchor - scroll.index
+                        peek_loop = raw <= lo
+                        x = peek_loop and peek_anchor or math.max(math.min(raw, peek_anchor), lo)
+                    else
+                        local lo  = peek_anchor == 0 and -(peek_total - 1) or -(peek_total - rows + peek_anchor)
+                        local raw = peek_anchor - scroll.index
+                        peek_loop = raw <= lo
+                        y = peek_loop and peek_anchor or math.max(math.min(raw, peek_anchor), lo)
+                    end
                 end
             else
                 if dir_val == 'col' then
@@ -130,7 +155,7 @@ local function dom_layout(self, node, parent_x, parent_y, parent_w, parent_h)
         end
 
         if node.childs then
-            for _, child in ipairs(node.childs) do
+            for i, child in ipairs(node.childs) do
                 local cc = child.config
 
                 -- span=0: hidden — takes no grid space, draw() never called
@@ -148,19 +173,30 @@ local function dom_layout(self, node, parent_x, parent_y, parent_w, parent_h)
                         span_x, span_y = 1, span_x
                     end
 
-                    if dir_val == 'col' then
-                        y = y + offset_val
-                        if y >= rows then
-                            local wrap = math.floor(y / rows)
-                            y = y % rows
-                            x = x + wrap
+                    if scroll and scroll.mode == 'peek' and peek_loop then
+                        local delta = peek_cycle_delta(scroll.index, i - 1, peek_total)
+                        if dir_val == 'col' then
+                            x = peek_anchor + delta
+                            y = 0
+                        else
+                            x = 0
+                            y = peek_anchor + delta
                         end
                     else
-                        x = x + offset_val
-                        if x >= cols then
-                            local wrap = math.floor(x / cols)
-                            x = x % cols
-                            y = y + wrap
+                        if dir_val == 'col' then
+                            y = y + offset_val
+                            if y >= rows then
+                                local wrap = math.floor(y / rows)
+                                y = y % rows
+                                x = x + wrap
+                            end
+                        else
+                            x = x + offset_val
+                            if x >= cols then
+                                local wrap = math.floor(x / cols)
+                                x = x % cols
+                                y = y + wrap
+                            end
                         end
                     end
 
