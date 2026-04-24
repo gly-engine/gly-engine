@@ -22,6 +22,7 @@ local engine_math = require('source/engine/api/math/basic')
 local engine_math_clib = require('source/engine/api/math/clib')
 local engine_math_random = require('source/engine/api/math/random')
 local engine_media = require('source/engine/api/io/media')
+local engine_media_pip = require('source/engine/api/io/media_pip')
 local engine_array = require('source/engine/api/data/array')
 local engine_getenv = require('source/engine/api/system/getenv')
 local engine_storage = require('source/engine/api/io/storage')
@@ -67,7 +68,9 @@ local engine = {
     offset_x = 0,
     offset_y = 0,
     delay = 1,
-    fps = 0
+    fps = 0,
+    canvasgly = {},
+    pip = nil
 }
 
 
@@ -105,6 +108,24 @@ local fallback_restarts = 0
 local falback_fallback_time = 0
 local falback_fallback_restart = 0
 
+local function compose_pip_canvas()
+    local pip = engine.pip
+    if not pip then return end
+    
+    if pip.y > 0 and engine.canvasgly[1] then
+        canvas:compose(0, 0, engine.canvasgly[1])
+    end
+    if pip.x > 0 and engine.canvasgly[2] then
+        canvas:compose(0, pip.y, engine.canvasgly[2])
+    end
+    if pip.x + pip.w < std.app.width and engine.canvasgly[3] then
+        canvas:compose(pip.x + pip.w, pip.y, engine.canvasgly[3])
+    end
+    if pip.y + pip.h < std.app.height and engine.canvasgly[4] then
+        canvas:compose(0, pip.y + pip.h, engine.canvasgly[4])
+    end
+end
+
 local function register_fixed_loop(fallback)
     local tick = nil
     local loop = std.bus.trigger('loop')
@@ -117,6 +138,9 @@ local function register_fixed_loop(fallback)
         canvas:attrColor(0, 0, 0, 0)
         canvas:clear()
         xpcall(draw, engine.handler)
+        if engine.pip then
+            compose_pip_canvas()
+        end
         canvas:flush()
         if fallback_restarts == fallback then
             event.timer(engine.delay, tick)
@@ -200,8 +224,17 @@ local function main(evt, gamefile)
         :package('i18n', engine_i18n, cfg_system)
         :run()
 
+    engine_media_pip.install(std, engine)
+
     application.data.width, application.data.height = canvas:attrSize()
     std.app.width, std.app.height = application.data.width, application.data.height
+
+    engine.canvasgly = {
+        canvas:new(application.data.width, 0),
+        canvas:new(0, application.data.height),
+        canvas:new(0, application.data.height),
+        canvas:new(application.data.width, 0)
+    }
 
     engine.dom = tree.node_begin(application, std.app.width, std.app.height)
     engine.root, engine.current = application, application
