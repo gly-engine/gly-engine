@@ -4,15 +4,15 @@ local function clamp(value, minv, maxv)
     return value
 end
 
-local function pip_create(engine)
+local function pip_create(std, engine)
     return function(x, y, w, h)
         x = math.floor(tonumber(x) or 0)
         y = math.floor(tonumber(y) or 0)
         w = math.floor(tonumber(w) or 0)
         h = math.floor(tonumber(h) or 0)
 
-        local screenW = engine.screen_w or engine.canvas:attrSize()
-        local screenH = engine.screen_h or select(2, engine.canvas:attrSize())
+        local screenW = std.app.width or engine.canvas:attrSize()
+        local screenH = std.app.height or select(2, engine.canvas:attrSize())
 
         x = clamp(x, 0, screenW)
         y = clamp(y, 0, screenH)
@@ -42,7 +42,7 @@ end
 
 local function install(std, engine)
     std.media = std.media or {}
-    std.media.pip = pip_create(engine)
+    std.media.pip = pip_create(std, engine)
 end
 
 local P = {

@@ -118,10 +118,10 @@ local function compose_pip_canvas()
     if pip.x > 0 and engine.canvasgly[2] then
         canvas:compose(0, pip.y, engine.canvasgly[2])
     end
-    if pip.x + pip.w < engine.screen_w and engine.canvasgly[3] then
+    if pip.x + pip.w < std.app.width and engine.canvasgly[3] then
         canvas:compose(pip.x + pip.w, pip.y, engine.canvasgly[3])
     end
-    if pip.y + pip.h < engine.screen_h and engine.canvasgly[4] then
+    if pip.y + pip.h < std.app.height and engine.canvasgly[4] then
         canvas:compose(0, pip.y + pip.h, engine.canvasgly[4])
     end
 end
@@ -228,8 +228,6 @@ local function main(evt, gamefile)
 
     application.data.width, application.data.height = canvas:attrSize()
     std.app.width, std.app.height = application.data.width, application.data.height
-    engine.screen_w = application.data.width
-    engine.screen_h = application.data.height
 
     engine.canvasgly = {
         canvas:new(application.data.width, 0),
