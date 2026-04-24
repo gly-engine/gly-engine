@@ -70,9 +70,14 @@ local function resolve_require(raw, src_dir, cwd, node_root)
         :gsub('%.lua$', '')
         :gsub('%.', '/')
 
-    -- 1. Relative to cwd (entrypoint)
-    if file_exists(cwd..lua_path..'.lua') then
-        return { dep=lua_path..'.lua', module_path=lua_path, use_prefix=true }
+    -- 1. Relative to cwd (entrypoint); if path starts with node_modules/ also try lua_modules/
+    local candidates_cwd = { lua_path }
+    local alt = lua_path:gsub('^node_modules/', 'lua_modules/')
+    if alt ~= lua_path then candidates_cwd[2] = alt end
+    for _, p in ipairs(candidates_cwd) do
+        if file_exists(cwd..p..'.lua') then
+            return { dep=p..'.lua', module_path=p, use_prefix=true }
+        end
     end
 
     -- 2. Relative to current file's directory
@@ -97,12 +102,12 @@ local function resolve_require(raw, src_dir, cwd, node_root)
         if pkg then
             subpath = (subpath or ''):gsub('^/', '')
             local pkg_dir = node_root..pkg..'/'
-            local candidates = node_candidates(pkg_dir, subpath)
+            local node_candidates_list = node_candidates(pkg_dir, subpath)
             local i = 1
-            while i <= #candidates do
-                if file_exists(candidates[i]) then
-                    local mp = candidates[i]:gsub('%.lua$', '')
-                    return { dep=candidates[i], module_path=mp, use_prefix=true }
+            while i <= #node_candidates_list do
+                if file_exists(node_candidates_list[i]) then
+                    local mp = node_candidates_list[i]:gsub('%.lua$', '')
+                    return { dep=node_candidates_list[i], module_path=mp, use_prefix=true }
                 end
                 i = i + 1
             end
