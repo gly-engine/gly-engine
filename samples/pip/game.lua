@@ -1,6 +1,13 @@
 local App = {
     title = 'PIP Grid',
-    version = '1.0.0'
+    version = '1.0.0',
+    assets = {
+        "samples/pip/lines.png:assets/lines.png"
+    },
+    screens = {
+        {left=20, top=482, width=388, height=218},
+        {left=700, top=13, width=388, height=218},
+    },
 }
 
 local makeColorLine = function(color)
@@ -27,12 +34,23 @@ function App.load(self, std)
 end
 
 function App.draw(self, std)
-    std.image.draw('assets/lines.png', 0, 0)
+    if self.pip_image then
+        std.image.draw(self.pip_image, 0, 0)
+    end
 end
 
 function App.key(self, std)
-    if std.key.press.up or std.key.press.left or std.key.press.right or std.key.press.down then
-        std.media.pip(500, 13, 387, 218)
+    if std.key.press.up then
+        std.media.pip(700, 13, 388, 218)
+        if std.media.tv then
+            std.media.tv():position(700, 13, 388, 218):resume()
+        end
+    elseif std.key.press.down then
+        self.pip_image = "assets/lines.png"
+        std.media.pip(20, 482, 388, 218)
+        if std.media.tv then
+            std.media.tv():position(20, 482, 388, 218):resume()
+        end
     end
 end
 
