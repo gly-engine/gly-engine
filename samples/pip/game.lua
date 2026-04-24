@@ -8,6 +8,7 @@ local App = {
         {left=20, top=482, width=388, height=218},
         {left=700, top=13, width=388, height=218},
     },
+    require = "media.tv?"
 }
 
 local makeColorLine = function(color)
