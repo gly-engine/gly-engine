@@ -134,6 +134,12 @@ interface GlyStdHash {
 }
 
 /** @noSelf **/
+interface GlyStdJson {
+  encode<T = unknown>(value: T): string;
+  decode<T = unknown>(text: string): T;
+}
+
+/** @noSelf **/
 interface GlyStdHttp {
   delete(url: string): GlyHttp;
   get(url: string): GlyHttp;
@@ -363,6 +369,7 @@ export interface GlyStdLite extends GlyStdMicro {
   hash: GlyStdHash;
   http: GlyStdHttp;
   i18n: GlyStdI18n;
+  json: GlyStdJson;
   log: GlyStdLog;
   media: GlyStdMedia;
   storage: GlyStdStorage;

@@ -28,6 +28,15 @@ local function ensure_slash(p)
     return p
 end
 
+local function build_candidates(base_path)
+    return {
+        base_path..'.lua',
+        base_path..'/index.lua',
+        base_path..'/init.lua',
+        base_path..'/main.lua'
+    }
+end
+
 local function pkg_entry(pkg_dir)
     local text = read_file(pkg_dir..'package.json')
     if not text then return nil end
@@ -49,7 +58,9 @@ end
 local function node_candidates(pkg_dir, subpath)
     local result = {}
     if subpath and #subpath > 0 then
-        result[1] = pkg_dir..subpath..'.lua'
+        for _, candidate in ipairs(build_candidates(pkg_dir..subpath)) do
+            result[#result+1] = candidate
+        end
         return result
     end
     local entry = pkg_entry(pkg_dir)
@@ -64,34 +75,50 @@ end
 --   dep:         path added to the build queue
 --   module_path: normalized path used to build the require alias (no .lua)
 --   use_prefix:  whether options.prefix is applied to the alias
-local function resolve_require(raw, src_dir, cwd, node_root)
+local function resolve_require(raw, parent_dir, src_dir, cwd, node_root)
     local lua_path = raw
         :gsub('^%./', ''):gsub('^%.\\', '')
         :gsub('%.lua$', '')
         :gsub('%.', '/')
 
-    -- 1. Relative to cwd (entrypoint); if path starts with node_modules/ also try lua_modules/
+    -- 1. Relative to parent file's directory (who made the require)
+    if #parent_dir > 0 then
+        for _, full in ipairs(build_candidates(parent_dir..lua_path)) do
+            if file_exists(full) then
+                local mp = full
+                if mp:sub(1, #cwd) == cwd then mp = mp:sub(#cwd + 1) end
+                mp = mp:gsub('%.lua$', '')
+                return { dep=mp..'.lua', module_path=mp, use_prefix=true }
+            end
+        end
+    end
+
+    -- 2. Relative to cwd (entrypoint); if path starts with node_modules/ also try lua_modules/
     local candidates_cwd = { lua_path }
     local alt = lua_path:gsub('^node_modules/', 'lua_modules/')
     if alt ~= lua_path then candidates_cwd[2] = alt end
     for _, p in ipairs(candidates_cwd) do
-        if file_exists(cwd..p..'.lua') then
-            return { dep=p..'.lua', module_path=p, use_prefix=true }
+        for _, full in ipairs(build_candidates(cwd..p)) do
+            if file_exists(full) then
+                local mp = full:gsub('^'..cwd, ''):gsub('%.lua$', '')
+                return { dep=mp..'.lua', module_path=mp, use_prefix=true }
+            end
         end
     end
 
-    -- 2. Relative to current file's directory
+    -- 3. Relative to current file's directory (src_dir)
     if #src_dir > 0 then
-        local full = src_dir..lua_path..'.lua'
-        if file_exists(full) then
-            local mp = full
-            if mp:sub(1, #cwd) == cwd then mp = mp:sub(#cwd + 1) end
-            mp = mp:gsub('%.lua$', '')
-            return { dep=mp..'.lua', module_path=mp, use_prefix=true }
+        for _, full in ipairs(build_candidates(src_dir..lua_path)) do
+            if file_exists(full) then
+                local mp = full
+                if mp:sub(1, #cwd) == cwd then mp = mp:sub(#cwd + 1) end
+                mp = mp:gsub('%.lua$', '')
+                return { dep=mp..'.lua', module_path=mp, use_prefix=true }
+            end
         end
     end
 
-    -- 3. node_modules (only for non-relative, non-absolute paths)
+    -- 4. node_modules (only for non-relative, non-absolute paths)
     if raw:sub(1,1) ~= '.' and raw:sub(1,1) ~= '/' then
         local pkg, subpath
         if raw:sub(1,1) == '@' then
@@ -158,7 +185,7 @@ local function move(src_filename, out_filename, options)
                 content = content..line:gsub(pattern_gameload, 'std.node.load('..var_name..')')..'\\n'
             elseif line_require and #line_require > 0 and not is_comment then
                 local var_name = line_require[1]
-                local resolved = resolve_require(line_require[2], src_dir, cwd, node_root)
+                local resolved = resolve_require(line_require[2], src_dir, src_dir, cwd, node_root)
                 local module_prefix = resolved.use_prefix and prefix or ''
                 local module_alias = module_prefix..resolved.module_path:gsub('/', '_'):gsub('\\', '_')
                 if resolved.dep then
