@@ -155,6 +155,7 @@ local function off(self, name, func)
     for i = count, #list do
         list[i] = nil
     end
+    self.handlers[name] = list
     return self
 end
 
@@ -176,15 +177,15 @@ local function websocket_create(request, engine, protocol)
         end,
         send = function(self, data)
             if not engine.http[self.id] then return false end
-            return protocol.send(self.id, 1, data) 
+            return protocol.sock(self.id, 1, data) 
         end,
         close = function(self)
-            protocol.send(self.id, 2)
+            protocol.sock(self.id, 2)
             engine.http[self.id] = nil
         end,
         is_connected = function(self)
             if not engine.http[self.id] then return false end
-            return protocol.send(self.id, 3)
+            return protocol.sock(self.id, 3)
         end
     }
 end
@@ -203,6 +204,7 @@ local function websocket_request(std, engine, protocol)
             handlers = {},
             -- functions
             on = on,
+            off = off,
             param = param,
             header = header,
             run = zeebo_pipeline.run,
@@ -215,8 +217,12 @@ local function websocket_request(std, engine, protocol)
         self.resolve = function()
             zeebo_pipeline.resume(self)
         end
+        
+        self.set = function (key, value)
+            std.http[key] = value
+        end
 
-        self.on('disconnect', function()
+        self:on('disconnect', function()
             if self.id then engine.http[self.id] = nil end
         end)
 
@@ -244,6 +250,8 @@ local function websocket_request(std, engine, protocol)
                 zeebo_pipeline.reset(self)
             end
         }
+
+        return self
     end
 end
 
@@ -370,7 +378,7 @@ local function install(std, engine, protocol)
     std.http.delete=request('DELETE', std, engine, protocol)
     std.http.patch=request('PATCH', std, engine, protocol)
 
-    if protocol.send then
+    if protocol.sock then
         std.http.connect = websocket_request(std, engine, protocol)
     end
     

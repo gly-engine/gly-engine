@@ -85,6 +85,7 @@ local cfg_poly = {
 }
 
 local cfg_http = {
+    sock = native_http_sock,
     install = native_http_install,
     handler = native_http_handler,
     has_ssl = native_http_has_ssl,

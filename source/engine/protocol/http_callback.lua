@@ -59,12 +59,12 @@ local callbacks = {
     end,
     ['add-body-data'] = function(self, data, std)
         self.set('body', (std.http.body or '')..data)
-    end
+    end,
     ['sock-event'] = function(self, data)
-        for _, h in ipairs(self.handlers[data] or {}) do h(sock) end
-    end
+        for _, h in ipairs(self.handlers[data] or {}) do h() end
+    end,
     ['sock-message']  = function(self, data)
-        for _, h in ipairs(self.handlers.message or {}) do h(sock) end
+        for _, h in ipairs(self.handlers.message or {}) do h(data) end
     end
 }
 
