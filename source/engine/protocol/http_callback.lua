@@ -38,6 +38,9 @@ local callbacks = {
     ['get-header-data'] = function(self, data)
         return self.heeader_dict[self.data] or self.heeader_dict[self.header_list[self.data]]
     end,
+    ['get-sock-upgrade'] = function(self)
+        return self.upgrade
+    end,
     ['set-status'] = function(self, data)
         self.set('status', data)
         self.set('ok', str_http.is_ok(data))
@@ -56,7 +59,13 @@ local callbacks = {
     end,
     ['add-body-data'] = function(self, data, std)
         self.set('body', (std.http.body or '')..data)
-    end    
+    end
+    ['sock-event'] = function(self, data)
+        for _, h in ipairs(self.handlers[data] or {}) do h(sock) end
+    end
+    ['sock-message']  = function(self, data)
+        for _, h in ipairs(self.handlers.message or {}) do h(sock) end
+    end
 }
 
 local function native_http_callback(self, evt, data, std)

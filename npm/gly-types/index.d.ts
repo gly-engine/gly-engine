@@ -1,7 +1,3 @@
-/**
- * @version 0.2.4
- */
-
 export type GlyNode = Record<string, unknown>;
 
 export type GlyApp = GlyNode & {
@@ -19,7 +15,7 @@ export type GlyHandlerValueString = (this: void, value: string) => unknown
 
 export type GlyHandlerStdData<T = GlyStd> = (this: void, std: T, data: GlyApp) => unknown
 
-declare class GlyHttp {
+declare class GlyHttp<T = GlyStdWithHttpResponse> {
   public json(): GlyHttp;
   public fast(): GlyHttp;
   public noforce(): GlyHttp;
@@ -27,10 +23,10 @@ declare class GlyHttp {
   public header(key: string, value: string): GlyHttp;
   public body(content: string): GlyHttp;
   public body(content: object): GlyHttp;
-  public success(handler: GlyHandlerStdData<GlyStdWithHttpResponse>): GlyHttp;
-  public failed(handler: GlyHandlerStdData<GlyStdWithHttpResponse>): GlyHttp;
-  public error(handler: GlyHandlerStdData<GlyStdWithHttpResponse>): GlyHttp;
-  public done(handler: GlyHandlerStdData<GlyStdWithHttpResponse>): GlyHttp;
+  public success(handler: GlyHandlerStdData<T>): GlyHttp;
+  public failed(handler: GlyHandlerStdData<T>): GlyHttp;
+  public error(handler: GlyHandlerStdData<T>): GlyHttp;
+  public done(handler: GlyHandlerStdData<T>): GlyHttp;
   public run(): void;
 }
 
@@ -65,18 +61,6 @@ interface GlyStdApp {
   height: number;
   reset(): void;
   width: number;
-}
-
-interface GlyStdArray {
-  each<T>(array: T[], func: (item: T, index: number, array: T[]) => void): void;
-  every<T>(array: T[], func: (item: T, index: number, array: T[]) => boolean): boolean;
-  filter<T>(array: T[], func: (item: T, index: number, array: T[]) => boolean): T[];
-  first<T>(array: T[], func?: (item: T, index: number, array: T[]) => boolean): T | undefined;
-  index<T>(array: T[], func: (item: T, index: number, array: T[]) => boolean, reverse?: boolean): number;
-  map<T, U>(array: T[], func: (item: T, index: number, array: T[]) => U): U[];
-  reducer<T, U>(array: T[], func: (acc: U, item: T, index: number, array: T[]) => U, value: U): U;
-  some<T>(array: T[], func: (item: T, index: number, array: T[]) => boolean, reverse?: boolean): boolean;
-  unique<T>(array: T[]): T[];
 }
 
 /** @noSelf **/
@@ -358,7 +342,6 @@ export interface GlyStdNano {
 /** @noSelf **/
 export interface GlyStdMicro extends GlyStdNano {
   app: GlyStdApp;
-  array: GlyStdArray;
   math: GlyStdMath & GlyStdMathLibC;
   mem: GlyStdMemory;
 }
