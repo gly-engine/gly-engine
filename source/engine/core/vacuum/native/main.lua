@@ -194,9 +194,6 @@ function native_callback_init(width, height, game_lua)
         (native_system_exit or native_system_fatal or function() end)()
     end)
 
-    engine.dom = dom.node_begin(application, width, height, engine.dom, std)
-    engine.root, engine.current = application, application
-
     loadcore.setup(std, application, engine)
         :package('@bus', engine_raw_bus)
         :package('@node', engine_raw_node)
