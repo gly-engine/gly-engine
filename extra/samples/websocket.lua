@@ -3,7 +3,7 @@ local function event(name)
 end
 
 local function init(self, std)
-    std.http.connect('ws://localhost:8080', 'ws')
+    std.http.connect('ws://localhost:8080/api/blind-scan', 'ws')
         :on('open', function(sock)
             print('open!')
             self.sock = sock

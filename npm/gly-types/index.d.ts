@@ -15,7 +15,30 @@ export type GlyHandlerValueString = (this: void, value: string) => unknown
 
 export type GlyHandlerStdData<T = GlyStd> = (this: void, std: T, data: GlyApp) => unknown
 
-declare class GlyHttp<T = GlyStdWithHttpResponse> {
+type GlyEventsWS = {
+  open: (sock: GlySockWs) => void;
+  error: (message: string) => void;
+  message: (message: string) => void;
+  disconect: () => void;
+};
+
+declare class GlySockWs {
+  public on<K extends keyof GlyEventsWS>(topic: K, handler: GlyEventsWS[K]): void;
+  public off<K extends keyof GlyEventsWS>(topic: K, handler: GlyEventsWS[K]): void;
+  public send(message: string): void;
+  public is_connected(): boolean;
+  public close(): void;
+}
+
+declare class GlyWS {
+  public on<K extends keyof GlyEventsWS>(topic: K, handler: GlyEventsWS[K]): GlyWS;
+  public off<K extends keyof GlyEventsWS>(topic: K, handler: GlyEventsWS[K]): GlyWS;
+  public param(key: string, value: string): GlyWS;
+  public header(key: string, value: string): GlyWS;
+  public run(): void;
+}
+
+declare class GlyHttp {
   public json(): GlyHttp;
   public fast(): GlyHttp;
   public noforce(): GlyHttp;
@@ -23,10 +46,10 @@ declare class GlyHttp<T = GlyStdWithHttpResponse> {
   public header(key: string, value: string): GlyHttp;
   public body(content: string): GlyHttp;
   public body(content: object): GlyHttp;
-  public success(handler: GlyHandlerStdData<T>): GlyHttp;
-  public failed(handler: GlyHandlerStdData<T>): GlyHttp;
-  public error(handler: GlyHandlerStdData<T>): GlyHttp;
-  public done(handler: GlyHandlerStdData<T>): GlyHttp;
+  public success(handler: GlyHandlerStdData): GlyHttp;
+  public failed(handler: GlyHandlerStdData): GlyHttp;
+  public error(handler: GlyHandlerStdData): GlyHttp;
+  public done(handler: GlyHandlerStdData): GlyHttp;
   public run(): void;
 }
 
@@ -125,6 +148,7 @@ interface GlyStdJson {
 
 /** @noSelf **/
 interface GlyStdHttp {
+  connect(url: string, upgrade?: string | undefined): GlyWs;
   delete(url: string): GlyHttp;
   get(url: string): GlyHttp;
   head(url: string): GlyHttp;
