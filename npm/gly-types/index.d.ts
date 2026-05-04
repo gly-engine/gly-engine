@@ -148,7 +148,7 @@ interface GlyStdJson {
 
 /** @noSelf **/
 interface GlyStdHttp {
-  connect(url: string, upgrade?: string | undefined): GlyWs;
+  connect(url: string, upgrade?: string | undefined): GlyWS;
   delete(url: string): GlyHttp;
   get(url: string): GlyHttp;
   head(url: string): GlyHttp;
