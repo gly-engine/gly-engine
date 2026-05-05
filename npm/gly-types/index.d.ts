@@ -16,9 +16,9 @@ export type GlyHandlerValueString = (this: void, value: string) => unknown
 export type GlyHandlerStdData<T = GlyStd> = (this: void, std: T, data: GlyApp) => unknown
 
 type GlyEventsWS = {
-  open: (sock: GlySockWs) => void;
-  error: (message: string) => void;
-  message: (message: string) => void;
+  open: (this: void, sock: GlySockWs) => void;
+  error: (this: void, message: string) => void;
+  message: (this: void, message: string) => void;
   disconect: () => void;
 };
 
@@ -46,10 +46,10 @@ declare class GlyHttp {
   public header(key: string, value: string): GlyHttp;
   public body(content: string): GlyHttp;
   public body(content: object): GlyHttp;
-  public success(handler: GlyHandlerStdData): GlyHttp;
-  public failed(handler: GlyHandlerStdData): GlyHttp;
-  public error(handler: GlyHandlerStdData): GlyHttp;
-  public done(handler: GlyHandlerStdData): GlyHttp;
+  public success(handler: GlyHandlerStdData<GlyStdWithHttpResponse>): GlyHttp;
+  public failed(handler: GlyHandlerStdData<GlyStdWithHttpResponse>): GlyHttp;
+  public error(handler: GlyHandlerStdData<GlyStdWithHttpResponse>): GlyHttp;
+  public done(handler: GlyHandlerStdData<GlyStdWithHttpResponse>): GlyHttp;
   public run(): void;
 }
 
@@ -228,8 +228,14 @@ interface GlyStdLog {
   fatal(...data: any[]): void;
   info(...data: any[]): void;
   trace(...data: any[]): void;
-  level(level: 'none' | 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace'): void;
   warn(...data: any[]): void;
+  debug(this: any, ...data: any[]): void;
+  error(this: any, ...data: any[]): void;
+  fatal(this: any, ...data: any[]): void;
+  info(this: any, ...data: any[]): void;
+  trace(this: any, ...data: any[]): void;
+  warn(this: any, ...data: any[]): void;
+  level(level: 'none' | 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace'): void;
 }
 
 /** @noSelf **/
