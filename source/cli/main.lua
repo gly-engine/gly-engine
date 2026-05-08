@@ -127,6 +127,9 @@ local command = cli.argparse(arg)
     .add_next_value('url', {required=true})
     .add_next_value('dist', {required=true})
     --
+    .add_subcommand('fs-image-show', commands_fs)
+    .add_next_value('file', {required=true})
+    --
     .add_subcommand('hazard-package-mock', commands_hazard)
     .add_next_value('mock', {required=true})
     .add_next_value('file', {required=true})

@@ -1,5 +1,8 @@
 local cli_fs = require('source/cli/tools/fs')
 local png_validator = require('source/shared/image/check_png')
+local check_auto = require('source/shared/image/check_auto')
+local y4m_decoder = require('source/shared/image/decoder_y4m')
+local enconde_canvas = require('source/shared/image/enconde_canvas')
 
 local function replace(args)
     local file_in = io.open(args.file,'r')
@@ -100,13 +103,78 @@ local function checkpng(args)
     return png_validator.check_error(args.file)
 end
 
+local function imageshow(args)
+    local file_in, file_err = io.open(args.file, 'rb')
+
+    if not file_in then
+        return false, file_err
+    end
+
+    local content = file_in:read('*a')
+    file_in:close()
+
+    local format = check_auto(content)
+    if not format then
+        return false, 'unknown image format: '..args.file
+    end
+
+    local decoder
+    if format == 'y4m' then
+        decoder = y4m_decoder.new('rgb')
+    else
+        return false, 'unsupported image format: '..format
+    end
+
+    decoder:push(content)
+    while not decoder:is_done() do
+        decoder:step(1024)
+    end
+
+    local w, h = decoder.w, decoder.h
+    local rgba = decoder:close()
+
+    if not rgba then
+        return false, 'failed to decode image: '..args.file
+    end
+
+    local ops = {
+        start = function()
+            return { last_y = -1 }
+        end,
+        pixel = function(canvas, x, y, run_w, run_h, c1, c2, c3)
+            if canvas.last_y ~= y then
+                if canvas.last_y >= 0 then
+                    io.write('\27[0m\n')
+                end
+                canvas.last_y = y
+            end
+            io.write(string.format('\27[48;2;%d;%d;%dm', c1, c2, c3))
+            io.write(string.rep('  ', run_w))
+        end,
+        finish = function(canvas)
+            io.write('\27[0m\n')
+            return canvas
+        end
+    }
+
+    local encoder = enconde_canvas.new(w, h, 3, ops)
+    encoder:push(rgba)
+    while not encoder:is_done() do
+        encoder:step(64)
+    end
+    encoder:close()
+
+    return true
+end
+
 local P = {
     ['fs-copy'] = copy,
     ['fs-xxd-i'] = vim_xxd_i,
     ['fs-luaconf'] = luaconf,
     ['fs-replace'] = replace,
     ['fs-download'] = download,
-    ['fs-check-png'] = checkpng
+    ['fs-check-png'] = checkpng,
+    ['fs-image-show'] = imageshow
 }
 
 return P
