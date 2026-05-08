@@ -1,4 +1,7 @@
 local zeebo_pipeline = require('source/shared/functional/pipeline')
+local create_counter = require('source/shared/functional/counter')
+
+local nextId, clearId = create_counter()
 
 --! @defgroup std
 --! @{
@@ -228,8 +231,9 @@ local function websocket_request(std, engine, protocol)
 
         self.pipeline = {
             function()
-                self.id = tonumber(tostring({}):gsub('0x', ''):match('^table: (%w+)$'), 16)
+                self.id = nextId()
                 engine.http[self.id] = self
+                req_count = req_count + 1
             end,
             function()
                 protocol.handler(self, self.id)
@@ -242,6 +246,8 @@ local function websocket_request(std, engine, protocol)
                     if not std.http.error then self.set('error', 'core not upgrade to ws') end
                     for _, h in ipairs(self.handlers.error or {}) do h(std.http.error) end
                     engine.http[self.id] = nil
+                    clearId(self.id)
+                    self.id = nil
                 end
             end,
             function()
