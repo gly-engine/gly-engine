@@ -24,8 +24,15 @@ local function yuv2rgb(y, u, v)
     return clamp(r), clamp(g), clamp(b)
 end
 
+--! @todo return 4? how to encoder detect stride in?
+local function rgba(r, g, b, a)
+    local color = (r * 0xFFFFFF) + (g * 0xFFFF) + (b * 0xFF) + a
+    return color, color, color, color
+end
+
 return {
+    rgba = rgba,
     bw2rgb = bw2rgb,
     bw2rgba = bw2rgba,
-    yuv2rgb = yuv2rgb
+    yuv2rgb = yuv2rgb,
 }

@@ -200,6 +200,10 @@ local function close(self)
     return out
 end
 
+local function mensure(self)
+    return self.w, self.h
+end
+
 local function new(mode)
     local stride = 4
     if mode == "rgb" then stride = 3 end

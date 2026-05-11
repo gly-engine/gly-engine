@@ -152,7 +152,7 @@ local function close(self)
 end
 
 local function mensure(self)
-    return self.width, self.height
+    return self.w, self.h
 end
 
 --! @param[in] w width

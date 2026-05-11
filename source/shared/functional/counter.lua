@@ -30,3 +30,5 @@ local function creater_counter(start)
 
     return nextId, clearId, clearAll
 end
+
+return creater_counter

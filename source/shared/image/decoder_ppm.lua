@@ -23,8 +23,38 @@ local function parse_header(self, header)
     self.frame_size = self.w * self.h * 3
 end
 
-local function step(self)
-   if self.state == "header" then
+local function decode_line(self, y)
+    local w = self.w
+    local stride = self.stride
+    local maxval = self.maxval
+    local data = self.frame_data
+    local src = y * w * 3 + 1
+    local p = y * w * stride + 1
+
+    for x = 0, w - 1 do
+        local r = data:byte(src)
+        local g = data:byte(src + 1)
+        local b = data:byte(src + 2)
+
+        self.rgba[p]   = (r * 255) / maxval
+        self.rgba[p+1] = (g * 255) / maxval
+        self.rgba[p+2] = (b * 255) / maxval
+
+        if stride == 4 then
+            self.rgba[p+3] = 255
+        end
+
+        p = p + stride
+        src = src + 3
+    end
+end
+
+local function step(self, lines_per_tick)
+    if self.done then return end
+
+    lines_per_tick = lines_per_tick or 1
+
+    if self.state == "header" then
         local s, e = self.buffer:find("^P6%s+%d+%s+%d+%s+%d+%s")
         if not e then return end
 
@@ -41,26 +71,29 @@ local function step(self)
         self.frame_data = self.buffer:sub(1, self.frame_size)
         self.buffer = self.buffer:sub(self.frame_size + 1)
 
+        local size = self.w * self.h * self.stride
         self.rgba = {}
-        local maxval, stride = self.maxval, self.stride
-        local p = 1
-    
-        for i = 1, self.frame_size, 3 do
-            local r = self.frame_data:byte(i)
-            local g = self.frame_data:byte(i+1)
-            local b = self.frame_data:byte(i+2)
-
-            self.rgba[p]   = (r * 255) / maxval
-            self.rgba[p+1] = (g * 255) / maxval
-            self.rgba[p+2] = (b * 255) / maxval
-            p = p + 3
-            if stride >= 4 then
-                self.rgba[p+3] = 255
-                p = p + 1
-            end
+        for i = 1, size do
+            self.rgba[i] = 0
         end
 
-        self.done = true
+        self.decode_y = 0
+        self.state = "decoding"
+    end
+
+    if self.state == "decoding" then
+        local processed = 0
+
+        while self.decode_y < self.h and processed < lines_per_tick do
+            decode_line(self, self.decode_y)
+            self.decode_y = self.decode_y + 1
+            processed = processed + 1
+        end
+
+        if self.decode_y >= self.h then
+            self.done = true
+        end
+
         return self:is_done()
     end
 
@@ -68,16 +101,22 @@ local function step(self)
 end
 
 local function close(self)
-    local out = self.rgba 
+    local out = self.rgba
     self.buffer = ""
     self.state = "header"
     self.done = false
     self.rgba = nil
+    self.frame_data = nil
+    self.decode_y = 0
+    self.w = 0
+    self.h = 0
+    self.maxval = 0
+    self.frame_size = 0
     return out
 end
 
 local function mensure(self)
-    return self.width, self.height
+    return self.w, self.h
 end
 
 local function new(mode)
