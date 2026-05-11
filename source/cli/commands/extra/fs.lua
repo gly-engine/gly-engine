@@ -2,6 +2,7 @@ local cli_fs = require('source/cli/tools/fs')
 local png_validator = require('source/shared/image/check_png')
 local check_auto = require('source/shared/image/check_auto')
 local y4m_decoder = require('source/shared/image/decoder_y4m')
+local ppm_decoder = require('source/shared/image/decoder_ppm')
 local enconde_canvas = require('source/shared/image/enconde_canvas')
 
 local function replace(args)
@@ -121,6 +122,8 @@ local function imageshow(args)
     local decoder
     if format == 'y4m' then
         decoder = y4m_decoder.new('rgb')
+    elseif format == 'ppm' then
+        decoder = ppm_decoder.new('rgb')
     else
         return false, 'unsupported image format: '..format
     end

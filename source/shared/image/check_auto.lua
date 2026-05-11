@@ -14,7 +14,7 @@ local function auto(buf)
         end
 
         if b1 == 0x50 and b2 == 0x36 then
-            return "p6"
+            return "ppm"
         end
 
         if buf:sub(1, 9) == "YUV4MPEG2" then

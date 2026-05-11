@@ -151,6 +151,10 @@ local function close(self)
     return out
 end
 
+local function mensure(self)
+    return self.width, self.height
+end
+
 --! @param[in] w width
 --! @param[in] h height
 --! @param[in] mode must be integer (stride) or string (format)
@@ -191,6 +195,7 @@ local function new(w, h, mode, ops)
         push = push,
         step = step,
         close = close,
+        mensure = mensure,
         is_done = is_done,
     }
 

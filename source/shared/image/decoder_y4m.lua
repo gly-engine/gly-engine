@@ -9,8 +9,8 @@ local CHROMA = {
     ['420jpeg']  = { x = 2, y = 2 },
     ['420mpeg2'] = { x = 2, y = 2 },
     ['420paldv'] = { x = 2, y = 2 },
---  ['422']      = { x = 2, y = 1 },
---  ['444']      = { x = 1, y = 1 },
+    ['422']      = { x = 2, y = 1 },
+    ['444']      = { x = 1, y = 1 },
 --  ['mono']     = { x = 0, y = 0 },
 }
 
@@ -208,8 +208,9 @@ local function new(mode)
         stride = stride,
         push = push,
         step = step,
-        is_done = is_done,
         close = close,
+        mensure = mensure,
+        is_done = is_done,
     }
 
     self:close()
