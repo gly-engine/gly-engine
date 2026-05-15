@@ -52,6 +52,10 @@ local function install(std, engine)
                 nav.focus_navigate(dom_obj, target)
                 return
             end
+            if target == 'first' then
+                nav.set_focus(dom_obj, dom_obj.focus_list[1])
+                return
+            end
             if target:sub(1, 1) == '#' then
                 target = dom_obj.index_id[target:sub(2)]
             elseif target:sub(1, 1) == '.' then
