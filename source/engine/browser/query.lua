@@ -1,9 +1,11 @@
 --! @file query.lua
---! @brief Selector API. Reads: index_id, index_class (owned by dom.lua).
+--! @brief Selector API. Reads: index_id (owned by dom.lua), node.config.style_names.
 --! @details Does NOT modify any engine state — pure read operations only.
 --! query_one() returns a single wrapped node or nil.
 --! query() returns an array of wrapped nodes.
 --! wrap() returns a chainable object with setScroll, getScroll, focus, count, etc.
+--! Selector '.name' matches nodes that have stylesheet 'name' applied (config.style_names),
+--! NOT options.class — see [[feedback-class-vs-style]].
 
 local ss  = require('source/engine/browser/stylesheet')
 local nav = require('source/engine/browser/navigator')
@@ -107,9 +109,30 @@ local function wrap(self, node)
     return w
 end
 
---! @brief Look up a single node by '#id' or '.class' selector.
+--! @brief Find all raw nodes that have stylesheet `name` applied.
 --! @param self engine.dom
---! @param selector string  '#id' or '.class'
+--! @param name string  stylesheet name (without '.')
+--! @return table  array of raw nodes (may be empty)
+local function nodes_by_style(self, name)
+    local result = {}
+    local nodes  = self.node_list
+    for i = 1, #nodes do
+        local styles = nodes[i].config.style_names
+        if styles then
+            for j = 1, #styles do
+                if styles[j] == name then
+                    result[#result + 1] = nodes[i]
+                    break
+                end
+            end
+        end
+    end
+    return result
+end
+
+--! @brief Look up a single node by '#id' or '.style' selector.
+--! @param self engine.dom
+--! @param selector string  '#id', '.style-name', or 'focused'
 --! @return table|nil  wrapped node or nil
 local function query_one(self, selector)
     local prefix = selector:sub(1, 1)
@@ -119,8 +142,7 @@ local function query_one(self, selector)
     if prefix == '#' then
         node = self.index_id[name]
     elseif prefix == '.' then
-        local list = self.index_class[name]
-        node = list and list[1]
+        node = nodes_by_style(self, name)[1]
     elseif selector == 'focused' then
         node = self.focus_current
     end
@@ -129,16 +151,16 @@ local function query_one(self, selector)
     return wrap(self, node)
 end
 
---! @brief Look up all nodes matching a '.class' selector.
+--! @brief Look up all nodes matching a '.style' selector.
 --! @param self engine.dom
---! @param selector string  '.class'
+--! @param selector string  '.style-name'
 --! @return table  array of wrapped nodes (may be empty)
 local function query(self, selector)
     local prefix = selector:sub(1, 1)
     local name   = selector:sub(2)
 
     if prefix == '.' then
-        local list   = self.index_class[name] or {}
+        local list   = nodes_by_style(self, name)
         local result = {}
         for i = 1, #list do
             result[i] = wrap(self, list[i])
@@ -152,9 +174,10 @@ local function query(self, selector)
 end
 
 local P = {
-    query_one = query_one,
-    query     = query,
-    wrap      = wrap,
+    query_one      = query_one,
+    query          = query,
+    wrap           = wrap,
+    nodes_by_style = nodes_by_style,
 }
 
 return P
