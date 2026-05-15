@@ -341,6 +341,7 @@ interface GlyQueryResult {
   delStyle(name: string): GlyQueryResult;
   setAttr(key: string, value: unknown): GlyQueryResult;
   getAttr(key: string): unknown;
+  getId(): string | undefined;
   isVisible(): boolean;
 }
 
@@ -349,11 +350,11 @@ interface GlyStdUi {
   grid(classlist: string): GlyUi;
   style(classlist: string): GlyUi;
   style(classlist: string, stylesheet: object): GlyUi;
-  focus(target?: 'left' | 'right' | 'up' | 'down' | `#${string}` | GlyApp): void;
+  focus(target?: 'left' | 'right' | 'up' | 'down' | `#${string}` | `.${string}` | GlyApp): void;
   isFocused(target?: `#${string}` | GlyApp): boolean;
   span(size: number | `${number}x${number}`, target?: `#${string}` | GlyApp): void;
   class(size: `${number}x${number}`, target?: `#${string}` | GlyApp): void;
-  queryOne(selector: `#${string}` | `.${string}`): GlyQueryResult | undefined;
+  queryOne(selector: `#${string}` | `.${string}` | 'focused'): GlyQueryResult | undefined;
   query(selector: `.${string}`): GlyQueryResult[];
   press(): void;
 }

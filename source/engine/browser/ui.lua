@@ -54,6 +54,9 @@ local function install(std, engine)
             end
             if target:sub(1, 1) == '#' then
                 target = dom_obj.index_id[target:sub(2)]
+            elseif target:sub(1, 1) == '.' then
+                local list = dom_obj.index_class[target:sub(2)]
+                target = list and list[1] or nil
             end
         end
         if target then

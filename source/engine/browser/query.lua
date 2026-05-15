@@ -94,6 +94,11 @@ local function wrap(self, node)
         return node.data[key]
     end
 
+    --! Return the node's id (config.id), or nil.
+    w.getId = function()
+        return node.config.id
+    end
+
     --! Return whether this node is visible (not explicitly hidden).
     w.isVisible = function()
         return node.config.visible ~= false
@@ -116,6 +121,8 @@ local function query_one(self, selector)
     elseif prefix == '.' then
         local list = self.index_class[name]
         node = list and list[1]
+    elseif selector == 'focused' then
+        node = self.focus_current
     end
 
     if not node then return nil end
