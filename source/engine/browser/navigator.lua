@@ -26,7 +26,10 @@ local function is_descendant(node, needle)
 end
 
 --! @brief Find the first focusable node in a subtree (depth-first).
+--! @details Skips dead nodes (cfg.parent==nil) — they linger in parent.childs
+--!   until the next bus() rebuild after node_del.
 local function find_focusable(node)
+    if node.config.parent == nil then return nil end
     if node.config.focusable then return node end
     if node.childs then
         for _, child in ipairs(node.childs) do
@@ -39,11 +42,12 @@ end
 
 --! @brief DFS the tree returning the first focusable node declared on the
 --!        current screen (visible, not scroll-clipped, not span-hidden,
---!        not paused). Mirrors the filters dom.event_dispatch uses to decide
---!        whether a node is "live" right now.
+--!        not paused, not dead). Mirrors the filters dom.event_dispatch uses
+--!        to decide whether a node is "live" right now.
 local function find_first(self, node)
     node = node or self.root
     local cfg = node.config
+    if node ~= self.root and cfg.parent == nil then return nil end
     if cfg.visible == false
        or cfg._scroll_clipped
        or cfg._span_hidden
@@ -141,11 +145,16 @@ end
 --! @brief Move focus to a new node, swapping :focus styles and firing callbacks.
 --! @param self engine.dom
 --! @param node table  node to receive focus
+--! @return table|nil  the node now focused, or nil if no movement happened
 local function set_focus(self, node)
-    if not node then return end
-    if pause.is_paused(self, node.config.uid, '*') then return end
+    if not node then return nil end
+    -- dead-node guard: node_del nils cfg.parent on every killed node;
+    -- those linger in node_list / parent.childs until the next bus() rebuild,
+    -- so any selector could still resolve to them. Never focus a dead node.
+    if node ~= self.root and node.config.parent == nil then return nil end
+    if pause.is_paused(self, node.config.uid, '*') then return nil end
     local old = self.focus_current
-    if old == node then return end
+    if old == node then return nil end
 
     local std = self.std
 
@@ -182,6 +191,8 @@ local function set_focus(self, node)
         ensure_visible(self, scroll_parent, node)
         scroll_parent = find_scroll_parent(self, scroll_parent)
     end
+
+    return node
 end
 
 -- ─── Spatial navigation ─────────────────────────────────────────────────────
@@ -243,7 +254,8 @@ local function focus_navigate_spatial(self, current, direction)
         end
     end
 
-    if best_node then set_focus(self, best_node) end
+    if best_node then return set_focus(self, best_node) end
+    return nil
 end
 
 -- ─── Index navigation (inside scroll grid) ──────────────────────────────────
@@ -331,9 +343,10 @@ end
 --! @brief Dispatch a directional navigation event to the appropriate handler.
 --! @param self engine.dom
 --! @param direction string  'up'|'down'|'left'|'right'
+--! @return table|nil  the newly focused node, or nil if focus did not move
 local function focus_navigate(self, direction)
     local current = self.focus_current
-    if not current then return end
+    if not current then return nil end
 
     -- walk scroll parents from nearest to farthest: each off-axis nil bubbles
     -- up to the next outer grid until one handles it or spatial takes over.
@@ -341,13 +354,12 @@ local function focus_navigate(self, direction)
     while scroll_parent do
         local next_node = focus_navigate_grid(self, scroll_parent, current, direction)
         if next_node then
-            set_focus(self, next_node)
-            return
+            return set_focus(self, next_node)
         end
         scroll_parent = find_scroll_parent(self, scroll_parent)
     end
 
-    focus_navigate_spatial(self, current, direction)
+    return focus_navigate_spatial(self, current, direction)
 end
 
 -- ─── Public interface ────────────────────────────────────────────────────────

@@ -42,6 +42,9 @@ local function install(std, engine)
     std.ui.style = util_decorator.prefix1(engine, ui_style.component)
 
     -- focus and navigation
+    --! @return GlyQueryResult|nil  wrap of the focused node, or nil when the
+    --!   target did not resolve to a focusable (directional: nil if focus did
+    --!   not move; selector: nil if no matching focusable was found).
     std.ui.focus = function(target)
         local dom_obj = engine.dom
         if not target then
@@ -49,12 +52,26 @@ local function install(std, engine)
         elseif type(target) == 'string' then
             if target == 'right' or target == 'left'
             or target == 'up'   or target == 'down' then
-                nav.focus_navigate(dom_obj, target)
-                return
+                -- if there's no anchor focus yet, seed with the first focusable
+                -- and use it as the starting point for the directional move
+                if not dom_obj.focus_current then
+                    local seed = nav.find_first(dom_obj)
+                    if not seed then return nil end
+                    local placed = nav.set_focus(dom_obj, seed)
+                    if not placed then return nil end
+                end
+                local moved = nav.focus_navigate(dom_obj, target)
+                if moved then return query.wrap(dom_obj, moved) end
+                -- no movement: keep the current focus (may be the seed we just placed)
+                return dom_obj.focus_current and query.wrap(dom_obj, dom_obj.focus_current) or nil
             end
             if target == 'first' then
-                nav.set_focus(dom_obj, nav.find_first(dom_obj))
-                return
+                local found = nav.find_first(dom_obj)
+                if not found then return nil end
+                if dom_obj.focus_current == found then return query.wrap(dom_obj, found) end
+                local placed = nav.set_focus(dom_obj, found)
+                if not placed then return nil end
+                return query.wrap(dom_obj, placed)
             end
             if target:sub(1, 1) == '#' then
                 target = dom_obj.index_id[target:sub(2)]
@@ -62,21 +79,22 @@ local function install(std, engine)
                 target = query.nodes_by_style(dom_obj, target:sub(2))[1]
             end
         end
-        if target then
-            -- if the target is not directly focusable (e.g. a grid), descend
-            -- into its subtree; if still nothing found, walk up one level so
-            -- siblings (e.g. the cards row next to a title row) are also searched
-            if type(target) == 'table' and not target.config.focusable then
-                local found = nav.find_focusable(target)
-                if not found and target.config.parent then
-                    found = nav.find_focusable(target.config.parent)
-                end
-                target = found
+        if not target then return nil end
+        -- if the target is not directly focusable (e.g. a grid), descend
+        -- into its subtree; if still nothing found, walk up one level so
+        -- siblings (e.g. the cards row next to a title row) are also searched
+        if type(target) == 'table' and not target.config.focusable then
+            local found = nav.find_focusable(target)
+            if not found and target.config.parent then
+                found = nav.find_focusable(target.config.parent)
             end
-            if target then
-                nav.set_focus(dom_obj, target)
-            end
+            target = found
         end
+        if not target then return nil end
+        if dom_obj.focus_current == target then return query.wrap(dom_obj, target) end
+        local placed = nav.set_focus(dom_obj, target)
+        if not placed then return nil end
+        return query.wrap(dom_obj, placed)
     end
 
     std.ui.press = function()

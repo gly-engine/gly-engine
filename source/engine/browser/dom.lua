@@ -386,10 +386,6 @@ local function node_add(self, node, options)
     if focusable then
         cfg.focusable = true
         self.focus_list[#self.focus_list + 1] = node
-        if not self.focus_current then
-            self.focus_current = node
-            lifecycle.focus(self, node)
-        end
     end
 
     -- mark dirty
@@ -400,9 +396,27 @@ local function node_add(self, node, options)
 end
 
 --! @brief Remove a node subtree from the DOM, cleaning all registries.
+--! @details If focus_current is inside the subtree, fire unfocus and clear it
+--!   BEFORE walking — so 'exit' callbacks and any focus reads during teardown
+--!   see a consistent (cleared) state instead of pointing at a dying node.
 --! @param self engine.dom
 --! @param node_root table  root of subtree to remove
 local function node_del(self, node_root)
+    -- proactive focus cleanup: walk ancestors of focus_current to see if it
+    -- belongs to the subtree being removed
+    local focused = self.focus_current
+    if focused then
+        local anc = focused
+        while anc do
+            if anc == node_root then
+                lifecycle.unfocus(self, focused)
+                self.focus_current = nil
+                break
+            end
+            anc = anc.config.parent
+        end
+    end
+
     walk(node_root, function(node)
         -- lifecycle: exit
         lifecycle.kill(self, node)

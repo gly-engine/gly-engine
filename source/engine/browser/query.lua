@@ -110,19 +110,25 @@ local function wrap(self, node)
 end
 
 --! @brief Find all raw nodes that have stylesheet `name` applied.
+--! @details Skips dead nodes (cfg.parent==nil and not root) — those linger
+--!   in node_list until the next bus() rebuild after node_del.
 --! @param self engine.dom
 --! @param name string  stylesheet name (without '.')
 --! @return table  array of raw nodes (may be empty)
 local function nodes_by_style(self, name)
     local result = {}
     local nodes  = self.node_list
+    local root   = self.root
     for i = 1, #nodes do
-        local styles = nodes[i].config.style_names
-        if styles then
-            for j = 1, #styles do
-                if styles[j] == name then
-                    result[#result + 1] = nodes[i]
-                    break
+        local node = nodes[i]
+        if node == root or node.config.parent ~= nil then
+            local styles = node.config.style_names
+            if styles then
+                for j = 1, #styles do
+                    if styles[j] == name then
+                        result[#result + 1] = node
+                        break
+                    end
                 end
             end
         end
