@@ -1,9 +1,11 @@
 --! @file dom.lua
---! @brief Core DOM engine. Owns: node_list, render_list, dirty_queue, index maps.
+--! @brief Core DOM engine. Owns: node_list, dispatch_list, render_list, dirty_queue, index maps.
 --! @details
 --! INVARIANT: node_list[1] is always root.
 --! INVARIANT: All nodes in node_list have config.parent set (except root).
 --! INVARIANT: dirty_queue is empty after flush_dirty() returns.
+--! node_list keeps creation order (used by walk, rebuild_tree, query).
+--! dispatch_list is z-sorted (used by bus iteration and render compile).
 --! Replaces source/shared/engine/tree.lua.
 --! Grid layout computation lives in layout.lua.
 
@@ -75,19 +77,85 @@ local function flush_dirty(self)
     for i = #queue, 1, -1 do queue[i] = nil end
 end
 
+-- ─── Z-order dispatch list ───────────────────────────────────────────────────
+
+--! @brief Resolve effective z for a node (override-puro inheritance).
+--! @details Explicit non-zero cfg.z wins. Otherwise walk up the parent chain
+--!   until an explicit non-zero z is found; root falls back to 0.
+--! @param node table
+--! @param cache table  per-sort memoization keyed by node
+--! @return number
+local function effective_z(node, cache)
+    local cached = cache[node]
+    if cached ~= nil then return cached end
+    local z = node.config.z
+    if z and z ~= 0 then
+        cache[node] = z
+        return z
+    end
+    local parent = node.config.parent
+    if parent then
+        z = effective_z(parent, cache)
+    else
+        z = 0
+    end
+    cache[node] = z
+    return z
+end
+
+--! @brief Rebuild dispatch_list as a z-sorted view of node_list.
+--! @details Stable sort: ties on effective z preserve node_list (creation) order.
+--!   Root is pinned at index 1 so the bus root-only-skip check still holds.
+--! @param self engine.dom
+local function sort_list(self)
+    local src      = self.node_list
+    local dispatch = self.dispatch_list
+    local n        = #src
+
+    -- single-bucket fast path: when all nodes share z=0, skip sort entirely
+    local trivial = true
+    for i = 1, n do
+        local z = src[i].config.z
+        if z and z ~= 0 then trivial = false; break end
+    end
+    if trivial then
+        for i = 1, n do dispatch[i] = src[i] end
+        for i = n + 1, #dispatch do dispatch[i] = nil end
+        return
+    end
+
+    local cache = {}
+    local index = {}
+    for i = 1, n do index[src[i]] = i end
+
+    for i = 1, n do dispatch[i] = src[i] end
+    for i = n + 1, #dispatch do dispatch[i] = nil end
+
+    local root = self.root
+    table.sort(dispatch, function(a, b)
+        if a == root then return true  end
+        if b == root then return false end
+        local za, zb = effective_z(a, cache), effective_z(b, cache)
+        if za ~= zb then return za < zb end
+        return index[a] < index[b]
+    end)
+end
+
 -- ─── Compile ─────────────────────────────────────────────────────────────────
 
 --! @brief Compile DOM into flat render list with screen-culling.
 --! @details Reuses entry tables from previous frame (pool) to avoid GC pressure.
---!   Nodes with pause_registry all=true are excluded.
+--!   Nodes with pause_registry all=true are excluded. Iterates dispatch_list so
+--!   draw order matches z-sort (higher z drawn later, on top).
 --! @param self engine.dom
 local function compile(self)
     local list  = self.render_list
     local index = 0
     local sw, sh = self.width, self.height
 
-    for i = 1, #self.node_list do
-        local node = self.node_list[i]
+    local source = self.dispatch_list
+    for i = 1, #source do
+        local node = source[i]
         local cfg  = node.config
 
         -- skip globally-paused nodes
@@ -165,8 +233,11 @@ local function node_begin(node, width, height, self, std)
     self.root   = node
     self.std    = std or self.std
 
-    -- node list
+    -- node list (creation order — used by walk, rebuild_tree, query)
     self.node_list = { node }
+
+    -- dispatch list (z-sorted view of node_list — used by bus, compile)
+    self.dispatch_list = { node }
 
     -- render list (pooled)
     self.render_list = self.render_list or {}
@@ -201,6 +272,7 @@ local function node_begin(node, width, height, self, std)
     -- tree rebuild flags (kept for compatibility)
     self.flag_relist   = false
     self.flag_reparent = false
+    self.flag_resort   = false
 
     -- configure root node
     node.config.css  = {}
@@ -251,6 +323,10 @@ local function node_add(self, node, options)
             cfg.id = options.id
             self.index_id[options.id] = node
         end
+        if options.z ~= nil then
+            cfg.z = options.z
+            self.flag_resort = true
+        end
         self.flag_reparent = true
         mark_dirty(self, parent)
         return
@@ -294,6 +370,7 @@ local function node_add(self, node, options)
     cfg.size   = options.size   or 1
     cfg.after  = options.after  or 0
     cfg.offset = options.offset or 0
+    cfg.z      = options.z
 
     -- lifecycle: init
     lifecycle.spawn(self, node)
@@ -318,6 +395,7 @@ local function node_add(self, node, options)
     -- mark dirty
     self.flag_relist   = false
     self.flag_reparent = true
+    self.flag_resort   = true
     mark_dirty(self, parent)
 end
 
@@ -399,19 +477,27 @@ local function bus(self, key, handler_func)
     if self.flag_relist then
         rebuild_list(self)
         self.flag_relist = false
+        self.flag_resort = true
     end
     if self.flag_reparent then
         rebuild_tree_from_parents(self)
         self.flag_reparent = false
+        self.flag_resort = true
+    end
+    if self.flag_resort then
+        sort_list(self)
+        self.flag_resort = false
     end
 
     flush_dirty(self)
     compile(self)
 
+    local list = self.dispatch_list
+    local root = self.root
     local i = 1
-    while i <= #self.node_list do
-        local node = self.node_list[i]
-        local skip = i ~= 1 and (pause.is_paused(self, node.config.uid, key) or node.config._scroll_clipped or node.config._span_hidden)
+    while i <= #list do
+        local node = list[i]
+        local skip = node ~= root and (pause.is_paused(self, node.config.uid, key) or node.config._scroll_clipped or node.config._span_hidden)
         if not skip then
             self.current_node = node
             handler_func(node)

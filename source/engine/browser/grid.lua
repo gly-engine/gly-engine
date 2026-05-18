@@ -25,6 +25,7 @@ local function add(std, engine, self, application, options)
     local offset = type(options) == 'table' and options.offset
     local id     = type(options) == 'table' and options.id
     local class  = type(options) == 'table' and options.class
+    local z      = type(options) == 'table' and options.z
     dom.node_add(engine.dom, node, {
         parent = self.node,
         offset = offset,
@@ -32,6 +33,7 @@ local function add(std, engine, self, application, options)
         size   = size,
         id     = id,
         class  = class,
+        z      = z,
     })
     return self
 end
@@ -115,6 +117,7 @@ local function component(std, engine, layout, options)
         parent = engine.current,
         id     = options and options.id,
         class  = options and options.class,
+        z      = options and options.z,
     })
     node.config.type = 'grid'
     node.config.cols = tonumber(cols)

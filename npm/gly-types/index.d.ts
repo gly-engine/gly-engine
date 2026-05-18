@@ -72,6 +72,13 @@ declare class GlyStorage {
 declare class GlyUi {
   public add(node: GlyNode): GlyUi;
   public add(node: GlyNode, size: number): GlyUi;
+  public add(node: GlyNode, options: {
+    span?: number | `${number}x${number}`;
+    offset?: number;
+    after?: number;
+    id?: string;
+    z?: number;
+  }): GlyUi;
   public get_item(id: number): GlyApp;
   public get_items(): Array<GlyApp>;
   public add_items(nodes: GlyNode[]): GlyUi;

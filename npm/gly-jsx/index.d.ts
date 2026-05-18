@@ -18,6 +18,7 @@ declare namespace JSX {
       span?: number | `${number}x${number}`,
       offset?: number,
       after?: number,
+      'z-index'?: number,
       style?: string,
       dir?: 'row' | 'col',
       scroll?: 'shift' | 'page' | 'peek',
@@ -30,6 +31,7 @@ declare namespace JSX {
       & { span?: number | SpanUnit }
       & { offset?: number }
       & { after?: number }
+      & { 'z-index'?: number }
       & { style?: string }
     ) & { children: JSX.Element };
 
