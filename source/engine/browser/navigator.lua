@@ -37,6 +37,29 @@ local function find_focusable(node)
     return nil
 end
 
+--! @brief DFS the tree returning the first focusable node declared on the
+--!        current screen (visible, not scroll-clipped, not span-hidden,
+--!        not paused). Mirrors the filters dom.event_dispatch uses to decide
+--!        whether a node is "live" right now.
+local function find_first(self, node)
+    node = node or self.root
+    local cfg = node.config
+    if cfg.visible == false
+       or cfg._scroll_clipped
+       or cfg._span_hidden
+       or (cfg.uid and pause.is_paused(self, cfg.uid, '*')) then
+        return nil
+    end
+    if cfg.focusable then return node end
+    if node.childs then
+        for _, child in ipairs(node.childs) do
+            local found = find_first(self, child)
+            if found then return found end
+        end
+    end
+    return nil
+end
+
 --! @brief Find the nearest scroll-enabled grid ancestor of node.
 local function find_scroll_parent(self, node)
     local current = node.config.parent
@@ -358,6 +381,7 @@ local P = {
     focus_navigate_grid    = focus_navigate_grid,
     find_scroll_parent     = find_scroll_parent,
     find_focusable         = find_focusable,
+    find_first             = find_first,
     is_descendant          = is_descendant,
     is_focused             = is_focused,
     press                  = press,

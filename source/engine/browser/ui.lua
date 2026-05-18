@@ -53,7 +53,7 @@ local function install(std, engine)
                 return
             end
             if target == 'first' then
-                nav.set_focus(dom_obj, dom_obj.focus_list[1])
+                nav.set_focus(dom_obj, nav.find_first(dom_obj))
                 return
             end
             if target:sub(1, 1) == '#' then
