@@ -48,6 +48,10 @@ local function create_h(std, engine)
                         error('[error] JSX forbidden attributes in \'node\' child')
                     end
                     std.node.spawn(c.node, parent)
+                    if c.id and not c.node.config.id then
+                        c.node.config.id = c.id
+                        engine.dom.index_id[c.id] = c.node
+                    end
                     if c.style then add_style(std, c.node, c.style) end
                 else
                     std.node.spawn(c, parent)
