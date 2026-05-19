@@ -389,7 +389,6 @@ local function node_add(self, node, options)
     end
 
     -- mark dirty
-    self.flag_relist   = false
     self.flag_reparent = true
     self.flag_resort   = true
     mark_dirty(self, parent)
