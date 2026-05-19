@@ -242,7 +242,7 @@ end
 
 local function loop(self, std)
     if self.state == 1 then
-        local keyh = std.key.axis.x + std.key.axis.a 
+        local keyh = std.key.axis.x + (std.key.press.a and 1 or 0)
         if std.key.axis.y ~= 0 and std.milis > self.menu_time + 250 then
             self.menu = std.math.clamp(self.menu + std.key.axis.y, self.player_pos_x == (self.VW/2) and 2 or 1, 9)
             self.menu_time = std.milis
