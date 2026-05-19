@@ -233,7 +233,6 @@ local function websocket_request(std, engine, protocol)
             function()
                 self.id = nextId()
                 engine.http[self.id] = self
-                req_count = req_count + 1
             end,
             function()
                 protocol.handler(self, self.id)
