@@ -308,7 +308,7 @@ local function request(method, std, engine, protocol)
         self.pipeline = {
             -- prepare
             function()
-                self.id = tonumber(tostring({}):gsub('0x', ''):match('^table: (%w+)$'), 16)
+                self.id = nextId()
                 engine.http[self.id] = self
                 if protocol.force and not self.options['noforce'] then
                     self.url = url:gsub("^[^:]+://", protocol.force.."://")
@@ -363,6 +363,8 @@ local function request(method, std, engine, protocol)
             function()
                 engine.http[self.id] = nil
                 zeebo_pipeline.reset(self)
+                clearId(self.id)
+                self.id = nil
             end
         }
 
