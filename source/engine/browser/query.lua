@@ -73,7 +73,7 @@ local function wrap(self, node)
     --! @param name string  stylesheet class name
     w.addStyle = function(name)
         local func = ss.stylesheet(self, name)
-        ss.css_add(self, func, node)
+        ss.css_add(self, func, node, name)
         return w
     end
 
@@ -81,7 +81,7 @@ local function wrap(self, node)
     --! @param name string  stylesheet class name
     w.delStyle = function(name)
         local func = self.stylesheet_func and self.stylesheet_func[name]
-        if func then ss.css_del(self, func, node) end
+        if func then ss.css_del(self, func, node, name) end
         return w
     end
 

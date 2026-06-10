@@ -84,6 +84,8 @@ local function stylesheet(self, name, options)
         css.bottom = options.bottom or options.margin or nil
         css.height = options.height or nil
         css.width  = options.width  or nil
+        css.span   = options.span or nil
+        css.z      = options['z-index'] or options.z or nil
 
         -- store closure key
         if not self.stylesheet_key then self.stylesheet_key = {} end
@@ -169,16 +171,56 @@ local function stylesheet(self, name, options)
     self.stylesheet_dict[name] = css
     self.stylesheet_func[name] = exe
 
+    -- structural props (span/z) live alongside the geometry closure, keyed by it,
+    -- so a node can resolve them from its applied css list without a name lookup.
+    self.stylesheet_meta = self.stylesheet_meta or {}
+    self.stylesheet_meta[exe] = { span = css.span, z = css.z }
+
     return exe
+end
+
+--! @brief Recompute a node's effective style-driven span and z from its applied
+--!   css funcs. Cascade: last applied style that declares the value wins; a
+--!   declaring style overrides the node's own inline span/z (handled by the
+--!   layout/z-sort readers falling back to cfg.size/cfg.z when these are nil).
+--! @details Cached on cfg._style_span / cfg._style_z so the per-frame layout and
+--!   z-sort paths read a single field. Runs only on css_add/css_del (rare).
+--! @param self engine.dom
+--! @param node table
+local function resolve_style_props(self, node)
+    local cfg  = node.config
+    local meta = self.stylesheet_meta
+    local span, z
+    if meta then
+        local styles = cfg.css
+        for i = 1, #styles do
+            local m = meta[styles[i]]
+            if m then
+                if m.span ~= nil then span = m.span end
+                if m.z    ~= nil then z    = m.z    end
+            end
+        end
+    end
+    local span_changed = span ~= cfg._style_span
+    cfg._style_span = span
+    if z ~= cfg._style_z then
+        cfg._style_z = z
+        self.flag_resort = true  -- z changed: dispatch list must be re-sorted
+    end
+    return span_changed
 end
 
 --! @brief Add a CSS function to a node's css list if not already present.
 --! @param self engine.dom
 --! @param func function  css transform function
 --! @param node table
-local function css_add(self, func, node)
-    local styles = node.config.css
-    local found = false
+--! @param name string|nil  style name; when given, tracked in cfg.style_names so
+--!   '.name' selectors and runtime addStyle/delStyle stay in sync. Focus-swap
+--!   callers pass nil (style_names must not flip on focus).
+local function css_add(self, func, node, name)
+    local cfg    = node.config
+    local styles = cfg.css
+    local found  = false
 
     for i = 1, #styles do
         if styles[i] == func then found = true; break end
@@ -188,15 +230,32 @@ local function css_add(self, func, node)
         styles[#styles + 1] = func
     end
 
-    if _mark_dirty then _mark_dirty(self, node) end
+    if name then
+        local names = cfg.style_names or {}
+        cfg.style_names = names
+        local present = false
+        for i = 1, #names do
+            if names[i] == name then present = true; break end
+        end
+        if not present then names[#names + 1] = name end
+    end
+
+    -- span is structural (changes the parent grid's flow / sibling positions),
+    -- so re-flow the parent; geometry-only styles relayout the node's own subtree.
+    local span_changed = resolve_style_props(self, node)
+    if _mark_dirty then
+        _mark_dirty(self, (span_changed and node.config.parent) or node)
+    end
 end
 
 --! @brief Remove a CSS function from a node's css list.
 --! @param self engine.dom
 --! @param func function  css transform function
 --! @param node table
-local function css_del(self, func, node)
-    local styles = node.config.css
+--! @param name string|nil  style name to drop from cfg.style_names (see css_add).
+local function css_del(self, func, node, name)
+    local cfg    = node.config
+    local styles = cfg.css
     local src, dst = 1, 1
 
     while src <= #styles do
@@ -213,7 +272,21 @@ local function css_del(self, func, node)
         dst = dst + 1
     end
 
-    if _mark_dirty then _mark_dirty(self, node) end
+    if name and cfg.style_names then
+        local names = cfg.style_names
+        local s, d = 1, 1
+        while s <= #names do
+            if names[s] ~= name then names[d] = names[s]; d = d + 1 end
+            s = s + 1
+        end
+        while d <= #names do names[d] = nil; d = d + 1 end
+    end
+
+    -- span is structural: re-flow the parent grid (see css_add).
+    local span_changed = resolve_style_props(self, node)
+    if _mark_dirty then
+        _mark_dirty(self, (span_changed and node.config.parent) or node)
+    end
 end
 
 --! @brief Create a scroll-offset CSS transform from a scroll_state table.

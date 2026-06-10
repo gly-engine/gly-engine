@@ -38,6 +38,17 @@ local function parse_span(span)
     return 1, 1
 end
 
+--! @brief Effective span of a child: a style-provided span (cfg._style_span,
+--!   resolved by stylesheet.css_add/css_del) overrides the node's own cfg.size.
+--!   Returns the raw span value (number, 'NxN' string, or 0 for hidden).
+--! @param cc node.config
+--! @return number|string
+local function effective_span(cc)
+    local s = cc._style_span
+    if s == nil then return cc.size end
+    return s
+end
+
 -- ─── Scroll step ─────────────────────────────────────────────────────────────
 
 --! @brief Compute the number of items to skip per scroll step.
@@ -83,12 +94,13 @@ local function peek_axis(childs, dir_val)
     local place  = {}
     local cursor = 0
     for i, child in ipairs(childs) do
-        local cc = child.config
-        if cc.size == 0 then
+        local cc   = child.config
+        local size = effective_span(cc)
+        if size == 0 then
             place[i] = cursor  -- hidden: occupies no cell, cursor not advanced
         else
-            local span_x, span_y = parse_span(cc.size or 1)
-            if dir_val == 'row' and type(cc.size) == 'number' then
+            local span_x, span_y = parse_span(size or 1)
+            if dir_val == 'row' and type(size) == 'number' then
                 span_x, span_y = 1, span_x
             end
             local axis_span = (dir_val == 'col') and span_x or span_y
@@ -190,10 +202,11 @@ local function dom_layout(self, node, parent_x, parent_y, parent_w, parent_h)
 
         if node.childs then
             for i, child in ipairs(node.childs) do
-                local cc = child.config
+                local cc   = child.config
+                local size = effective_span(cc)
 
                 -- span=0: hidden — takes no grid space, draw() never called
-                if cc.size == 0 then
+                if size == 0 then
                     _hide = _hide + 1
                     dom_layout(self, child, parent_x, parent_y, 0, 0)
                     _hide = _hide - 1
@@ -202,8 +215,8 @@ local function dom_layout(self, node, parent_x, parent_y, parent_w, parent_h)
                 else
                     local offset_val = cc.offset or 0
                     local after_val  = cc.after  or 0
-                    local span_x, span_y = parse_span(cc.size or 1)
-                    if dir_val == 'row' and type(cc.size) == 'number' then
+                    local span_x, span_y = parse_span(size or 1)
+                    if dir_val == 'row' and type(size) == 'number' then
                         span_x, span_y = 1, span_x
                     end
 

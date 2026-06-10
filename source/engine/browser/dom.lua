@@ -80,15 +80,16 @@ end
 -- ─── Z-order dispatch list ───────────────────────────────────────────────────
 
 --! @brief Resolve effective z for a node (override-puro inheritance).
---! @details Explicit non-zero cfg.z wins. Otherwise walk up the parent chain
---!   until an explicit non-zero z is found; root falls back to 0.
+--! @details Explicit non-zero style z (cfg._style_z) wins. Otherwise walk up the
+--!   parent chain until an explicit non-zero z is found; root falls back to 0.
 --! @param node table
 --! @param cache table  per-sort memoization keyed by node
 --! @return number
 local function effective_z(node, cache)
     local cached = cache[node]
     if cached ~= nil then return cached end
-    local z = node.config.z
+    -- z is provided exclusively by stylesheets (cfg._style_z), resolved on css_add/del
+    local z = node.config._style_z
     if z and z ~= 0 then
         cache[node] = z
         return z
@@ -115,7 +116,7 @@ local function sort_list(self)
     -- single-bucket fast path: when all nodes share z=0, skip sort entirely
     local trivial = true
     for i = 1, n do
-        local z = src[i].config.z
+        local z = src[i].config._style_z
         if z and z ~= 0 then trivial = false; break end
     end
     if trivial then
@@ -268,6 +269,7 @@ local function node_begin(node, width, height, self, std)
     self.stylesheet_dict = self.stylesheet_dict or {}
     self.stylesheet_func = self.stylesheet_func or {}
     self.stylesheet_key  = self.stylesheet_key or {}
+    self.stylesheet_meta = self.stylesheet_meta or {}
 
     -- tree rebuild flags (kept for compatibility)
     self.flag_relist   = false
@@ -323,10 +325,6 @@ local function node_add(self, node, options)
             cfg.id = options.id
             self.index_id[options.id] = node
         end
-        if options.z ~= nil then
-            cfg.z = options.z
-            self.flag_resort = true
-        end
         self.flag_reparent = true
         mark_dirty(self, parent)
         return
@@ -370,7 +368,6 @@ local function node_add(self, node, options)
     cfg.size   = options.size   or 1
     cfg.after  = options.after  or 0
     cfg.offset = options.offset or 0
-    cfg.z      = options.z
 
     -- lifecycle: init
     lifecycle.spawn(self, node)

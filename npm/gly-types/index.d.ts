@@ -77,7 +77,6 @@ declare class GlyUi {
     offset?: number;
     after?: number;
     id?: string;
-    z?: number;
   }): GlyUi;
   public get_item(id: number): GlyApp;
   public get_items(): Array<GlyApp>;

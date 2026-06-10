@@ -3,6 +3,21 @@ type CSSUnit = `${number}px` | `${number}%` | `${number}vw` | `${number}vh` | nu
 
 type FocusState = '' | ':focus';
 
+// span and z-index are structural style props: applying a class via
+// `style="name"` (or addStyle) drives the node's grid span and draw z-order.
+// A declaring style overrides the element's own inline span; z is style-only.
+type StyleProps = {
+  width?:  CSSUnit,
+  height?: CSSUnit,
+  left?:   CSSUnit,
+  right?:  CSSUnit,
+  top?:    CSSUnit,
+  bottom?: CSSUnit,
+  margin?: CSSUnit,
+  span?:   number | SpanUnit,
+  'z-index'?: number,
+};
+
 declare namespace JSX {
 
   const __gly_jsx: unique symbol;
@@ -18,7 +33,6 @@ declare namespace JSX {
       span?: number | `${number}x${number}`,
       offset?: number,
       after?: number,
-      'z-index'?: number,
       style?: string,
       dir?: 'row' | 'col',
       scroll?: 'shift' | 'page' | 'peek',
@@ -31,7 +45,6 @@ declare namespace JSX {
       & { span?: number | SpanUnit }
       & { offset?: number }
       & { after?: number }
-      & { 'z-index'?: number }
       & { style?: string }
     ) & { children: JSX.Element };
 
@@ -40,18 +53,9 @@ declare namespace JSX {
       | {[key: string]: Function };
 
     style:
-      | { class: `${string}${FocusState}`, children?: never }
-      | { class: `${string}${FocusState}`, children: JSX.Element }
-      | {
-          width?:  CSSUnit,
-          height?: CSSUnit,
-          left?:   CSSUnit,
-          right?:  CSSUnit,
-          top?:    CSSUnit,
-          bottom?: CSSUnit,
-          margin?: CSSUnit,
-          children: JSX.Element,
-        };
+      | ({ class: `${string}${FocusState}`, children?: never } & StyleProps)
+      | ({ class: `${string}${FocusState}`, children: JSX.Element } & StyleProps)
+      | ({ children: JSX.Element } & StyleProps);
   }
 
   interface ElementChildrenAttribute {
