@@ -286,11 +286,20 @@ local function dom_layout(self, node, parent_x, parent_y, parent_w, parent_h)
 
     elseif node.childs then
         for _, child in ipairs(node.childs) do
-            local cx, cy, w, h = parent_x, parent_y, parent_w, parent_h
-            for _, css_fn in ipairs(child.config.css) do
-                cx, cy, w, h = css_fn(cx, cy, w, h)
+            -- span=0: hidden — even outside a grid (effective_span honours a
+            -- style-provided span or the node's own cfg.size). Whole subtree
+            -- marked _span_hidden via the _hide counter, so draw/bus/focus skip it.
+            if effective_span(child.config) == 0 then
+                _hide = _hide + 1
+                dom_layout(self, child, parent_x, parent_y, 0, 0)
+                _hide = _hide - 1
+            else
+                local cx, cy, w, h = parent_x, parent_y, parent_w, parent_h
+                for _, css_fn in ipairs(child.config.css) do
+                    cx, cy, w, h = css_fn(cx, cy, w, h)
+                end
+                dom_layout(self, child, cx, cy, w, h)
             end
-            dom_layout(self, child, cx, cy, w, h)
         end
     end
 end

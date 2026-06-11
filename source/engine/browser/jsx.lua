@@ -43,11 +43,14 @@ local function create_h(std, engine)
             for i = 1, #childs do
                 local c = childs[i]
                 if c.node then
+                    -- span>1/offset/after only make sense inside a grid; a plain
+                    -- 'node' has no cells. span==0 IS allowed: it hides the child.
                     local is_invalid = (c.span or 1) > 1 or c.offset or c.after
                     if is_invalid then
                         error('[error] JSX forbidden attributes in \'node\' child')
                     end
                     std.node.spawn(c.node, parent)
+                    if c.span ~= nil then c.node.config.size = c.span end
                     if c.id and not c.node.config.id then
                         c.node.config.id = c.id
                         engine.dom.index_id[c.id] = c.node
