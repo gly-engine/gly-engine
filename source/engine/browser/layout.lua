@@ -44,6 +44,7 @@ end
 --! @param cc node.config
 --! @return number|string
 local function effective_span(cc)
+    if cc._style_invisible then return 0 end
     local s = cc._style_span
     if s == nil then return cc.size end
     return s
