@@ -8,7 +8,7 @@ local error_module = require('source/engine/core/error')
 local loadgame = require('source/shared/engine/loadgame')
 --
 local core_draw = require('ee/engine/core/bind/ginga/draw')
-local core_draw_image = require('ee/engine/core/bind/ginga/draw_image')
+local core_draw_image = require('ee/engine/core/bind/ginga/draw_image_old')
 local core_text = require('ee/engine/core/bind/ginga/text')
 local core_keys = require('ee/engine/core/bind/ginga/keys')
 --

@@ -28,6 +28,74 @@ local function ensure_slash(p)
     return p
 end
 
+local function last_find(hay, needle)
+    local idx, from = nil, 1
+    while true do
+        local s = hay:find(needle, from, true)
+        if not s then break end
+        idx, from = s, s + 1
+    end
+    return idx
+end
+
+-- Given a directory inside a (lua|node)_modules package, return that package's
+-- root dir (".../lua_modules/@scope/pkg/"), or nil if not inside one. Used to
+-- resolve package-internal absolute imports (tsconfig baseUrl/paths style).
+local function package_root(dir)
+    dir = dir:gsub('\\', '/')
+    local marker, pos
+    for _, m in ipairs({ '/lua_modules/', '/node_modules/' }) do
+        local p = last_find(dir, m)
+        if p and (not pos or p > pos) then pos, marker = p, m end
+    end
+    if not pos then return nil end
+    local after = dir:sub(pos + #marker)
+    local pkg
+    if after:sub(1, 1) == '@' then
+        pkg = after:match('^(@[^/]+/[^/]+)')
+    else
+        pkg = after:match('^([^/]+)')
+    end
+    if not pkg then return nil end
+    return dir:sub(1, pos + #marker - 1)..pkg..'/'
+end
+
+-- Given a directory inside a (lua|node)_modules tree, return the directory that
+-- holds that tree (the transpiler output root, e.g. ".../build/"). Used to
+-- resolve build-root-relative modules emitted inside compiled packages
+-- ('lualib_bundle', 'node_modules/<pkg>') regardless of the build cwd.
+local function output_root(dir)
+    dir = dir:gsub('\\', '/')
+    local pos
+    for _, m in ipairs({ '/lua_modules/', '/node_modules/' }) do
+        local p = last_find(dir, m)
+        if p and (not pos or p > pos) then pos = p end
+    end
+    if not pos then return nil end
+    return dir:sub(1, pos)
+end
+
+-- Collapse '.' and '..' segments (and duplicate slashes) in a path.
+local function normalize_path(path)
+    path = path:gsub('\\', '/')
+    local is_abs = path:sub(1, 1) == '/'
+    local parts = {}
+    for seg in path:gmatch('[^/]+') do
+        if seg == '.' then
+            -- current dir: drop
+        elseif seg == '..' then
+            if #parts > 0 and parts[#parts] ~= '..' then
+                parts[#parts] = nil
+            elseif not is_abs then
+                parts[#parts + 1] = '..'
+            end
+        else
+            parts[#parts + 1] = seg
+        end
+    end
+    return (is_abs and '/' or '')..table.concat(parts, '/')
+end
+
 local function build_candidates(base_path)
     return {
         base_path..'.lua',
@@ -76,14 +144,19 @@ end
 --   module_path: normalized path used to build the require alias (no .lua)
 --   use_prefix:  whether options.prefix is applied to the alias
 local function resolve_require(raw, parent_dir, src_dir, cwd, node_root)
-    local lua_path = raw
-        :gsub('^%./', ''):gsub('^%.\\', '')
-        :gsub('%.lua$', '')
-        :gsub('%.', '/')
+    -- A filesystem-style path ('./x', '../x', 'a/b') keeps its dots so that
+    -- '..' segments survive; only a bare dotted module name ('a.b.c') is
+    -- rewritten to a path ('a/b/c').
+    local lua_path
+    if raw:sub(1, 1) == '.' or raw:find('/') then
+        lua_path = raw:gsub('\\', '/'):gsub('%.lua$', '')
+    else
+        lua_path = raw:gsub('%.lua$', ''):gsub('%.', '/')
+    end
 
     -- 1. Relative to parent file's directory (who made the require)
     if #parent_dir > 0 then
-        for _, full in ipairs(build_candidates(parent_dir..lua_path)) do
+        for _, full in ipairs(build_candidates(normalize_path(parent_dir..lua_path))) do
             if file_exists(full) then
                 local mp = full
                 if mp:sub(1, #cwd) == cwd then mp = mp:sub(#cwd + 1) end
@@ -93,22 +166,30 @@ local function resolve_require(raw, parent_dir, src_dir, cwd, node_root)
         end
     end
 
-    -- 2. Relative to cwd (entrypoint); if path starts with node_modules/ also try lua_modules/
+    -- 2. Relative to the enclosing package root (when the requiring file lives
+    --    inside a compiled lua_modules/node_modules package). Handles tsconfig
+    --    baseUrl/paths imports such as 'src/library/foo' meaning the package's
+    --    own src/. Only for non-relative, non-absolute paths.
+    if raw:sub(1, 1) ~= '.' and raw:sub(1, 1) ~= '/' then
+        local pkg_root = package_root(parent_dir)
+        if pkg_root then
+            for _, full in ipairs(build_candidates(normalize_path(pkg_root..lua_path))) do
+                if file_exists(full) then
+                    local mp = full
+                    if mp:sub(1, #cwd) == cwd then mp = mp:sub(#cwd + 1) end
+                    mp = mp:gsub('%.lua$', '')
+                    return { dep=mp..'.lua', module_path=mp, use_prefix=true }
+                end
+            end
+        end
+    end
+
+    -- 3. Relative to cwd (entrypoint); if path starts with node_modules/ also try lua_modules/
     local candidates_cwd = { lua_path }
     local alt = lua_path:gsub('^node_modules/', 'lua_modules/')
     if alt ~= lua_path then candidates_cwd[2] = alt end
     for _, p in ipairs(candidates_cwd) do
-        for _, full in ipairs(build_candidates(cwd..p)) do
-            if file_exists(full) then
-                local mp = full:gsub('^'..cwd, ''):gsub('%.lua$', '')
-                return { dep=mp..'.lua', module_path=mp, use_prefix=true }
-            end
-        end
-    end
-
-    -- 3. Relative to current file's directory (src_dir)
-    if #src_dir > 0 then
-        for _, full in ipairs(build_candidates(src_dir..lua_path)) do
+        for _, full in ipairs(build_candidates(normalize_path(cwd..p))) do
             if file_exists(full) then
                 local mp = full
                 if mp:sub(1, #cwd) == cwd then mp = mp:sub(#cwd + 1) end
@@ -118,7 +199,43 @@ local function resolve_require(raw, parent_dir, src_dir, cwd, node_root)
         end
     end
 
-    -- 4. node_modules (only for non-relative, non-absolute paths)
+    -- 4. Relative to current file's directory (src_dir)
+    if #src_dir > 0 then
+        for _, full in ipairs(build_candidates(normalize_path(src_dir..lua_path))) do
+            if file_exists(full) then
+                local mp = full
+                if mp:sub(1, #cwd) == cwd then mp = mp:sub(#cwd + 1) end
+                mp = mp:gsub('%.lua$', '')
+                return { dep=mp..'.lua', module_path=mp, use_prefix=true }
+            end
+        end
+    end
+
+    -- 5. Transpiler output root: a file inside a compiled (lua|node)_modules tree
+    --    may require modules the transpiler emitted relative to the build root,
+    --    e.g. 'lualib_bundle' or 'node_modules/@scope/pkg'. Resolve those against
+    --    the output root inferred from the requiring file's own location, trying
+    --    the node_modules -> lua_modules alias too. cwd-independent.
+    if raw:sub(1, 1) ~= '.' and raw:sub(1, 1) ~= '/' then
+        local out_root = output_root(parent_dir)
+        if out_root then
+            local probes = { lua_path }
+            local oalt = lua_path:gsub('^node_modules/', 'lua_modules/')
+            if oalt ~= lua_path then probes[#probes + 1] = oalt end
+            for _, p in ipairs(probes) do
+                for _, full in ipairs(build_candidates(normalize_path(out_root..p))) do
+                    if file_exists(full) then
+                        local mp = full
+                        if mp:sub(1, #cwd) == cwd then mp = mp:sub(#cwd + 1) end
+                        mp = mp:gsub('%.lua$', '')
+                        return { dep=mp..'.lua', module_path=mp, use_prefix=true }
+                    end
+                end
+            end
+        end
+    end
+
+    -- 6. node_modules (only for non-relative, non-absolute paths)
     if raw:sub(1,1) ~= '.' and raw:sub(1,1) ~= '/' then
         local pkg, subpath
         if raw:sub(1,1) == '@' then
@@ -142,7 +259,7 @@ local function resolve_require(raw, parent_dir, src_dir, cwd, node_root)
     end
 
     -- Not found: treat as system/external library (no prefix, no dep processing)
-    return { dep=nil, module_path=lua_path, use_prefix=false }
+    return { dep=nil, module_path=normalize_path(lua_path), use_prefix=false }
 end
 
 local function move(src_filename, out_filename, options)

@@ -38,6 +38,17 @@ local function parse_span(span)
     return 1, 1
 end
 
+--! @brief Effective span of a child: a style-provided span (cfg._style_span,
+--!   resolved by stylesheet.css_add/css_del) overrides the node's own cfg.size.
+--!   Returns the raw span value (number, 'NxN' string, or 0 for hidden).
+--! @param cc node.config
+--! @return number|string
+local function effective_span(cc)
+    local s = cc._style_span
+    if s == nil then return cc.size end
+    return s
+end
+
 -- ─── Scroll step ─────────────────────────────────────────────────────────────
 
 --! @brief Compute the number of items to skip per scroll step.
@@ -67,6 +78,38 @@ local function peek_cycle_delta(current, target, total)
         delta = delta - total
     end
     return delta
+end
+
+--! @brief Cell position of each child along a peek grid's scroll axis.
+--! @details Peek grids are a single line (rows==1 for 'col', cols==1 for 'row'),
+--!   so position is purely cumulative span+offset+after — mirrors the cursor
+--!   advance in dom_layout. Lets peek math work in cell units instead of item
+--!   index units, so items with span>1 keep the focused item anchored and the
+--!   carousel from overlapping. With every span==1 this is the identity (place[i]
+--!   == i-1, total == #childs), so span==1 behaviour is unchanged.
+--! @param childs table  the grid's children
+--! @param dir_val string  'col' or 'row'
+--! @return table place (1-based: cell start of each child), number total (total span)
+local function peek_axis(childs, dir_val)
+    local place  = {}
+    local cursor = 0
+    for i, child in ipairs(childs) do
+        local cc   = child.config
+        local size = effective_span(cc)
+        if size == 0 then
+            place[i] = cursor  -- hidden: occupies no cell, cursor not advanced
+        else
+            local span_x, span_y = parse_span(size or 1)
+            if dir_val == 'row' and type(size) == 'number' then
+                span_x, span_y = 1, span_x
+            end
+            local axis_span = (dir_val == 'col') and span_x or span_y
+            cursor   = cursor + (cc.offset or 0)
+            place[i] = cursor
+            cursor   = cursor + axis_span + (cc.after or 0)
+        end
+    end
+    return place, cursor
 end
 
 -- ─── Scroll clip depth ───────────────────────────────────────────────────────
@@ -117,6 +160,8 @@ local function dom_layout(self, node, parent_x, parent_y, parent_w, parent_h)
         local peek_total  = 0
         local peek_anchor = 1
         local peek_loop   = false
+        local peek_place        -- cell start of each child along scroll axis
+        local peek_span_total = 0  -- total span of all children (cell units)
 
         if scroll then
             if scroll.mode == 'page' then
@@ -133,17 +178,18 @@ local function dom_layout(self, node, parent_x, parent_y, parent_w, parent_h)
                 peek_anchor = scroll.anchor or 1
 
                 if peek_total > 0 then
-                    if dir_val == 'col' then
-                        local lo  = peek_anchor == 0 and -(peek_total - 1) or -(peek_total - cols + peek_anchor)
-                        local raw = peek_anchor - scroll.index
-                        peek_loop = raw <= lo
-                        x = peek_loop and peek_anchor or math.max(math.min(raw, peek_anchor), lo)
-                    else
-                        local lo  = peek_anchor == 0 and -(peek_total - 1) or -(peek_total - rows + peek_anchor)
-                        local raw = peek_anchor - scroll.index
-                        peek_loop = raw <= lo
-                        y = peek_loop and peek_anchor or math.max(math.min(raw, peek_anchor), lo)
-                    end
+                    -- work in cell units (span-aware) so span>1 items keep the
+                    -- focused item at the anchor slot and don't leave gaps/overlaps.
+                    peek_place, peek_span_total = peek_axis(node.childs, dir_val)
+                    local focus_cell = peek_place[scroll.index + 1] or 0
+                    local axis_max   = (dir_val == 'col') and cols or rows
+                    local lo  = peek_anchor == 0
+                        and -(peek_span_total - 1)
+                        or  -(peek_span_total - axis_max + peek_anchor)
+                    local raw = peek_anchor - focus_cell
+                    peek_loop = raw <= lo
+                    local pos = peek_loop and peek_anchor or math.max(math.min(raw, peek_anchor), lo)
+                    if dir_val == 'col' then x = pos else y = pos end
                 end
             else
                 if dir_val == 'col' then
@@ -156,10 +202,11 @@ local function dom_layout(self, node, parent_x, parent_y, parent_w, parent_h)
 
         if node.childs then
             for i, child in ipairs(node.childs) do
-                local cc = child.config
+                local cc   = child.config
+                local size = effective_span(cc)
 
                 -- span=0: hidden — takes no grid space, draw() never called
-                if cc.size == 0 then
+                if size == 0 then
                     _hide = _hide + 1
                     dom_layout(self, child, parent_x, parent_y, 0, 0)
                     _hide = _hide - 1
@@ -168,13 +215,14 @@ local function dom_layout(self, node, parent_x, parent_y, parent_w, parent_h)
                 else
                     local offset_val = cc.offset or 0
                     local after_val  = cc.after  or 0
-                    local span_x, span_y = parse_span(cc.size or 1)
-                    if dir_val == 'row' and type(cc.size) == 'number' then
+                    local span_x, span_y = parse_span(size or 1)
+                    if dir_val == 'row' and type(size) == 'number' then
                         span_x, span_y = 1, span_x
                     end
 
                     if scroll and scroll.mode == 'peek' and peek_loop then
-                        local delta = peek_cycle_delta(scroll.index, i - 1, peek_total)
+                        local focus_cell = peek_place[scroll.index + 1] or 0
+                        local delta = peek_cycle_delta(focus_cell, peek_place[i], peek_span_total)
                         if dir_val == 'col' then
                             x = peek_anchor + delta
                             y = 0
@@ -238,11 +286,20 @@ local function dom_layout(self, node, parent_x, parent_y, parent_w, parent_h)
 
     elseif node.childs then
         for _, child in ipairs(node.childs) do
-            local cx, cy, w, h = parent_x, parent_y, parent_w, parent_h
-            for _, css_fn in ipairs(child.config.css) do
-                cx, cy, w, h = css_fn(cx, cy, w, h)
+            -- span=0: hidden — even outside a grid (effective_span honours a
+            -- style-provided span or the node's own cfg.size). Whole subtree
+            -- marked _span_hidden via the _hide counter, so draw/bus/focus skip it.
+            if effective_span(child.config) == 0 then
+                _hide = _hide + 1
+                dom_layout(self, child, parent_x, parent_y, 0, 0)
+                _hide = _hide - 1
+            else
+                local cx, cy, w, h = parent_x, parent_y, parent_w, parent_h
+                for _, css_fn in ipairs(child.config.css) do
+                    cx, cy, w, h = css_fn(cx, cy, w, h)
+                end
+                dom_layout(self, child, cx, cy, w, h)
             end
-            dom_layout(self, child, cx, cy, w, h)
         end
     end
 end

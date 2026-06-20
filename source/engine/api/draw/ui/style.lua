@@ -44,14 +44,11 @@ local ss = require('source/engine/browser/stylesheet')
 
 local function add(engine, self, node)
     local dom_obj = engine.dom
-    ss.css_add(dom_obj, self.func, node)
+    -- css_add tracks style_names (and resolves span/z) when a name is passed
+    ss.css_add(dom_obj, self.func, node, self.name)
 
-    -- track style_names for focus-swap support (lazy alloc)
+    -- check for :focus variant
     if self.name then
-        node.config.style_names = node.config.style_names or {}
-        node.config.style_names[#node.config.style_names + 1] = self.name
-
-        -- check for :focus variant
         local focus_name = self.name .. ':focus'
         if dom_obj.stylesheet_func and dom_obj.stylesheet_func[focus_name] then
             node.config.style_focus = node.config.style_focus or {}
@@ -72,7 +69,7 @@ local function add_items(engine, self, nodes)
 end
 
 local function remove(engine, self, node)
-    ss.css_del(engine.dom, self.func, node)
+    ss.css_del(engine.dom, self.func, node, self.name)
     return self
 end
 

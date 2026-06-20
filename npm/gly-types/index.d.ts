@@ -77,7 +77,6 @@ declare class GlyUi {
     offset?: number;
     after?: number;
     id?: string;
-    z?: number;
   }): GlyUi;
   public get_item(id: number): GlyApp;
   public get_items(): Array<GlyApp>;
@@ -193,22 +192,13 @@ interface GlyStdImage {
 
 /** @noSelf **/
 interface GlyStdKey {
+  any: boolean;
   axis: {
-    a: 0 | 1;
-    b: 0 | 1;
-    c: 0 | 1;
-    d: 0 | 1;
-    down: 0 | 1;
-    left: 0 | 1;
-    menu: 0 | 1;
-    right: 0 | 1;
-    up: 0 | 1;
     x: -1 | 0 | 1;
     y: -1 | 0 | 1;
   };
   press: {
     a: boolean;
-    any: boolean;
     b: boolean;
     c: boolean;
     d: boolean;
@@ -217,12 +207,6 @@ interface GlyStdKey {
     menu: boolean;
     right: boolean;
     up: boolean;
-  };
-  media: undefined | {
-    ch_up: string;
-    ch_down: string;
-    vol_up: string;
-    vol_down: string;
   };
 }
 
