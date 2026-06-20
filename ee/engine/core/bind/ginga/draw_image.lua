@@ -127,7 +127,7 @@ local function image_mensure(std, engine, canvas)
             local w, h = image:attrSize()
             return w, h
         end
-        return nil
+        return 0, 0
     end
 end
 
@@ -153,8 +153,6 @@ local function install(std, engine)
     --! @todo
     std.image.unload = function() end
     std.image.unload_all = function() end
-    std.image.mensure_width = function(v) return select(1, std.image.mensure(v)) end
-    std.image.mensure_height = function(v) return select(2, std.image.mensure(v)) end
 end
 
 return {

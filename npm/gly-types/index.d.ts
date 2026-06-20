@@ -183,9 +183,7 @@ interface GlyStdI18n {
 
 /** @noSelf **/
 interface GlyStdImage {
-  mensure_height(src: string): number;
-  mensure_width(src: string): number;
-  mensure(src: string): LuaMultiReturn<[number, number]> | LuaMultiReturn<[undefined, undefined]>;
+  mensure(src: string): LuaMultiReturn<[number, number]>;
   draw(src: string, x?: number, y?: number): void;
   load(src: string): number;
   exists(src: string): boolean;
@@ -330,9 +328,7 @@ interface GlyStdText {
   font_previous(): void;
   font_size(size: number): void;
   is_tui(): boolean;
-  mensure_height(src: string): number;
-  mensure_width(src: string): number;
-  mensure(text: string | number): LuaMultiReturn<[number, number]> | LuaMultiReturn<[undefined, undefined]>;
+  mensure(text: string | number): LuaMultiReturn<[number, number]>;
   print(x: number, y: number, text: string | number): void;
   print_ex(x: number, y: number, text: string | number, align_x?: -1 | 0 | 1, align_y?: -1 | 0 | 1): [number, number];
   put(x: number, y: number, text: string | number, size?: number): void;
