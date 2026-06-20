@@ -150,9 +150,6 @@ local function install(std, engine)
     std.image.exists = image_exists(std, engine, engine.canvas)
     std.image.mensure = image_mensure(std, engine, engine.canvas)
     std.image.error = get_image_error
-    --! @todo
-    std.image.unload = function() end
-    std.image.unload_all = function() end
 end
 
 return {
