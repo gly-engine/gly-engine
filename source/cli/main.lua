@@ -60,6 +60,7 @@ local command = cli.argparse(arg)
     .add_option_has('enterprise')
     .add_option_has('bundler')
     .add_option_has('run')
+    .add_option_has('profile')
     --
     .add_subcommand('build-engine', commands_halt)
     .add_next_value('engine', {required=true})

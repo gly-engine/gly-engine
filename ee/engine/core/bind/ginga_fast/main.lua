@@ -5,6 +5,7 @@ local version = require('source/version')
 local tree = require('source/shared/engine/tree')
 local loadcore = require('source/shared/engine/loadcore')
 local error_module = require('source/engine/core/error')
+local engine_profile = require('source/engine/core/profile')
 local loadgame = require('source/shared/engine/loadgame')
 --
 local core_draw = require('ee/engine/core/bind/ginga/draw')
@@ -63,6 +64,7 @@ local engine = {
     handler = function(a) end,
     current = application_default,
     root = application_default,
+    profile = engine_profile.stub(),
     canvas = canvas,
     event = event,
     offset_x = 0,
@@ -73,7 +75,10 @@ local engine = {
 
 
 local cfg_system = {
-    quit = function() event.post({class = 'ncl', type = 'presentation', action = 'stop'}) end,
+    quit = function()
+        engine_profile.report(engine)
+        event.post({class = 'ncl', type = 'presentation', action = 'stop'})
+    end,
     get_language = function() return 'pt-BR' end
 }
 
@@ -99,8 +104,13 @@ local cfg_text = {
 
 local function register_event_loop()
     event.register(function(evt) 
+        if evt.class == 'ncl' and evt.type == 'presentation' and evt.action == 'stop' then
+            engine_profile.report(engine)
+        end
         xpcall(function()
-            std.bus.emit('ginga', evt)
+            engine.profile.call('scope.ginga', function()
+                std.bus.emit('ginga', evt)
+            end)
         end, engine.handler)
     end)
 end
@@ -110,10 +120,14 @@ local function register_fixed_loop()
     local loop = std.bus.trigger('loop')
     local draw = std.bus.trigger('draw')    
     tick = function()
-        xpcall(loop, engine.handler)
+        xpcall(function()
+            engine.profile.call('scope.root.loop', loop)
+        end, engine.handler)
         canvas:attrColor(0, 0, 0, 0)
         canvas:clear()
-        xpcall(draw, engine.handler)
+        xpcall(function()
+            engine.profile.call('scope.root.draw', draw)
+        end, engine.handler)
         canvas:flush()
         event.timer(engine.delay, tick)
     end
@@ -126,6 +140,7 @@ local function main(evt, gamefile)
 
     engine.envs = evt
     engine.handler = error_module.make_handler(engine, std, function()
+        engine_profile.report(engine)
         os.exit()
     end)
     application = loadgame.script(gamefile, application_default)
@@ -162,6 +177,8 @@ local function main(evt, gamefile)
         :package('storage', engine_storage, cfg_persistent)
         :package('i18n', engine_i18n, cfg_system)
         :run()
+
+    engine_profile.install(engine, engine_profile.is_enabled(os and os.getenv and os.getenv('GLY_PROFILE')))
 
     application.data.width, application.data.height = canvas:attrSize()
     std.app.width, std.app.height = application.data.width, application.data.height

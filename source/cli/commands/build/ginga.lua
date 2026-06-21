@@ -31,7 +31,7 @@ local function build(args)
         :add_rule('the flag -'..'-run is not available with ginga html5', 'core=html5', 'run=true')
         :add_core('ncl', {src=src})
         :add_meta('ee/engine/meta/ginga/ncl.mustache', {as='main.ncl'})
-        :add_step('ginga dist/main.ncl -s 1280x720', {when=args.run})
+        :add_step((args.profile and 'GLY_PROFILE=1 ' or '')..'ginga dist/main.ncl -s 1280x720', {when=args.run})
         --
         :add_core('html5', {src='source/engine/core/vacuum/native/main.lua', force_bundler=true})
         :add_meta('source/engine/meta/html5/index.mustache', {as='index.html'})
