@@ -332,11 +332,24 @@ interface GlyQueryResult {
   isVisible(): boolean;
 }
 
+type GlyStyleProps = {
+  width?:     string | number;
+  height?:    string | number;
+  left?:      string | number;
+  right?:     string | number;
+  top?:       string | number;
+  bottom?:    string | number;
+  margin?:    string | number;
+  span?:      number | `${number}x${number}`;
+  'z-index'?: number;
+  invisible?: boolean;
+};
+
 /** @noSelf **/
 interface GlyStdUi {
   grid(classlist: string): GlyUi;
   style(classlist: string): GlyUi;
-  style(classlist: string, stylesheet: object): GlyUi;
+  style(classlist: string, stylesheet: GlyStyleProps): GlyUi;
   focus(target?: 'left' | 'right' | 'up' | 'down' | 'first' | `#${string}` | `.${string}` | GlyApp): GlyQueryResult | undefined;
   isFocused(target?: `#${string}` | GlyApp): boolean;
   span(size: number | `${number}x${number}`, target?: `#${string}` | GlyApp): void;
