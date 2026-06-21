@@ -76,4 +76,20 @@ function test_engine_shortcut_native()
     assert(state2.engine == 'source/engine/core/vacuum/native/main.lua')
 end
 
+function test_profile_flag_for_build_run()
+    local ok, out, state = cli2.parse(dsl, {'build', '--core', 'love', '--run', '--profile', 'samples/pong/game.lua'})
+    assert(ok == true)
+    assert(state.command == 'build')
+    assert(state.run == true)
+    assert(state.profile == true)
+end
+
+function test_profile_flag_for_run()
+    local ok, out, state = cli2.parse(dsl, {'run', '--profile', 'samples/pong/game.lua'})
+    assert(ok == true)
+    assert(state.command == 'run')
+    assert(state.src == 'samples/pong/game.lua')
+    assert(state.profile == true)
+end
+
 test.unit(_G)

@@ -378,9 +378,16 @@ local function press(self)
     local node = self.focus_current
     if node and not pause.is_paused(self, node.config.uid, '*') and node.callbacks.click then
         local prev = self.current_node
+        local profile = self.profile
         self.current_node = node
         if self.std then
-            node.callbacks.click(node.data, self.std)
+            if profile then
+                profile.call('node click', function()
+                    node.callbacks.click(node.data, self.std)
+                end)
+            else
+                node.callbacks.click(node.data, self.std)
+            end
         end
         self.current_node = prev
     end

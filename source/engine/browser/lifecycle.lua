@@ -5,7 +5,16 @@
 
 local function call(self, node, key, ...)
     if node and node.callbacks and node.callbacks[key] and self.std then
-        node.callbacks[key](node.data, self.std, ...)
+        local a, b, c, d, e, f = ...
+        local profile = self.profile
+
+        if profile then
+            return profile.call('node '..key, function()
+                return node.callbacks[key](node.data, self.std, a, b, c, d, e, f)
+            end)
+        end
+
+        return node.callbacks[key](node.data, self.std, a, b, c, d, e, f)
     end
 end
 

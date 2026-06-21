@@ -160,6 +160,26 @@ end
 --! @}
 --! @}
 
+local function xpcall_profiled(engine, label, func)
+    local profile = engine.profile
+
+    if not profile then
+        return xpcall(func, engine.handler)
+    end
+
+    profile.start(label)
+    local ok = xpcall(func, function(msg)
+        profile.stop(label)
+        return engine.handler(msg)
+    end)
+
+    if ok then
+        profile.stop(label)
+    end
+
+    return ok
+end
+
 local function install(std, engine)
     std.node = std.node or {}
 
@@ -180,7 +200,9 @@ local function install(std, engine)
             engine.offset_y = node.config.offset_y
 
             if node.callbacks[key] and (node.config.uid == 0 or not LIFECYCLE[key]) then
-                xpcall(function() node.callbacks[key](node.data, std, a, b, c, d, e, f) end, engine.handler)
+                xpcall_profiled(engine, 'node '..key, function()
+                    node.callbacks[key](node.data, std, a, b, c, d, e, f)
+                end)
             end
         end)
     end)

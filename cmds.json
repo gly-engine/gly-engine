@@ -294,6 +294,11 @@
                     "name": "run",
                     "type": "boolean",
                     "description": "Execute after successful build"
+                },
+                {
+                    "name": "profile",
+                    "type": "boolean",
+                    "description": "Profile application Lua callbacks when running"
                 }
             ]
         },
@@ -314,6 +319,11 @@
                     "name": "screen",
                     "type": "string",
                     "description": "Screen resolution"
+                },
+                {
+                    "name": "profile",
+                    "type": "boolean",
+                    "description": "Profile application Lua callbacks"
                 }
             ]
         },

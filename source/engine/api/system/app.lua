@@ -12,6 +12,18 @@ local function reset(std, engine)
         end
     end
     return function()
+        local profile = engine.profile
+
+        if profile then
+            profile.call('node exit', function()
+                engine.root.callbacks.exit(engine.root.data, std)
+            end)
+            profile.call('node init', function()
+                engine.root.callbacks.init(engine.root.data, std)
+            end)
+            return
+        end
+
         engine.root.callbacks.exit(engine.root.data, std)
         engine.root.callbacks.init(engine.root.data, std)
     end

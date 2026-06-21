@@ -1,4 +1,5 @@
 local version = require('source/version')
+local engine_profile = require('source/engine/core/profile')
 --
 local engine_key = require('source/engine/api/system/key')
 local engine_api_draw_text = require('source/engine/api/draw/text')
@@ -10,7 +11,7 @@ local std = require('source/shared/var/object/std')
 local eval_code = require('source/shared/string/eval/code')
 --
 local f=function(a,b)end
-local engine={keyboard=f}
+local engine={keyboard=f,profile=engine_profile.stub()}
 local application={
     meta={title='', version=''},
     data={width=1280,height=720},
@@ -40,12 +41,16 @@ local cfg_text={
 
 function native_callback_loop(dt)
     std.milis, std.delta=std.milis + dt, dt
-    application.callbacks.loop(application.data, std)
+    engine.profile.call('node loop', function()
+        application.callbacks.loop(application.data, std)
+    end)
 end
 
 function native_callback_draw()
     native_draw_start()
-    application.callbacks.draw(application.data, std)
+    engine.profile.call('node draw', function()
+        application.callbacks.draw(application.data, std)
+    end)
     native_draw_flush()
 end
 
@@ -60,7 +65,7 @@ function native_callback_keyboard(key, value)
     engine.keyboard(std, engine, key, value)
 end
 
-function native_callback_init(width, height, game_lua)
+function native_callback_init(width, height, game_lua, profile_enabled)
     local ok, script=true, game_lua
 
     if type(script) == 'string' then
@@ -102,8 +107,18 @@ function native_callback_init(width, height, game_lua)
         native_draw_clear(tint, 0, 0, application.data.width, application.data.height)
     end
     std.app.reset = function()
-        (application.callbacks.exit or function() end)(application.data, std)
-        application.callbacks.init(application.data, std)
+        engine.profile.call('node exit', function()
+            (application.callbacks.exit or function() end)(application.data, std)
+        end)
+        engine.profile.call('node init', function()
+            application.callbacks.init(application.data, std)
+        end)
+    end
+    std.app.exit = function()
+        engine_profile.report(engine)
+        if native_system_exit then
+            return native_system_exit()
+        end
     end
 
     engine.root=application
@@ -112,7 +127,13 @@ function native_callback_init(width, height, game_lua)
     engine_api_draw_text.install(std, engine, cfg_text)
     engine_api_draw_poly.install(std, engine, cfg_poly)
     engine.current=application
-    application.callbacks.init(application.data, std)
+    engine_profile.install(engine, engine_profile.is_enabled(
+        profile_enabled,
+        native_system_get_env and native_system_get_env('GLY_PROFILE')
+    ))
+    engine.profile.call('node init', function()
+        application.callbacks.init(application.data, std)
+    end)
 end
 
 local P={

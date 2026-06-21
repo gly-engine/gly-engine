@@ -4,6 +4,7 @@ local dom          = require('source/engine/browser/dom')
 local loadgame     = require('source/shared/engine/loadgame')
 local loadcore     = require('source/shared/engine/loadcore')
 local error_module = require('source/engine/core/error')
+local engine_profile = require('source/engine/core/profile')
 --
 local core_text = require('source/engine/core/bind/love/text')
 local core_draw = require('source/engine/core/bind/love/draw')
@@ -80,9 +81,10 @@ local cfg_env = {
 function love.load(args)
     local screen = util_arg.get(args, 'screen')
     local fullscreen = util_arg.has(args, 'fullscreen')
+    local profile_enabled = util_arg.has(args, 'profile')
     local game_title = util_arg.param(arg, {'screen'}, 2)
     local application = loadgame.script(game_title, application_default)
-    local engine = {offset_x=0,offset_y=0,dom={}}
+    local engine = {offset_x=0,offset_y=0,dom={},profile=engine_profile.stub()}
     
     if screen then
         local w, h = screen:match('(%d+)x(%d+)')
@@ -141,6 +143,12 @@ function love.load(args)
     love.draw = std.bus.trigger('draw')
     love.keypressed = std.bus.trigger('rkey1')
     love.keyreleased = std.bus.trigger('rkey0')
+    love.quit = function()
+        engine_profile.report(engine)
+    end
+
+    engine_profile.install(engine, profile_enabled)
+    engine.dom.profile = engine.profile
     
     std.bus.emit_next('load')
     std.bus.emit_next('init')

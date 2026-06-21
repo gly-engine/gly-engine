@@ -5,6 +5,7 @@ local dom = require('source/engine/browser/dom')
 local loadcore = require('source/shared/engine/loadcore')
 local loadgame = require('source/shared/engine/loadgame')
 local error_module = require('source/engine/core/error')
+local engine_profile = require('source/engine/core/profile')
 --
 local engine_draw_fps = require('source/engine/api/draw/fps')
 local engine_draw_poly = require('source/engine/api/draw/poly')
@@ -39,12 +40,18 @@ local engine = {
     current = application_default,
     root = application_default,
     dom = {},
+    profile = engine_profile.stub(),
     offset_x = 0,
     offset_y = 0
 }
 
 local cfg_system = {
-    exit = native_system_exit,
+    exit = function(...)
+        engine_profile.report(engine)
+        if native_system_exit then
+            return native_system_exit(...)
+        end
+    end,
     reset = native_system_reset,
     title = native_system_title,
     get_fps = native_system_get_fps,
@@ -168,7 +175,7 @@ function native_callback_http(id, key, data)
     return callback_http.func(engine['http'][id], key, data, std)
 end
 
-function native_callback_init(width, height, game_lua)
+function native_callback_init(width, height, game_lua, profile_enabled)
     application = loadgame.script(game_lua, application_default)
 
     if application then
@@ -228,7 +235,13 @@ function native_callback_init(width, height, game_lua)
 
     std.app.title(application.meta.title..' - '..application.meta.version)
 
+    engine_profile.install(engine, engine_profile.is_enabled(
+        profile_enabled,
+        native_system_get_env and native_system_get_env('GLY_PROFILE')
+    ))
+
     engine.dom = dom.node_begin(application, std.app.width, std.app.height, engine.dom)
+    engine.dom.profile = engine.profile
     engine.root, engine.current = application, application
 
     std.bus.emit_next('load')

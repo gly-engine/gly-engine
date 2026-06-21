@@ -28,7 +28,7 @@ local function build(args)
         :add_core('native', {src='source/engine/core/vacuum/native/main.lua'})
         --
         :add_core('love', {src='source/engine/core/bind/love/main.lua'})
-        :add_step('love '..args.outdir, {when=args.run})
+        :add_step('love '..args.outdir..(args.profile and ' -'..'-profile' or ''), {when=args.run})
 
     if not args.engine then
         local ok, message = build_game:run()
