@@ -138,9 +138,14 @@ function love.load(args)
 
     std.app.title(application.meta.title..' - '..application.meta.version)
 
+    local draw = std.bus.trigger('draw')
+
     love.update = std.bus.trigger('loop')
     love.resize = std.bus.trigger('resize')
-    love.draw = std.bus.trigger('draw')
+    love.draw = function(...)
+        draw(...)
+        engine_profile.frame(engine, std)
+    end
     love.keypressed = std.bus.trigger('rkey1')
     love.keyreleased = std.bus.trigger('rkey0')
     love.quit = function()

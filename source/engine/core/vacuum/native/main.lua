@@ -156,6 +156,7 @@ end
 function native_callback_draw()
     native_draw_start()
     std.bus.emit('draw')
+    engine_profile.frame(engine, std)
     native_draw_flush()
 end
 

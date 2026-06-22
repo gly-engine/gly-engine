@@ -127,6 +127,7 @@ local function register_fixed_loop(fallback)
         xpcall(function()
             engine.profile.call('scope.root.draw', draw)
         end, engine.handler)
+        engine_profile.frame(engine, std)
         canvas:flush()
         if fallback_restarts == fallback then
             event.timer(engine.delay, tick)

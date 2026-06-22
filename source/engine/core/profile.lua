@@ -12,6 +12,9 @@ local excludes = {
 }
 
 local cols = { 3, 29, 11, 24, 32 }
+local overlay_rows = 8
+local sample_ms = 1000
+local reset_ms = 300000
 
 local function clean_src(src)
     return tostring(src or '')
@@ -95,6 +98,159 @@ local function write(value)
     end
 end
 
+local function short_src(src)
+    src = clean_src(src)
+    return src:match('([^/]+%.lua:%d+)$') or src
+end
+
+local function trim(value, size)
+    value = tostring(value)
+    if value:len() <= size then
+        return value
+    end
+    return value:sub(1, size - 1)..'…'
+end
+
+local function memory_kb()
+    return collectgarbage('count')
+end
+
+local function row_key(row)
+    return tostring(row[2])..'|'..tostring(row[5])
+end
+
+local function rows_by_key(rows)
+    local dict = {}
+
+    for _, row in ipairs(rows) do
+        if should_capture_src(row[5]) then
+            dict[row_key(row)] = {
+                label = row[2],
+                calls = row[3],
+                time = row[4],
+                src = row[5],
+            }
+        end
+    end
+
+    return dict
+end
+
+local function sort_rows(rows)
+    table.sort(rows, function(a, b)
+        if a.time == b.time then
+            return a.calls > b.calls
+        end
+        return a.time > b.time
+    end)
+    return rows
+end
+
+local function diff_rows(previous, current)
+    local rows = {}
+
+    for key, row in pairs(current) do
+        local prev = previous[key]
+        local calls = row.calls - (prev and prev.calls or 0)
+        local time = row.time - (prev and prev.time or 0)
+
+        if calls > 0 or time > 0 then
+            rows[#rows + 1] = {
+                label = row.label,
+                calls = calls,
+                time = time,
+                src = row.src,
+            }
+        end
+    end
+
+    return sort_rows(rows)
+end
+
+local function snapshot(self, now)
+    local current = rows_by_key(self.backend.query(self.sample_limit))
+    local rows = diff_rows(self.previous, current)
+    local calls = self.calls - self.previous_calls
+
+    self.previous = current
+    self.previous_calls = self.calls
+    self.sample = {
+        at = now,
+        calls = calls,
+        mem_kb = memory_kb(),
+        rows = rows,
+    }
+end
+
+local function tick(self, now)
+    if self.reported then
+        return
+    end
+
+    if not self.last_sample then
+        self.last_sample = now
+        self.reset_at = now
+        snapshot(self, now)
+        return
+    end
+
+    if now - self.last_sample >= self.sample_ms then
+        self.last_sample = now
+        snapshot(self, now)
+    end
+
+    if now - self.reset_at >= self.reset_ms then
+        write(('[profile] reset window lua_gc_kb=%.3f'):format(memory_kb()))
+        self.backend.reset()
+        self.previous = {}
+        self.previous_calls = self.calls
+        self.reset_at = now
+    end
+end
+
+local function draw_overlay(self, engine, std)
+    local sample = self.sample
+    local rows = sample.rows
+    local x = 40
+    local y = 32
+    local w = 700
+    local line_h = 18
+    local padding = 8
+    local count = math.min(#rows, self.overlay_rows)
+    local h = ((count + 3) * line_h) + padding
+    local old_current = engine.current
+    local old_x = engine.offset_x
+    local old_y = engine.offset_y
+
+    engine.current = engine.root
+    engine.offset_x = 0
+    engine.offset_y = 0
+
+    std.draw.color(0x101010D0)
+    std.draw.rect(0, x, y, w, h)
+    std.draw.color(0x66FF66FF)
+    std.text.font_default(1)
+    std.text.font_size(14)
+    std.text.print(x + 6, y + 4, ('profile 1s | lua gc %.1f kb | scopes/s %d'):format(sample.mem_kb, sample.calls))
+    std.text.print(x + 6, y + 4 + line_h, 'rank | ms | calls | function')
+    std.draw.color(0xFFFFFFFF)
+
+    for i = 1, count do
+        local row = rows[i]
+        local label = row.label ~= '?' and row.label or short_src(row.src)
+        local line = ('%02d | %7.3f | %5d | %s'):format(i, row.time * 1000, row.calls, trim(label..' @ '..short_src(row.src), 76))
+        std.text.print(x + 6, y + 4 + ((i + 1) * line_h), line)
+    end
+
+    if count == 0 then
+        std.text.print(x + 6, y + 4 + (2 * line_h), 'waiting for application samples')
+    end
+
+    engine.current = old_current
+    engine.offset_x = old_x
+    engine.offset_y = old_y
+end
+
 local function noop()
 end
 
@@ -109,6 +265,7 @@ local function make_stub(reason)
     stub.start = noop
     stub.stop = noop
     stub.report = noop
+    stub.frame = noop
     stub.call = function(label, func)
         return func()
     end
@@ -128,6 +285,14 @@ local function make_real(backend, options)
         depth = 0,
         last = nil,
         reported = false,
+        backend = backend,
+        previous = {},
+        previous_calls = 0,
+        sample = {at = 0, calls = 0, mem_kb = memory_kb(), rows = {}},
+        sample_limit = options.sample_limit or 200,
+        sample_ms = options.sample_ms or sample_ms,
+        reset_ms = options.reset_ms or reset_ms,
+        overlay_rows = options.overlay_rows or overlay_rows,
         original_hooker = backend.hooker,
     }
 
@@ -198,6 +363,11 @@ local function make_real(backend, options)
         write(format_rows(backend.query(limit or options.limit or 100)))
     end
 
+    self.frame = function(engine, std, now)
+        tick(self, now or std.milis)
+        draw_overlay(self, engine, std)
+    end
+
     return self
 end
 
@@ -261,6 +431,10 @@ local function report(engine)
     end
 end
 
+local function frame(engine, std, now)
+    engine.profile.frame(engine, std, now)
+end
+
 local function scoped(engine, label, func)
     local profile = engine and engine.profile
     if profile then
@@ -272,6 +446,7 @@ end
 local P = {
     install = install,
     is_enabled = is_enabled,
+    frame = frame,
     report = report,
     scoped = scoped,
     start = start,

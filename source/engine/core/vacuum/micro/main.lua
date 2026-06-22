@@ -70,6 +70,7 @@ function native_callback_draw()
     engine.profile.call('node draw', function()
         application.callbacks.draw(application.data, std)
     end)
+    engine_profile.frame(engine, std)
     native_draw_flush()
 end
 

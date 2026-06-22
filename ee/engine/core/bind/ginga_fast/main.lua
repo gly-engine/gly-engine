@@ -128,6 +128,7 @@ local function register_fixed_loop()
         xpcall(function()
             engine.profile.call('scope.root.draw', draw)
         end, engine.handler)
+        engine_profile.frame(engine, std)
         canvas:flush()
         event.timer(engine.delay, tick)
     end
