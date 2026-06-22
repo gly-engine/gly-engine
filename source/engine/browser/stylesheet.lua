@@ -78,14 +78,15 @@ local function stylesheet(self, name, options)
         end
 
         -- parse options into css table
-        css.left   = options.left   or options.margin or nil
-        css.right  = options.right  or options.margin or nil
-        css.top    = options.top    or options.margin or nil
-        css.bottom = options.bottom or options.margin or nil
-        css.height = options.height or nil
-        css.width  = options.width  or nil
-        css.span   = options.span or nil
-        css.z      = options['z-index'] or options.z or nil
+        css.left      = options.left   or options.margin or nil
+        css.right     = options.right  or options.margin or nil
+        css.top       = options.top    or options.margin or nil
+        css.bottom    = options.bottom or options.margin or nil
+        css.height    = options.height or nil
+        css.width     = options.width  or nil
+        css.span      = options.span or nil
+        css.z         = options['z-index'] or options.z or nil
+        css.invisible = options.invisible
 
         -- store closure key
         if not self.stylesheet_key then self.stylesheet_key = {} end
@@ -174,7 +175,7 @@ local function stylesheet(self, name, options)
     -- structural props (span/z) live alongside the geometry closure, keyed by it,
     -- so a node can resolve them from its applied css list without a name lookup.
     self.stylesheet_meta = self.stylesheet_meta or {}
-    self.stylesheet_meta[exe] = { span = css.span, z = css.z }
+    self.stylesheet_meta[exe] = { span = css.span, z = css.z, invisible = css.invisible }
 
     return exe
 end
@@ -190,18 +191,21 @@ end
 local function resolve_style_props(self, node)
     local cfg  = node.config
     local meta = self.stylesheet_meta
-    local span, z
+    local span, z, invisible
     if meta then
         local styles = cfg.css
         for i = 1, #styles do
             local m = meta[styles[i]]
             if m then
-                if m.span ~= nil then span = m.span end
-                if m.z    ~= nil then z    = m.z    end
+                if m.span      ~= nil then span      = m.span      end
+                if m.z         ~= nil then z         = m.z         end
+                if m.invisible ~= nil then invisible = m.invisible end
             end
         end
     end
-    local span_changed = span ~= cfg._style_span
+    local invisible_changed = invisible ~= cfg._style_invisible
+    cfg._style_invisible = invisible
+    local span_changed = span ~= cfg._style_span or invisible_changed
     cfg._style_span = span
     if z ~= cfg._style_z then
         cfg._style_z = z

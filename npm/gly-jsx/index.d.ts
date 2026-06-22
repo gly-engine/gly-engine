@@ -7,15 +7,16 @@ type FocusState = '' | ':focus';
 // `style="name"` (or addStyle) drives the node's grid span and draw z-order.
 // A declaring style overrides the element's own inline span; z is style-only.
 type StyleProps = {
-  width?:  CSSUnit,
-  height?: CSSUnit,
-  left?:   CSSUnit,
-  right?:  CSSUnit,
-  top?:    CSSUnit,
-  bottom?: CSSUnit,
-  margin?: CSSUnit,
-  span?:   number | SpanUnit,
+  width?:     CSSUnit,
+  height?:    CSSUnit,
+  left?:      CSSUnit,
+  right?:     CSSUnit,
+  top?:       CSSUnit,
+  bottom?:    CSSUnit,
+  margin?:    CSSUnit,
+  span?:      number | SpanUnit,
   'z-index'?: number,
+  invisible?: boolean,
 };
 
 declare namespace JSX {
