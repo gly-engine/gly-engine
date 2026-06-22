@@ -78,7 +78,7 @@ local function format_rows(rows, limit)
         end
     end
 
-    local line = ' +-----+-------------------------------+-------------+--------------------------+----------------------------------+ \n'
+    local line = ' +_____+_______________________________+_____________+__________________________+__________________________________+ \n'
     local head = ' | #   | Function                      | Calls       | Time                     | Code                             | \n'
     local report = '\n'..line..head..line
 
@@ -211,15 +211,15 @@ local function is_enabled(...)
 
         if type(value) == 'string' then
             value = value:lower()
-            if value == '1' or value == 'true' or value == 'yes' or value == '--profile' or value == 'profile' then
+            if value == '1' or value == 'true' or value == 'yes' or value == ('-' .. '-profile') or value == 'profile' then
                 return true
             end
         elseif type(value) == 'table' then
-            if value.profile or value['--profile'] then
+            if value.profile or value[('-' .. '-profile')] then
                 return true
             end
             for _, item in ipairs(value) do
-                if item == '--profile' or item == 'profile' then
+                if item == ('-' .. '-profile') or item == 'profile' then
                     return true
                 end
             end
