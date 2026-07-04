@@ -57,7 +57,7 @@ declare namespace JSX {
 
     node:
       | { children?: JSX.Children }
-      | {[key: string]: Function };
+      | {[key: string]: Function | undefined };
 
     style:
       | ({ class: `${string}${FocusState}`, children?: never } & StyleProps)
