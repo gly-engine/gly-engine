@@ -16,6 +16,25 @@ local function add_style(std, node, stylesheet_str)
     end
 end
 
+--! @brief Flatten nested child arrays ({arr} / {...arr} JSX sugar).
+--! @details Plain sequences ([1] set, no node/config marker) are child
+--! arrays from expression children; real childs (grid/item/node/style)
+--! never have positional indexes.
+--! @param src table
+--! @param dest table
+--! @return table dest
+local function flat_childs(src, dest)
+    for i = 1, #src do
+        local c = src[i]
+        if type(c) == 'table' and c[1] ~= nil and not c.node and not c.config then
+            flat_childs(c, dest)
+        else
+            dest[#dest + 1] = c
+        end
+    end
+    return dest
+end
+
 --! @brief Create the h() JSX factory as a closure capturing std and engine.
 --! @param std table
 --! @param engine table
@@ -24,7 +43,7 @@ local function create_h(std, engine)
     local function h(element, attribute, ...)
         local el_type = type(element)
         attribute = attribute or {}
-        local childs = {...}
+        local childs = flat_childs({...}, {})
 
         if element == std then
             return error

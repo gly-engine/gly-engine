@@ -27,6 +27,12 @@ declare namespace JSX {
     readonly [__gly_jsx]: keyof IntrinsicElements;
   };
 
+  // Anything valid in a children position: an element or an
+  // arbitrarily nested array of them. Arrays appear both from
+  // spread children ({...arr} — TS checks the spread as the array
+  // itself) and from plain expression children ({arr}).
+  type Children = Element | readonly Children[];
+
   interface IntrinsicElements {
     grid: {
       id?: string,
@@ -38,7 +44,7 @@ declare namespace JSX {
       dir?: 'row' | 'col',
       scroll?: 'shift' | 'page' | 'peek',
       focus?: 'wrap' | 'stop' | 'escape',
-      children?: JSX.Element | Array<JSX.Element>
+      children?: JSX.Children
     };
 
     item: (
@@ -50,7 +56,7 @@ declare namespace JSX {
     ) & { children: JSX.Element };
 
     node:
-      | { children?: JSX.Element | Array<JSX.Element> }
+      | { children?: JSX.Children }
       | {[key: string]: Function };
 
     style:
