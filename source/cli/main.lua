@@ -84,6 +84,11 @@ local command = cli.argparse(arg)
     .add_next_value('src', {required=true})
     .add_option_get('outfile', {default='./dist/main.lua'})
     --
+    .add_subcommand('bundler-js', commands_halt)
+    .add_next_value('src', {required=true})
+    .add_option_get('outfile', {default='./dist/main.js'})
+    .add_option_get('global', {})
+    --
     .add_subcommand('compile', commands_halt)
     .add_next_value('src', {required=true})
     .add_option_get('outfile', {default='a.out'})

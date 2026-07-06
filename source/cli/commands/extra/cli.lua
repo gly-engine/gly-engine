@@ -1,7 +1,7 @@
 local os = require('os')
 
 local cli_fs = require('source/cli/tools/fs')
-local zeebo_bundler = require('source/cli/build/bundler')
+local zeebo_bundler = require('source/cli/build/bundler_lua')
 local zeebo_bootstrap = require('source/cli/hazard/bootstrap')
 
 local function cli_build(args)

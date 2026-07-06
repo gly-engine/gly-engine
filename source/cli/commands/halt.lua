@@ -3,7 +3,8 @@ local build_bin = require('source/cli/commands/build/bin')
 local build_html = require('source/cli/commands/build/html')
 local build_ginga = require('source/cli/commands/build/ginga')
 local zeebo_compiler = require('source/cli/build/compiler')
-local zeebo_bundler = require('source/cli/build/bundler')
+local zeebo_bundler = require('source/cli/build/bundler_lua')
+local zeebo_bundler_js = require('source/cli/build/bundler_js')
 local str_fs = require('source/shared/string/schema/fs')
 local cli_fs = require('source/cli/tools/fs')
 local cli_meta = require('source/cli/tools/meta')
@@ -31,6 +32,13 @@ local function bundler(args)
     local to = str_fs.file(args.outfile)
     cli_fs.clear(to.get_sys_path())
     return zeebo_bundler.build(from.get_fullfilepath(), to.get_fullfilepath())
+end
+
+local function bundler_js(args)
+    local from = str_fs.file(args.src)
+    local to = str_fs.file(args.outfile)
+    cli_fs.mkdir(to.get_sys_path())
+    return zeebo_bundler_js.build(from.get_fullfilepath(), to.get_fullfilepath(), args.global)
 end
 
 local function compile(args)
@@ -99,6 +107,7 @@ local P = {
     test = test,
     meta = meta,
     bundler = bundler,
+    ['bundler-js'] = bundler_js,
     compile = compile,
     build = build.build,
     ['build-bin'] = build_bin.build,
