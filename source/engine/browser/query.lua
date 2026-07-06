@@ -3,110 +3,86 @@
 --! @details Does NOT modify any engine state — pure read operations only.
 --! query_one() returns a single wrapped node or nil.
 --! query() returns an array of wrapped nodes.
---! wrap() returns a chainable object with setScroll, getScroll, focus, count, etc.
+--! wrap() returns a chainable handle ({dom=, node=} + shared Query metatable)
+--! with focus, count, addStyle, etc. — methods are colon-called.
 --! Selector '.name' matches nodes that have stylesheet 'name' applied (config.style_names),
 --! NOT options.class — see [[feedback-class-vs-style]].
 
 local ss  = require('source/engine/browser/stylesheet')
 local nav = require('source/engine/browser/navigator')
-local dom = require('source/engine/browser/dom')
+
+-- ─── Query wrapper ────────────────────────────────────────────────────────────
+-- Methods live in a shared metatable (Query); wrap() only allocates a small
+-- {dom=, node=} handle instead of rebuilding a table of closures per call.
+-- Methods are colon-called (w:focus()), matching the TSTL output for the
+-- GlyQueryResult interface (no @noSelf) in npm/gly-types/index.d.ts.
+
+local Query = {}
+Query.__index = Query
+
+--! Focus this node directly, or focus a child by index.
+--! @param index number|nil  child index (1-based), or nil for direct focus
+function Query:focus(index)
+    if not index then
+        nav.set_focus(self.dom, self.node)
+    elseif type(index) == 'number' then
+        local child = self.node.childs and self.node.childs[index]
+        if child then
+            local focusable = nav.find_focusable(child)
+            if focusable then nav.set_focus(self.dom, focusable) end
+        end
+    end
+    return self
+end
+
+--! Return the number of direct children.
+function Query:count()
+    return self.node.childs and #self.node.childs or 0
+end
+
+--! Apply a named stylesheet to this node.
+--! @param name string  stylesheet class name
+function Query:addStyle(name)
+    local func = ss.stylesheet(self.dom, name)
+    ss.css_add(self.dom, func, self.node, name)
+    return self
+end
+
+--! Remove a named stylesheet from this node.
+--! @param name string  stylesheet class name
+function Query:delStyle(name)
+    local func = self.dom.stylesheet_func and self.dom.stylesheet_func[name]
+    if func then ss.css_del(self.dom, func, self.node, name) end
+    return self
+end
+
+--! Set a data attribute on this node.
+function Query:setAttr(key, value)
+    self.node.data[key] = value
+    return self
+end
+
+--! Get a data attribute from this node.
+function Query:getAttr(key)
+    return self.node.data[key]
+end
+
+--! Return the node's id (config.id), or nil.
+function Query:getId()
+    return self.node.config.id
+end
+
+--! Return whether this node is visible (not explicitly hidden).
+function Query:isVisible()
+    return self.node.config.visible ~= false
+end
 
 --! @brief Wrap a node with chainable query methods.
 --! @param self engine.dom
 --! @param node table
---! @return table  object with chainable methods
+--! @return table  {dom=, node=} handle with Query as metatable
 local function wrap(self, node)
-    local w = {}
-
-    --! Set the scroll index of a slide node.
-    --! @param value number|string  absolute index, 'end', '+N', '-N'
-    w.setScroll = function(value)
-        local scroll_state = self.scroll_registry[node]
-        if not scroll_state then return w end
-        if value == 'end' then
-            scroll_state.index = math.max(0, scroll_state.total - scroll_state.cols * scroll_state.rows)
-        elseif type(value) == 'string' and value:sub(1, 1) == '+' then
-            scroll_state.index = scroll_state.index + tonumber(value:sub(2))
-        elseif type(value) == 'string' and value:sub(1, 1) == '-' then
-            scroll_state.index = scroll_state.index - tonumber(value:sub(2))
-        else
-            scroll_state.index = value
-        end
-        scroll_state.index = math.max(0, math.min(scroll_state.index, math.max(0, scroll_state.total - 1)))
-        dom.mark_dirty(self, node)
-        return w
-    end
-
-    --! Get the current scroll state as a descriptor table.
-    w.getScroll = function()
-        local scroll_state = self.scroll_registry[node]
-        if not scroll_state then return nil end
-        local visible_count = scroll_state.cols * scroll_state.rows
-        return {
-            index    = scroll_state.index,
-            progress = scroll_state.index / math.max(1, scroll_state.total - visible_count),
-            visible  = { scroll_state.index, scroll_state.index + visible_count - 1 },
-        }
-    end
-
-    --! Focus this node directly, or focus a child by index.
-    --! @param index number|nil  child index (1-based), or nil for direct focus
-    w.focus = function(index)
-        if not index then
-            nav.set_focus(self, node)
-        elseif type(index) == 'number' then
-            local child = node.childs and node.childs[index]
-            if child then
-                local focusable = nav.find_focusable(child)
-                if focusable then nav.set_focus(self, focusable) end
-            end
-        end
-        return w
-    end
-
-    --! Return the number of direct children.
-    w.count = function()
-        return node.childs and #node.childs or 0
-    end
-
-    --! Apply a named stylesheet to this node.
-    --! @param name string  stylesheet class name
-    w.addStyle = function(name)
-        local func = ss.stylesheet(self, name)
-        ss.css_add(self, func, node, name)
-        return w
-    end
-
-    --! Remove a named stylesheet from this node.
-    --! @param name string  stylesheet class name
-    w.delStyle = function(name)
-        local func = self.stylesheet_func and self.stylesheet_func[name]
-        if func then ss.css_del(self, func, node, name) end
-        return w
-    end
-
-    --! Set a data attribute on this node.
-    w.setAttr = function(key, value)
-        node.data[key] = value
-        return w
-    end
-
-    --! Get a data attribute from this node.
-    w.getAttr = function(key)
-        return node.data[key]
-    end
-
-    --! Return the node's id (config.id), or nil.
-    w.getId = function()
-        return node.config.id
-    end
-
-    --! Return whether this node is visible (not explicitly hidden).
-    w.isVisible = function()
-        return node.config.visible ~= false
-    end
-
-    return w
+    return setmetatable({ dom = self, node = node }, Query)
 end
 
 --! @brief Find all raw nodes that have stylesheet `name` applied.
@@ -138,7 +114,8 @@ end
 
 --! @brief Look up a single node by '#id' or '.style' selector.
 --! @param self engine.dom
---! @param selector string  '#id', '.style-name', or 'focused'
+--! @param selector string  '#id', '.style-name', 'focused', or 'self'
+--!   ('self' resolves to the node whose callback is currently running)
 --! @return table|nil  wrapped node or nil
 local function query_one(self, selector)
     local prefix = selector:sub(1, 1)
@@ -151,6 +128,8 @@ local function query_one(self, selector)
         node = nodes_by_style(self, name)[1]
     elseif selector == 'focused' then
         node = self.focus_current
+    elseif selector == 'self' then
+        node = self.current_node
     end
 
     if not node then return nil end

@@ -320,8 +320,6 @@ interface GlyStdText {
 
 /** @noSelf **/
 interface GlyQueryResult {
-  setScroll(value: number | string | 'end' | `+${number}` | `-${number}`): GlyQueryResult;
-  getScroll(): { index: number; progress: number; visible: [number, number] } | undefined;
   focus(index?: number): GlyQueryResult;
   count(): number;
   addStyle(name: string): GlyQueryResult;
@@ -354,7 +352,7 @@ interface GlyStdUi {
   isFocused(target?: `#${string}` | GlyApp): boolean;
   span(size: number | `${number}x${number}`, target?: `#${string}` | GlyApp): void;
   class(size: `${number}x${number}`, target?: `#${string}` | GlyApp): void;
-  queryOne(selector: `#${string}` | `.${string}` | 'focused'): GlyQueryResult | undefined;
+  queryOne(selector: `#${string}` | `.${string}` | 'focused' | 'self'): GlyQueryResult | undefined;
   query(selector: `.${string}`): GlyQueryResult[];
   press(): void;
 }
