@@ -32,7 +32,7 @@ jobs:
         run: npm run build
       -
         if: matrix.package == 'gly-cli'
-        run: npm run build
+        run: ./cli.js cli-build
       - 
         working-directory: ./dist
         run: |

@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
@@ -15,13 +14,16 @@ function getScript(L) {
   return zlib.inflateRawSync(Buffer.from(cli, 'base64'));
 }
 
-function main() {
-  const L = glue.createState();
+async function main() {
+  if (glue.is_fengari()) {
+    console.warn('gly-cli: Running with Fengari. For better performance: npm install wasmoon');
+  }
+  const L = await glue.createState();
   glue.overridePrint(L);
   glue.setLuaArgs(L, process.argv.slice(2));
   glue.registerJsRequire(L);
   glue.createBufferTable(L);
-  glue.doScript(L, getScript(L));
+  await glue.doScript(L, getScript(L));
 }
 
 main();

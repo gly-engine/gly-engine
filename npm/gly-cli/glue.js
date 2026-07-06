@@ -3,18 +3,38 @@ const path = require('path');
 const child_process = require('child_process');
 
 const root = path.resolve(__dirname, '..', '..');
+const ceifa = 'wasmoon';
+
+let fengari = null;
+let wasmoon = null;
 
 function loadRuntime() {
+  if (fengari || wasmoon) {
+    return;
+  }
   try {
-    return require('fengari');
+    wasmoon = require(ceifa);
+    return;
+  } catch (e) {}
+  try {
+    fengari = require('fengari');
+    return;
   } catch (e) {
-    console.error('gly-cli: lua runtime not found!');
-    console.error('install it with: npm install fengari');
+    console.error('gly-cli: Lua runtime not found!');
+    console.error('Install one of the supported runtimes:');
+    console.error('  npm install wasmoon');
+    console.error('  npm install fengari');
     process.exit(1);
   }
 }
 
-const { lua, lauxlib, lualib, to_luastring, to_jsstring } = loadRuntime();
+loadRuntime();
+
+function is_fengari() {
+  return fengari !== null;
+}
+
+const { lua, lauxlib, lualib, to_luastring, to_jsstring } = fengari || {};
 
 function createModuleTable(L, functions) {
   lua.lua_newtable(L);
@@ -25,10 +45,14 @@ function createModuleTable(L, functions) {
   }
 }
 
-function createState() {
-  const L = lauxlib.luaL_newstate();
-  lualib.luaL_openlibs(L);
-  return L;
+async function createState() {
+  if (is_fengari()) {
+    const L = lauxlib.luaL_newstate();
+    lualib.luaL_openlibs(L);
+    return L;
+  }
+  const factory = new wasmoon.LuaFactory();
+  return factory.createEngine({ injectObjects: true });
 }
 
 function bootstrap() {
@@ -44,6 +68,22 @@ function bootstrap() {
 
 function addNpmToLuaPath(L)
 {
+  if (!is_fengari()) {
+    const rootLua = JSON.stringify(root);
+    L.doStringSync(`
+      table.insert(package.searchers, 2, function(name)
+        local fs = jsRequire('fs')
+        for _, file in ipairs({name .. '.lua', ${rootLua} .. '/' .. name .. '.lua'}) do
+          if fs.existsSync(file) then
+            return assert(load(fs.readFileSync(file, 'utf8'), '@' .. file))
+          end
+        end
+        return '\\n\\tno gly module: ' .. name
+      end)
+    `);
+    return;
+  }
+
   lua.lua_getglobal(L, "package");
   lua.lua_getfield(L, -1, "path");
 
@@ -58,6 +98,11 @@ function addNpmToLuaPath(L)
 }
 
 function overridePrint(L) {
+  if (!is_fengari()) {
+    L.global.set('print', (...args) => console.log(args.join('\t')));
+    return;
+  }
+
   lua.lua_getglobal(L, to_luastring("_G"));
   lua.lua_pushjsfunction(L, function (L) {
     const n = lua.lua_gettop(L);
@@ -75,6 +120,11 @@ function overridePrint(L) {
 }
 
 function setLuaArgs(L, args) {
+  if (!is_fengari()) {
+    L.global.set('arg', args);
+    return;
+  }
+
   lua.lua_newtable(L);
   args.forEach((arg, i) => {
     lua.lua_pushinteger(L, i + 1);
@@ -85,6 +135,11 @@ function setLuaArgs(L, args) {
 }
 
 function createBufferTable(L) {
+  if (!is_fengari()) {
+    L.global.set('Buffer', { from: (bytes) => Buffer.from(bytes) });
+    return;
+  }
+
   const bufferFns = {
     from: (L) => {
       if (!lua.lua_istable(L, 1)) {
@@ -177,6 +232,11 @@ function getJsModules() {
 }
 
 function registerJsRequire(L) {
+  if (!is_fengari()) {
+    L.global.set('jsRequire', (name) => require(name));
+    return;
+  }
+
   const modules = getJsModules();
 
   lua.lua_pushcfunction(L, (L) => {
@@ -195,7 +255,18 @@ function registerJsRequire(L) {
   lua.lua_setglobal(L, to_luastring("jsRequire"));
 }
 
-function doScript(L, luaCode) {
+async function doScript(L, luaCode) {
+  if (!is_fengari()) {
+    const code = typeof luaCode === 'string'? luaCode: Buffer.from(luaCode).toString('utf8');
+    try {
+      await L.doString(code);
+    } catch (e) {
+      console.error(e.message || e);
+      process.exit(1);
+    }
+    return;
+  }
+
   const code = typeof luaCode === 'string' ? to_luastring(luaCode) : luaCode;
 
   if (lauxlib.luaL_loadstring(L, code) !== lua.LUA_OK) {
@@ -214,6 +285,7 @@ function doScript(L, luaCode) {
 }
 
 module.exports = {
+  is_fengari,
   createState,
   bootstrap,
   addNpmToLuaPath,
