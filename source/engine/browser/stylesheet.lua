@@ -244,11 +244,13 @@ local function css_add(self, func, node, name)
         if not present then names[#names + 1] = name end
     end
 
-    -- span is structural (changes the parent grid's flow / sibling positions),
-    -- so re-flow the parent; geometry-only styles relayout the node's own subtree.
-    local span_changed = resolve_style_props(self, node)
+    -- a node's own css is applied by the PARENT's layout pass (it computes the
+    -- child cell then runs child.config.css), so re-flow the parent — marking
+    -- only the node would relayout from its already-styled box and never apply
+    -- the new css.
+    resolve_style_props(self, node)
     if _mark_dirty then
-        _mark_dirty(self, (span_changed and node.config.parent) or node)
+        _mark_dirty(self, node.config.parent or node)
     end
 end
 
@@ -286,10 +288,10 @@ local function css_del(self, func, node, name)
         while d <= #names do names[d] = nil; d = d + 1 end
     end
 
-    -- span is structural: re-flow the parent grid (see css_add).
-    local span_changed = resolve_style_props(self, node)
+    -- re-flow the parent so the removed css stops being applied (see css_add).
+    resolve_style_props(self, node)
     if _mark_dirty then
-        _mark_dirty(self, (span_changed and node.config.parent) or node)
+        _mark_dirty(self, node.config.parent or node)
     end
 end
 

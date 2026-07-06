@@ -318,8 +318,7 @@ interface GlyStdText {
   put(x: number, y: number, text: string | number, size?: number): void;
 }
 
-/** @noSelf **/
-interface GlyQueryResult {
+declare class GlyQueryResult {
   focus(index?: number): GlyQueryResult;
   count(): number;
   addStyle(name: string): GlyQueryResult;

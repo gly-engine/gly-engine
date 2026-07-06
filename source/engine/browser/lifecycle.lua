@@ -5,7 +5,12 @@
 
 local function call(self, node, key, ...)
     if node and node.callbacks and node.callbacks[key] and self.std then
+        -- expose the callback's own node as current_node so queryOne('self')
+        -- and target=nil APIs resolve to the node receiving the event
+        local prev = self.current_node
+        self.current_node = node
         node.callbacks[key](node.data, self.std, ...)
+        self.current_node = prev
     end
 end
 
