@@ -19,7 +19,7 @@ type GlyEventsWS = {
   open: (this: void, sock: GlySockWs) => void;
   error: (this: void, message: string) => void;
   message: (this: void, message: string) => void;
-  disconect: () => void;
+  disconnect: () => void;
 };
 
 declare class GlySockWs {
