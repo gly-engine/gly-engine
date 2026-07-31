@@ -82,11 +82,10 @@ local function create_h(std, engine)
             return parent
 
         elseif element == 'grid' then
-            local has_scroll = attribute.scroll or attribute.focus or attribute.anchor
+            local has_scroll = attribute.scroll or attribute.anchor
             local has_opts   = has_scroll or attribute.id
             local grid_opts  = has_opts and {
                 scroll = attribute.scroll,
-                focus  = attribute.focus,
                 anchor = attribute.anchor,
                 id     = attribute.id,
             } or nil

@@ -166,16 +166,25 @@ local function set_focus(self, node)
             if base_func then ss.css_add(self, base_func, old) end
         end
         lifecycle.unfocus(self, old)
+
+        -- reset scroll position on any scroll ancestor of `old` that the new
+        -- focus actually left — ancestors still shared with `node` (e.g. an
+        -- outer scroll wrapping both grids) keep their position untouched
+        local left_scroll = find_scroll_parent(self, old)
+        while left_scroll do
+            if not is_descendant(left_scroll, node) then
+                local scroll = self.scroll_registry[left_scroll]
+                scroll.vindex = nil
+                if scroll.index ~= 0 then
+                    scroll.index = 0
+                    dom.mark_dirty(self, left_scroll)
+                end
+            end
+            left_scroll = find_scroll_parent(self, left_scroll)
+        end
     end
 
     self.focus_current = node
-
-    -- record as last focus for all ancestor containers
-    local ancestor = node.config.parent
-    while ancestor do
-        self.focus_memory[ancestor] = node
-        ancestor = ancestor.config.parent
-    end
 
     -- apply :focus styles to new node and fire focus callback
     for name, focus_func in pairs(node.config.style_focus or {}) do
@@ -254,8 +263,17 @@ local function focus_navigate_spatial(self, current, direction)
         end
     end
 
-    if best_node then return set_focus(self, best_node) end
-    return nil
+    if not best_node then return nil end
+
+    -- entering a scroll grid from outside (spatial score picked whichever of
+    -- its items was geometrically closest) always lands on its first
+    -- focusable item instead — same rule grid-index nav already gets for
+    -- free via find_focusable(target). Any future selector-seeded directional
+    -- focus (e.g. a '.modal right' origin) routes through here too, so it
+    -- inherits this without extra plumbing.
+    local scroll_parent = find_scroll_parent(self, best_node)
+    local target = scroll_parent and find_focusable(scroll_parent) or best_node
+    return set_focus(self, target or best_node)
 end
 
 -- ─── Index navigation (inside scroll grid) ──────────────────────────────────
@@ -324,18 +342,28 @@ local function focus_navigate_grid(self, grid_node, current, direction)
         end
     end
 
-    if cfg.focus_mode == 'wrap' then
-        if next_idx < 1     then next_idx = total end
-        if next_idx > total then next_idx = 1     end
+    -- peek carousels only loop forward, forever (an odometer, not a mirror):
+    -- going past the last item always continues from the first again, but
+    -- going backward unwinds through every lap it actually took to get here
+    -- and stops dead at the true first item — no wrap, no shortcut back.
+    if mode == 'peek' then
+        local step = next_idx - idx
+        local vindex = scroll_state.vindex
+        if not vindex or vindex % total ~= idx - 1 then
+            vindex = idx - 1
+        end
+        if step > 0 then
+            vindex = vindex + step
+        elseif step < 0 then
+            if vindex + step < 0 then return nil end
+            vindex = vindex + step
+        end
+        scroll_state.vindex = vindex
+        next_idx = (vindex % total) + 1
     end
 
     if next_idx < 1 or next_idx > total then return nil end
-    local target = childs[next_idx]
-    local remembered = self.focus_memory[target]
-    if remembered and remembered.config.focusable and remembered.config.parent then
-        return remembered
-    end
-    return find_focusable(target)
+    return find_focusable(childs[next_idx])
 end
 
 -- ─── Top-level navigation dispatch ──────────────────────────────────────────

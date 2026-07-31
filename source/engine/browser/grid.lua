@@ -61,7 +61,7 @@ end
 --! @brief Register scroll state for a grid node.
 --! @param dom_obj engine.dom
 --! @param node table  the grid node (cols/rows/dir already set)
---! @param options table  {scroll, anchor, focus} — all optional
+--! @param options table  {scroll, anchor} — all optional
 local function scroll_register(dom_obj, node, options)
     options = options or {}
     local cols = node.config.cols
@@ -82,9 +82,6 @@ local function scroll_register(dom_obj, node, options)
         rows   = rows,
         dir    = node.config.dir,
     }
-    if options.focus then
-        node.config.focus_mode = options.focus
-    end
 end
 
 -- ─── Grid component ──────────────────────────────────────────────────────────

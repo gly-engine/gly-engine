@@ -67,20 +67,6 @@ local function slide_step(scroll)
     end
 end
 
---! @brief Shortest signed delta to go from current to target in a circular list.
---! @param current number
---! @param target  number
---! @param total   number  size of the list
---! @return number
-local function peek_cycle_delta(current, target, total)
-    if total <= 0 then return target - current end
-    local delta = (target - current) % total
-    if delta > total / 2 then
-        delta = delta - total
-    end
-    return delta
-end
-
 --! @brief Cell position of each child along a peek grid's scroll axis.
 --! @details Peek grids are a single line (rows==1 for 'col', cols==1 for 'row'),
 --!   so position is purely cumulative span+offset+after — mirrors the cursor
@@ -188,7 +174,12 @@ local function dom_layout(self, node, parent_x, parent_y, parent_w, parent_h)
                         and -(peek_span_total - 1)
                         or  -(peek_span_total - axis_max + peek_anchor)
                     local raw = peek_anchor - focus_cell
-                    peek_loop = raw <= lo
+                    -- once navigator.lua's odometer has carried us past a full
+                    -- lap, the carousel is genuinely infinite from here on —
+                    -- keep showing the circular window (peek of the previous
+                    -- item) even at what is otherwise the first item's slot.
+                    local looped = scroll.vindex and scroll.vindex >= peek_span_total
+                    peek_loop = raw <= lo or looped
                     local pos = peek_loop and peek_anchor or math.max(math.min(raw, peek_anchor), lo)
                     if dir_val == 'col' then x = pos else y = pos end
                 end
@@ -222,14 +213,16 @@ local function dom_layout(self, node, parent_x, parent_y, parent_w, parent_h)
                     end
 
                     if scroll and scroll.mode == 'peek' and peek_loop then
+                        -- single contiguous circular window anchored on the focused item —
+                        -- every item gets one consistent slot, never an independent nearest-side pick
                         local focus_cell = peek_place[scroll.index + 1] or 0
-                        local delta = peek_cycle_delta(focus_cell, peek_place[i], peek_span_total)
+                        local slot = (peek_place[i] - focus_cell + peek_anchor) % peek_span_total
                         if dir_val == 'col' then
-                            x = peek_anchor + delta
+                            x = slot
                             y = 0
                         else
                             x = 0
-                            y = peek_anchor + delta
+                            y = slot
                         end
                     else
                         if dir_val == 'col' then
