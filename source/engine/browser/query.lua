@@ -85,6 +85,19 @@ local function wrap(self, node)
     return setmetatable({ dom = self, node = node }, Query)
 end
 
+--! @brief Check whether a node has stylesheet `name` applied.
+--! @param node table
+--! @param name string  stylesheet name (without '.')
+--! @return boolean
+local function has_style(node, name)
+    local styles = node.config.style_names
+    if not styles then return false end
+    for i = 1, #styles do
+        if styles[i] == name then return true end
+    end
+    return false
+end
+
 --! @brief Find all raw nodes that have stylesheet `name` applied.
 --! @details Skips dead nodes (cfg.parent==nil and not root) — those linger
 --!   in node_list until the next bus() rebuild after node_del.
@@ -97,19 +110,27 @@ local function nodes_by_style(self, name)
     local root   = self.root
     for i = 1, #nodes do
         local node = nodes[i]
-        if node == root or node.config.parent ~= nil then
-            local styles = node.config.style_names
-            if styles then
-                for j = 1, #styles do
-                    if styles[j] == name then
-                        result[#result + 1] = node
-                        break
-                    end
-                end
-            end
+        if (node == root or node.config.parent ~= nil) and has_style(node, name) then
+            result[#result + 1] = node
         end
     end
     return result
+end
+
+--! @brief Build a node predicate from a '#id' or '.style' selector.
+--! @details Used by directional-search filters (e.g. std.ui.focus('right .modal'))
+--!   to restrict candidates without duplicating selector semantics.
+--! @param selector string  '#id' or '.style-name'
+--! @return function(node)->boolean|nil  predicate, or nil for an unsupported prefix
+local function make_filter(selector)
+    local prefix = selector:sub(1, 1)
+    local name   = selector:sub(2)
+    if prefix == '.' then
+        return function(node) return has_style(node, name) end
+    elseif prefix == '#' then
+        return function(node) return node.config.id == name end
+    end
+    return nil
 end
 
 --! @brief Look up a single node by '#id' or '.style' selector.
@@ -163,6 +184,8 @@ local P = {
     query          = query,
     wrap           = wrap,
     nodes_by_style = nodes_by_style,
+    has_style      = has_style,
+    make_filter    = make_filter,
 }
 
 return P

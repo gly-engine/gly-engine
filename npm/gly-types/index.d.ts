@@ -329,6 +329,9 @@ declare class GlyQueryResult {
   isVisible(): boolean;
 }
 
+type GlyFocusDirection = 'left' | 'right' | 'up' | 'down';
+type GlyFocusSelector = `#${string}` | `.${string}`;
+
 type GlyStyleProps = {
   width?:     string | number;
   height?:    string | number;
@@ -347,11 +350,11 @@ interface GlyStdUi {
   grid(classlist: string): GlyUi;
   style(classlist: string): GlyUi;
   style(classlist: string, stylesheet: GlyStyleProps): GlyUi;
-  focus(target?: 'left' | 'right' | 'up' | 'down' | 'first' | `#${string}` | `.${string}` | GlyApp): GlyQueryResult | undefined;
+  focus(target?: GlyFocusDirection | `${GlyFocusDirection} ${GlyFocusSelector}` | 'first' | GlyFocusSelector | GlyApp): GlyQueryResult | undefined;
   isFocused(target?: `#${string}` | GlyApp): boolean;
   span(size: number | `${number}x${number}`, target?: `#${string}` | GlyApp): void;
   class(size: `${number}x${number}`, target?: `#${string}` | GlyApp): void;
-  queryOne(selector: `#${string}` | `.${string}` | 'focused' | 'self'): GlyQueryResult | undefined;
+  queryOne(selector: GlyFocusSelector | 'focused' | 'self'): GlyQueryResult | undefined;
   query(selector: `.${string}`): GlyQueryResult[];
   press(): void;
 }

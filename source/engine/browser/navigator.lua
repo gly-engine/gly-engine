@@ -206,11 +206,16 @@ end
 
 -- ─── Spatial navigation ─────────────────────────────────────────────────────
 
---! @brief Find best focus candidate in a given direction using position scoring.
+--! @brief Score every focusable node against `current` in `direction`, restricted
+--!   to those for which `filter` is true, and return the closest one.
+--! @details Shared by focus_navigate_spatial (filter = accept-all) and the
+--!   filtered directional search (filter = selector predicate).
 --! @param self engine.dom
 --! @param current table  currently focused node
 --! @param direction string  'up'|'down'|'left'|'right'
-local function focus_navigate_spatial(self, current, direction)
+--! @param filter function(node)->boolean
+--! @return table|nil  closest matching candidate, or nil
+local function best_directional_candidate(self, current, direction, filter)
     local cx = current.config.offset_x + current.data.width  / 2
     local cy = current.config.offset_y + current.data.height / 2
     local c_left   = current.config.offset_x
@@ -227,7 +232,8 @@ local function focus_navigate_spatial(self, current, direction)
            and candidate.config.visible ~= false
            and not candidate.config._scroll_clipped
            and candidate.config.focusable
-           and not pause.is_paused(self, candidate.config.uid, '*') then
+           and not pause.is_paused(self, candidate.config.uid, '*')
+           and filter(candidate) then
 
             local px = candidate.config.offset_x + candidate.data.width  / 2
             local py = candidate.config.offset_y + candidate.data.height / 2
@@ -263,28 +269,44 @@ local function focus_navigate_spatial(self, current, direction)
         end
     end
 
+    return best_node
+end
+
+local function accept_all() return true end
+
+--! @brief Find best focus candidate in a given direction using position scoring.
+--! @param self engine.dom
+--! @param current table  currently focused node
+--! @param direction string  'up'|'down'|'left'|'right'
+--! @param filter function(node)->boolean|nil  restricts candidates; nil = any
+--! @return table|nil  the newly focused node, or nil if none matched
+local function focus_navigate_spatial(self, current, direction, filter)
+    filter = filter or accept_all
+    local best_node = best_directional_candidate(self, current, direction, filter)
     if not best_node then return nil end
 
-    -- entering a scroll grid from outside (spatial score picked whichever of
-    -- its items was geometrically closest) always lands on its first
-    -- focusable item instead — same rule grid-index nav already gets for
-    -- free via find_focusable(target). Any future selector-seeded directional
-    -- focus (e.g. a '.modal right' origin) routes through here too, so it
-    -- inherits this without extra plumbing.
-    local scroll_parent = find_scroll_parent(self, best_node)
-    local target = scroll_parent and find_focusable(scroll_parent) or best_node
-    return set_focus(self, target or best_node)
+    -- entering a scroll grid from outside always lands on its first focusable
+    -- item instead of whichever of its items scored closest — but only for a
+    -- plain (unfiltered) move; a selector-filtered search must land on the
+    -- exact node it matched, not just "some node in the same grid".
+    if filter == accept_all then
+        local scroll_parent = find_scroll_parent(self, best_node)
+        local target = scroll_parent and find_focusable(scroll_parent) or best_node
+        return set_focus(self, target or best_node)
+    end
+
+    return set_focus(self, best_node)
 end
 
 -- ─── Index navigation (inside scroll grid) ──────────────────────────────────
 
---! @brief Navigate focus within a scroll grid using logical child index.
+--! @brief Single logical-index step within a scroll grid (no filtering).
 --! @param self engine.dom
 --! @param grid_node table  the scroll-enabled grid container
 --! @param current table  currently focused node
 --! @param direction string  'up'|'down'|'left'|'right'
 --! @return table|nil  next focusable node, or nil if at boundary
-local function focus_navigate_grid(self, grid_node, current, direction)
+local function step_grid_index(self, grid_node, current, direction)
     local cfg    = grid_node.config
     local childs = grid_node.childs
     if not childs then return nil end
@@ -366,28 +388,63 @@ local function focus_navigate_grid(self, grid_node, current, direction)
     return find_focusable(childs[next_idx])
 end
 
+--! @brief Navigate focus within a scroll grid using logical child index.
+--! @details With a filter, keeps stepping in `direction` — skipping children
+--!   that fail it — until a match is found or the grid boundary is reached.
+--!   On failure, rolls back any peek odometer state (scroll_state.vindex)
+--!   mutated while probing, so a failed search never desyncs a later, plain
+--!   directional press. With no filter this degenerates to a single step,
+--!   identical to the old unfiltered behavior.
+--! @param self engine.dom
+--! @param grid_node table  the scroll-enabled grid container
+--! @param current table  currently focused node
+--! @param direction string  'up'|'down'|'left'|'right'
+--! @param filter function(node)->boolean|nil  restricts candidates; nil = any
+--! @return table|nil  next matching focusable node, or nil if none found
+local function focus_navigate_grid(self, grid_node, current, direction, filter)
+    filter = filter or accept_all
+    local scroll_state = self.scroll_registry[grid_node]
+    local saved_vindex = scroll_state and scroll_state.vindex
+
+    local probe   = current
+    local visited = {}
+    while true do
+        local next_node = step_grid_index(self, grid_node, probe, direction)
+        if not next_node or visited[next_node] then
+            if scroll_state then scroll_state.vindex = saved_vindex end
+            return nil
+        end
+        visited[next_node] = true
+        if filter(next_node) then return next_node end
+        probe = next_node
+    end
+end
+
 -- ─── Top-level navigation dispatch ──────────────────────────────────────────
 
 --! @brief Dispatch a directional navigation event to the appropriate handler.
+--! @details Walks scroll parents from nearest to farthest — each off-axis nil
+--!   bubbles up to the next outer grid until one handles it or spatial takes
+--!   over. With a filter (e.g. std.ui.focus('right .modal')), every stage
+--!   only accepts filter-matching nodes.
 --! @param self engine.dom
 --! @param direction string  'up'|'down'|'left'|'right'
---! @return table|nil  the newly focused node, or nil if focus did not move
-local function focus_navigate(self, direction)
+--! @param filter function(node)->boolean|nil  restricts candidates; nil = any
+--! @return table|nil  the newly focused node, or nil if none matched
+local function focus_navigate(self, direction, filter)
     local current = self.focus_current
     if not current then return nil end
 
-    -- walk scroll parents from nearest to farthest: each off-axis nil bubbles
-    -- up to the next outer grid until one handles it or spatial takes over.
     local scroll_parent = find_scroll_parent(self, current)
     while scroll_parent do
-        local next_node = focus_navigate_grid(self, scroll_parent, current, direction)
+        local next_node = focus_navigate_grid(self, scroll_parent, current, direction, filter)
         if next_node then
             return set_focus(self, next_node)
         end
         scroll_parent = find_scroll_parent(self, scroll_parent)
     end
 
-    return focus_navigate_spatial(self, current, direction)
+    return focus_navigate_spatial(self, current, direction, filter)
 end
 
 -- ─── Public interface ────────────────────────────────────────────────────────
