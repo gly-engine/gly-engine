@@ -27,9 +27,12 @@ end
 
 --! @brief Find the first focusable node in a subtree (depth-first).
 --! @details Skips dead nodes (cfg.parent==nil) — they linger in parent.childs
---!   until the next bus() rebuild after node_del.
+--!   until the next bus() rebuild after node_del. Also skips span-hidden
+--!   subtrees (span=0): those are collapsed to 0x0 at their parent's origin
+--!   and must never be reachable as a focus target.
 local function find_focusable(node)
     if node.config.parent == nil then return nil end
+    if node.config._span_hidden then return nil end
     if node.config.focusable then return node end
     if node.childs then
         for _, child in ipairs(node.childs) do
@@ -152,6 +155,10 @@ local function set_focus(self, node)
     -- those linger in node_list / parent.childs until the next bus() rebuild,
     -- so any selector could still resolve to them. Never focus a dead node.
     if node ~= self.root and node.config.parent == nil then return nil end
+    -- span-hidden guard: span=0 nodes collapse to 0x0 at their parent's origin
+    -- (see layout.lua) but keep config.focusable == true, so any selector or
+    -- spatial search could still resolve to them. Never focus one.
+    if node.config._span_hidden then return nil end
     if pause.is_paused(self, node.config.uid, '*') then return nil end
     local old = self.focus_current
     if old == node then return nil end
@@ -231,6 +238,7 @@ local function best_directional_candidate(self, current, direction, filter)
         if candidate ~= current
            and candidate.config.visible ~= false
            and not candidate.config._scroll_clipped
+           and not candidate.config._span_hidden
            and candidate.config.focusable
            and not pause.is_paused(self, candidate.config.uid, '*')
            and filter(candidate) then
