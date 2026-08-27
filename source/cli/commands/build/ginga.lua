@@ -16,10 +16,6 @@ local function build(args)
     args.atob = true
     args.aa = true
 
-    if args['disable-fallback'] then
-        src = 'ee/engine/core/bind/ginga_fast/main.lua'
-    end
-
     cli_fs.clear(args.outdir)
     cli_fs.mkdir(args.outdir..'_bundler/')
 

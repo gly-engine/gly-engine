@@ -30,7 +30,6 @@ local engine_api_draw_fps = require('source/engine/api/draw/fps')
 local engine_api_draw_text = require('source/engine/api/draw/text')
 local engine_api_draw_poly = require('source/engine/api/draw/poly')
 local engine_bus = require('source/engine/api/raw/bus')
-local engine_fps = require('source/engine/api/raw/fps')
 local engine_node = require('source/engine/api/raw/node')
 local engine_memory = require('source/engine/api/raw/memory')
 --
@@ -96,64 +95,32 @@ local cfg_text = {
     font_previous = core_text.font_previous
 }
 
---! @details
---! The fallback mechanism attempts to address an issue where Ginga sometimes simply omits events
---! whether a `@c event.timer` or a silent error that was not caught by `pcall`/`xpcall`.
---! If a certain amount of time has passed and the loop appears to have been stopped for more than one second,
---! it is restarted.
-local fallback_restarts = 0
-local falback_fallback_time = 0
-local falback_fallback_restart = 0
+local function register_event_loop(loop, draw)
+    event.register(function(evt) 
+        xpcall(function()
+            std.bus.emit('ginga', evt)
+            if evt.class == 'key' then
+                loop()
+                draw()
+            end
+        end, engine.handler)
+    end)
+end
 
-local function register_fixed_loop(fallback)
+local function register_fixed_loop(loop, draw)
     local tick = nil
-    local loop = std.bus.trigger('loop')
-    local draw = std.bus.trigger('draw')
-
-    fallback_restarts = fallback
-
     tick = function()
+        std.delta = 100
+        std.milis = std.milis + 100
         xpcall(loop, engine.handler)
         canvas:attrColor(0, 0, 0, 0)
         canvas:clear()
         xpcall(draw, engine.handler)
         canvas:flush()
-        if fallback_restarts == fallback then
-            event.timer(engine.delay, tick)
-        end
+        event.timer(100, tick)
     end
 
-    event.timer(engine.delay, tick)
-end
-
-local function register_fallback(fallback)
-    local tick = nil
-    falback_fallback_restart = fallback
-
-    tick = function()
-        falback_fallback_time = event.uptime()
-        if falback_fallback_time - std.milis >= 1000 then
-            register_fixed_loop(fallback_restarts + 1)
-        end
-        if falback_fallback_restart == fallback then
-            event.timer(5000, tick)
-        end
-    end
-
-    event.timer(engine.delay, tick)
-end
-
-local function register_event_loop()
-    event.register(function(evt) 
-        local uptime = event.uptime()
-        pcall(std.bus.emit, 'ginga', evt)
-        if (uptime - std.milis) >= 1000 then
-            register_fixed_loop(fallback_restarts + 1)
-        end
-        if (uptime - falback_fallback_time) >= 6000 then
-            register_fallback(falback_fallback_restart + 1)
-        end
-    end)
+    event.timer(100, tick)
 end
 
 local function main(evt, gamefile)
@@ -170,7 +137,6 @@ local function main(evt, gamefile)
     loadcore.setup(std, application, engine)
         :package('@bus', engine_bus)
         :package('@node', engine_node)
-        :package('@fps', engine_fps, cfg_fps_control)
         :package('@memory', engine_memory)
         :package('@game', engine_game, cfg_system)
         :package('@math', engine_math)
@@ -206,9 +172,11 @@ local function main(evt, gamefile)
     engine.dom = tree.node_begin(application, std.app.width, std.app.height)
     engine.root, engine.current = application, application
 
-    register_event_loop()
-    register_fixed_loop(0)
-    register_fallback(0)
+
+    local loop = std.bus.trigger('loop')
+    local draw = std.bus.trigger('draw')
+    register_event_loop(loop, draw)
+    register_fixed_loop(loop, draw)
 
     std.bus.emit_next('load')
     std.bus.emit_next('init')
