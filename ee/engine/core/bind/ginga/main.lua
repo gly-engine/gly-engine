@@ -2,12 +2,13 @@ local os = require('os')
 --
 local version = require('source/version')
 --
-local tree = require('source/shared/engine/tree')
+local dom = require('source/engine/browser/dom')
 local loadcore = require('source/shared/engine/loadcore')
+local error_module = require('source/engine/core/error')
 local loadgame = require('source/shared/engine/loadgame')
 --
 local core_draw = require('ee/engine/core/bind/ginga/draw')
-local core_draw_image = require('ee/engine/core/bind/ginga/draw_image')
+local core_draw_image = require('ee/engine/core/bind/ginga/draw_image_old')
 local core_text = require('ee/engine/core/bind/ginga/text')
 local core_keys = require('ee/engine/core/bind/ginga/keys')
 --
@@ -66,7 +67,8 @@ local engine = {
     offset_x = 0,
     offset_y = 0,
     delay = 1,
-    fps = 0
+    fps = 0,    
+    dom = {}
 }
 
 
@@ -159,11 +161,9 @@ local function main(evt, gamefile)
     if evt.class and evt.class ~= 'ncl' or evt.action ~= 'start' and evt.type ~= 'presentation' then return end
 
     engine.envs = evt
-    engine.handler = function(msg) 
-        if select(2, pcall(engine.root.callbacks.error or function() end, engine.root.data, std, tostring(msg))) == true then
-            os.exit()
-        end
-    end
+    engine.handler = error_module.make_handler(engine, std, function()
+        os.exit()
+    end)
     application = loadgame.script(gamefile, application_default)
 
     loadcore.setup(std, application, engine)
@@ -201,7 +201,7 @@ local function main(evt, gamefile)
     application.data.width, application.data.height = canvas:attrSize()
     std.app.width, std.app.height = application.data.width, application.data.height
 
-    engine.dom = tree.node_begin(application, std.app.width, std.app.height)
+    engine.dom = dom.node_begin(application, std.app.width, std.app.height, engine.dom)
     engine.root, engine.current = application, application
 
     register_event_loop()

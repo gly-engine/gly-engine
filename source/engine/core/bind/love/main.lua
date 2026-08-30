@@ -1,8 +1,9 @@
 local os = require('os')
 --
-local tree = require('source/shared/engine/tree')
-local loadgame = require('source/shared/engine/loadgame')
-local loadcore = require('source/shared/engine/loadcore')
+local dom          = require('source/engine/browser/dom')
+local loadgame     = require('source/shared/engine/loadgame')
+local loadcore     = require('source/shared/engine/loadcore')
+local error_module = require('source/engine/core/error')
 --
 local core_text = require('source/engine/core/bind/love/text')
 local core_draw = require('source/engine/core/bind/love/draw')
@@ -98,7 +99,7 @@ function love.load(args)
         })
     end
 
-    loadcore.setup(std, application, engine)
+    local loader = loadcore.setup(std, application, engine)
         :package('@bus', lib_raw_bus)
         :package('@node', lib_raw_node)
         :package('@memory', lib_raw_memory)
@@ -125,15 +126,13 @@ function love.load(args)
         :package('hash', lib_api_hash, cfg_system)
         :run()
 
-    std.bus.listen('resize', function(w, h) tree.resize(engine.dom, w, h) end)
-    engine.dom = tree.node_begin(application, std.app.width, std.app.height)
+    std.bus.listen('resize', function(w, h) dom.resize(engine.dom, w, h) end)
+    engine.dom = dom.node_begin(application, std.app.width, std.app.height, engine.dom)
     engine.root, engine.current = application, application
 
-    engine.handler = function(msg) 
-        if select(2, pcall(engine.root.callbacks.error or function() end, engine.root.data, std, tostring(msg))) == true then
-            love.event.quit(1)
-        end
-    end
+    engine.handler = error_module.make_handler(engine, std, function()
+        love.event.quit(1)
+    end)
 
     std.app.title(application.meta.title..' - '..application.meta.version)
 

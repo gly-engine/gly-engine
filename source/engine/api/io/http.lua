@@ -1,4 +1,7 @@
 local zeebo_pipeline = require('source/shared/functional/pipeline')
+local create_counter = require('source/shared/functional/counter')
+
+local nextId, clearId = create_counter()
 
 --! @defgroup std
 --! @{
@@ -51,25 +54,12 @@ local zeebo_pipeline = require('source/shared/functional/pipeline')
 --!     end)
 --!     :run()
 --! @endcode
---! @li global handler
---! @code{.java}
---! local function http(std, game)
---!     if std.http.error then
---!         print('eg. https is not supported')
---!     end
---!     if std.http.ok then
---!         print('2xx status')
---!     end
---!     if std.http.status > 400 then
---!         print('2xx / 5xx status')
---!     end
---! end
---! @endcode
 
 --! @short json response
 --! @hideparam self
 --! @brief decode body to table on response
 local function json(self)
+    print('std.http.get():json() is deprecated.')
     self.options['json'] = true
     return self
 end
@@ -156,16 +146,121 @@ end
 --! @}
 --! @}
 
---! @cond
-local function request(method, std, engine, protocol)
-    local callback_handler = function()
-        if std.node then
-            std.node.emit(engine.current, 'http')
-        elseif engine.current.callbacks.http then
-            engine.current.callbacks.http(std, engine.current.data)
-        end
+local function off(self, name, func)
+    local count = 1
+    local list = self.handlers[name] or {}
+    for i = 1, #list do
+        if list[i] ~= func then
+            list[count] = list[i]
+            count = count + 1
+        end     
     end
+    for i = count, #list do
+        list[i] = nil
+    end
+    self.handlers[name] = list
+    return self
+end
 
+local function on(self, name, func)
+    off(self, name, func)
+    local list = self.handlers[name]
+    list[#list + 1] = func
+    return self
+end
+
+local function websocket_create(request, engine, protocol)
+    return {
+        id = request.id,
+        on = function(self, name, func)
+            on(request, name, func)
+        end,
+        off = function(self, name, func)
+            off(request, name, func)
+        end,
+        send = function(self, data)
+            if not engine.http[self.id] then return false end
+            return protocol.sock(self.id, 1, data) 
+        end,
+        close = function(self)
+            protocol.sock(self.id, 2)
+            engine.http[self.id] = nil
+        end,
+        is_connected = function(self)
+            if not engine.http[self.id] then return false end
+            return protocol.sock(self.id, 3)
+        end
+    }
+end
+
+--! @cond
+local function websocket_request(std, engine, protocol)
+    return function(url, upgrade)
+        local self = {
+            url = url,
+            method = 'SOCK',
+            upgrade = upgrade,
+            header_list = {},
+            header_dict = {},
+            param_list = {},
+            param_dict = {},
+            handlers = {},
+            -- functions
+            on = on,
+            off = off,
+            param = param,
+            header = header,
+            run = zeebo_pipeline.run,
+        }
+
+        self.promise = function()
+            zeebo_pipeline.stop(self)
+        end
+
+        self.resolve = function()
+            zeebo_pipeline.resume(self)
+        end
+        
+        self.set = function (key, value)
+            std.http[key] = value
+        end
+
+        self:on('disconnect', function()
+            if self.id then engine.http[self.id] = nil end
+        end)
+
+        self.pipeline = {
+            function()
+                self.id = nextId()
+                engine.http[self.id] = self
+            end,
+            function()
+                protocol.handler(self, self.id)
+            end,
+            function()
+                if std.http.ok then
+                    local sock = websocket_create(self, engine, protocol)
+                    for _, h in ipairs(self.handlers.open or {}) do h(sock) end
+                else
+                    if not std.http.error then self.set('error', 'core not upgrade to ws') end
+                    for _, h in ipairs(self.handlers.error or {}) do h(std.http.error) end
+                    engine.http[self.id] = nil
+                    clearId(self.id)
+                    self.id = nil
+                end
+            end,
+            function()
+                std.http.ok = nil
+                std.http.error = nil
+                zeebo_pipeline.reset(self)
+            end
+        }
+
+        return self
+    end
+end
+
+local function request(method, std, engine, protocol)
     return function (url)
         local json_encode = std.json and std.json.encode
         local json_decode = std.json and std.json.decode
@@ -213,7 +308,7 @@ local function request(method, std, engine, protocol)
         self.pipeline = {
             -- prepare
             function()
-                self.id = tonumber(tostring({}):gsub('0x', ''):match('^table: (%w+)$'), 16)
+                self.id = nextId()
                 engine.http[self.id] = self
                 if protocol.force and not self.options['noforce'] then
                     self.url = url:gsub("^[^:]+://", protocol.force.."://")
@@ -244,8 +339,6 @@ local function request(method, std, engine, protocol)
             end,
             -- callbacks
             function()
-                -- global handler
-                callback_handler(std, game)
                 -- local handlers
                 if std.http.ok then
                     self.success_handler(std, game)
@@ -270,6 +363,8 @@ local function request(method, std, engine, protocol)
             function()
                 engine.http[self.id] = nil
                 zeebo_pipeline.reset(self)
+                clearId(self.id)
+                self.id = nil
             end
         }
 
@@ -289,6 +384,10 @@ local function install(std, engine, protocol)
     std.http.put=request('PUT', std, engine, protocol)
     std.http.delete=request('DELETE', std, engine, protocol)
     std.http.patch=request('PATCH', std, engine, protocol)
+
+    if protocol.sock then
+        std.http.connect = websocket_request(std, engine, protocol)
+    end
     
     if protocol.install then
         protocol.install(std, engine)

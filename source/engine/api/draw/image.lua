@@ -44,8 +44,6 @@ local function install(std, engine, func)
     std.image.mensure = image_mensure(func.mensure)
     std.image.unload = image_unload(func.unload or f)
     std.image.unload_all = image_unload_all(func.unload_all or f)
-    std.image.mensure_width = function(v) return select(1, std.image.mensure(v)) end
-    std.image.mensure_height = function(v) return select(2, std.image.mensure(v)) end
 end
 
 return {

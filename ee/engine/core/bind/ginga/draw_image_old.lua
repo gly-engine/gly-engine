@@ -1,14 +1,27 @@
 local png_validator = require('source/shared/image/check_png')
+local creater_counter = require('source/shared/functional/counter')
+
+local nextId, clearId, clearAll = creater_counter()
+
+local image_ids = {}
+local image_canvas = {}
 
 local function load_png(std, engine, canvas, src)
     local is_userdata = type(src) == 'userdata'
     local key = src and tostring(src)
     if not key or #key == 0 then return false end
-    return std.mem.cache('image'..key, function()
-        if not is_userdata and not png_validator.check_error(src) then return false end
-        local ok, texture = pcall(canvas.new, canvas, src)
-        return (ok and texture) or false
-    end)
+
+    local id = image_ids[key]
+    if id then return image_canvas[id] end
+
+    if not is_userdata and not png_validator.check_error(src) then return false end
+    local ok, texture = pcall(canvas.new, canvas, src)
+    if not ok or not texture then return false end
+
+    id = nextId()
+    image_ids[key] = id
+    image_canvas[id] = texture
+    return texture
 end
 
 local function image_draw(std, engine, canvas)
@@ -19,7 +32,7 @@ local function image_draw(std, engine, canvas)
             local y = engine.offset_y + (pos_y or 0)
             canvas:compose(x, y, image)
         end
-    end  
+    end
 end
 
 local function image_mensure(std, engine, canvas)
@@ -29,7 +42,7 @@ local function image_mensure(std, engine, canvas)
             local w, h = image:attrSize()
             return w, h
         end
-        return nil
+        return 0, 0
     end
 end
 
@@ -39,15 +52,28 @@ local function image_exists(std, engine, canvas)
     end
 end
 
+local function image_unload(src)
+    local key = tostring(src)
+    local id = image_ids[key]
+    if id then
+        image_ids[key] = nil
+        image_canvas[id] = nil
+        clearId(id)
+    end
+end
+
+local function image_unload_all()
+    image_ids = {}
+    image_canvas = {}
+    clearAll()
+end
+
 local function install(std, engine)
     std.image.draw = image_draw(std, engine, engine.canvas)
     std.image.exists = image_exists(std, engine, engine.canvas)
     std.image.mensure = image_mensure(std, engine, engine.canvas)
-    --! @todo
-    std.image.unload = function() end
-    std.image.unload_all = function() end
-    std.image.mensure_width = function(v) return select(1, std.image.mensure(v)) end
-    std.image.mensure_height = function(v) return select(2, std.image.mensure(v)) end
+    std.image.unload = image_unload
+    std.image.unload_all = image_unload_all
 end
 
 return {

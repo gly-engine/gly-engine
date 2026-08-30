@@ -84,6 +84,11 @@ local command = cli.argparse(arg)
     .add_next_value('src', {required=true})
     .add_option_get('outfile', {default='./dist/main.lua'})
     --
+    .add_subcommand('bundler-js', commands_halt)
+    .add_next_value('src', {required=true})
+    .add_option_get('outfile', {default='./dist/main.js'})
+    .add_option_get('global', {})
+    --
     .add_subcommand('compile', commands_halt)
     .add_next_value('src', {required=true})
     .add_option_get('outfile', {default='a.out'})
@@ -126,6 +131,9 @@ local command = cli.argparse(arg)
     .add_subcommand('fs-download', commands_fs)
     .add_next_value('url', {required=true})
     .add_next_value('dist', {required=true})
+    --
+    .add_subcommand('fs-image-show', commands_fs)
+    .add_next_value('file', {required=true})
     --
     .add_subcommand('hazard-package-mock', commands_hazard)
     .add_next_value('mock', {required=true})

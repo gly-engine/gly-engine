@@ -1,9 +1,10 @@
 local version = require('source/version')
 local util_decorator = require('source/shared/functional/decorator')
 --
-local tree = require('source/shared/engine/tree')
+local dom = require('source/engine/browser/dom')
 local loadcore = require('source/shared/engine/loadcore')
 local loadgame = require('source/shared/engine/loadgame')
+local error_module = require('source/engine/core/error')
 --
 local engine_draw_fps = require('source/engine/api/draw/fps')
 local engine_draw_poly = require('source/engine/api/draw/poly')
@@ -37,6 +38,7 @@ local application = application_default
 local engine = {
     current = application_default,
     root = application_default,
+    dom = {},
     offset_x = 0,
     offset_y = 0
 }
@@ -83,6 +85,7 @@ local cfg_poly = {
 }
 
 local cfg_http = {
+    sock = native_http_sock,
     install = native_http_install,
     handler = native_http_handler,
     has_ssl = native_http_has_ssl,
@@ -185,14 +188,10 @@ function native_callback_init(width, height, game_lua)
     std.text.font_size=native_text_font_size
     std.text.font_name=native_text_font_name
     std.text.font_default=native_text_font_default
-    std.text.mensure_width=function(v) return select(1, native_text_mensure(v)) end
-    std.text.mensure_height=function(v) return select(2, native_text_mensure(v)) end
 
-    engine.handler = function(msg) 
-        if select(2, pcall(engine.root.callbacks.error or function() end, engine.root.data, std, tostring(msg))) == true then
-            (native_system_exit or native_system_fatal or function() end)()
-        end
-    end
+    engine.handler = error_module.make_handler(engine, std, function()
+        (native_system_exit or native_system_fatal or function() end)()
+    end)
 
     loadcore.setup(std, application, engine)
         :package('@bus', engine_raw_bus)
@@ -229,7 +228,7 @@ function native_callback_init(width, height, game_lua)
 
     std.app.title(application.meta.title..' - '..application.meta.version)
 
-    engine.dom = tree.node_begin(application, std.app.width, std.app.height)
+    engine.dom = dom.node_begin(application, std.app.width, std.app.height, engine.dom)
     engine.root, engine.current = application, application
 
     std.bus.emit_next('load')

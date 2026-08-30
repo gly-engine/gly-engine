@@ -1,14 +1,42 @@
-import { lua, lauxlib } from "fengari";
-import { to_luastring, to_jsstring } from "fengari/src/fengaricore";
+const fs = require('fs');
+const path = require('path');
+const child_process = require('child_process');
 
-import * as fs from "fs";
-import * as path from "path";
-import * as child_process from "child_process";
-import { fileURLToPath } from "url";
+const root = path.resolve(__dirname, '..', '..');
+const ceifa = 'wasmoon';
 
-const root = path.resolve(fileURLToPath(import.meta.url), '..', '..', '..')
+let fengari = null;
+let wasmoon = null;
 
-function createModuleTable(L, functions: Record<string, (L) => number>): void {
+function loadRuntime() {
+  if (fengari || wasmoon) {
+    return;
+  }
+  try {
+    wasmoon = require(ceifa);
+    return;
+  } catch (e) {}
+  try {
+    fengari = require('fengari');
+    return;
+  } catch (e) {
+    console.error('gly-cli: Lua runtime not found!');
+    console.error('Install one of the supported runtimes:');
+    console.error('  npm install wasmoon');
+    console.error('  npm install fengari');
+    process.exit(1);
+  }
+}
+
+loadRuntime();
+
+function is_fengari() {
+  return fengari !== null;
+}
+
+const { lua, lauxlib, lualib, to_luastring, to_jsstring } = fengari || {};
+
+function createModuleTable(L, functions) {
   lua.lua_newtable(L);
   for (const [name, fn] of Object.entries(functions)) {
     lua.lua_pushstring(L, to_luastring(name));
@@ -17,7 +45,17 @@ function createModuleTable(L, functions: Record<string, (L) => number>): void {
   }
 }
 
-export function bootstrap() {
+async function createState() {
+  if (is_fengari()) {
+    const L = lauxlib.luaL_newstate();
+    lualib.luaL_openlibs(L);
+    return L;
+  }
+  const factory = new wasmoon.LuaFactory();
+  return factory.createEngine({ injectObjects: true });
+}
+
+function bootstrap() {
   const mock = fs.readFileSync(`${root}/tests/mock/io.lua`, 'utf8');
   const bootstrap = fs.readFileSync(`${root}/source/cli/hazard/silvertap.lua`, 'utf8');
   const match = mock.match(/--! @bootstrap(.*?)--! @endbootstrap/s);
@@ -28,26 +66,47 @@ export function bootstrap() {
   return content;
 }
 
-export function addNpmToLuaPath(L)
+function addNpmToLuaPath(L)
 {
-  lua.lua_getglobal(L, "package");     
-  lua.lua_getfield(L, -1, "path");      
+  if (!is_fengari()) {
+    const rootLua = JSON.stringify(root);
+    L.doStringSync(`
+      table.insert(package.searchers, 2, function(name)
+        local fs = jsRequire('fs')
+        for _, file in ipairs({name .. '.lua', ${rootLua} .. '/' .. name .. '.lua'}) do
+          if fs.existsSync(file) then
+            return assert(load(fs.readFileSync(file, 'utf8'), '@' .. file))
+          end
+        end
+        return '\\n\\tno gly module: ' .. name
+      end)
+    `);
+    return;
+  }
+
+  lua.lua_getglobal(L, "package");
+  lua.lua_getfield(L, -1, "path");
 
   let currentPath = to_jsstring(lua.lua_tostring(L, -1));
   currentPath += `;${root}/?.lua`;
 
-  lua.lua_pop(L, 1); 
+  lua.lua_pop(L, 1);
   lua.lua_pushstring(L, to_luastring(currentPath));
-  lua.lua_setfield(L, -2, "path");   
+  lua.lua_setfield(L, -2, "path");
 
-  lua.lua_pop(L, 1); 
+  lua.lua_pop(L, 1);
 }
 
-export function overridePrint(L) {
+function overridePrint(L) {
+  if (!is_fengari()) {
+    L.global.set('print', (...args) => console.log(args.join('\t')));
+    return;
+  }
+
   lua.lua_getglobal(L, to_luastring("_G"));
   lua.lua_pushjsfunction(L, function (L) {
     const n = lua.lua_gettop(L);
-    const output: string[] = [];
+    const output = [];
 
     for (let i = 1; i <= n; i++) {
       output.push(to_jsstring(lua.lua_tolstring(L, i)));
@@ -60,7 +119,12 @@ export function overridePrint(L) {
   lua.lua_pop(L, 1);
 }
 
-export function setLuaArgs(L, args: string[]): void {
+function setLuaArgs(L, args) {
+  if (!is_fengari()) {
+    L.global.set('arg', args);
+    return;
+  }
+
   lua.lua_newtable(L);
   args.forEach((arg, i) => {
     lua.lua_pushinteger(L, i + 1);
@@ -70,8 +134,13 @@ export function setLuaArgs(L, args: string[]): void {
   lua.lua_setglobal(L, to_luastring("arg"));
 }
 
-export function createBufferTable(L): void {
-  const bufferFns: Record<string, (L) => number> = {
+function createBufferTable(L) {
+  if (!is_fengari()) {
+    L.global.set('Buffer', { from: (bytes) => Buffer.from(bytes) });
+    return;
+  }
+
+  const bufferFns = {
     from: (L) => {
       if (!lua.lua_istable(L, 1)) {
         lua.lua_pushnil(L);
@@ -87,19 +156,19 @@ export function createBufferTable(L): void {
   lua.lua_setglobal(L, to_luastring("Buffer"));
 }
 
-function getJsModules(): Record<string, Record<string, (L) => number>> {
+function getJsModules() {
   return {
     fs: {
       readFileSync: (L) => {
         const file = to_jsstring(lua.lua_tostring(L, 1));
-        const filename = [file, `${root}/${file}`].find(fs.existsSync)!
+        const filename = [file, `${root}/${file}`].find(fs.existsSync)
         const encoding = lua.lua_type(L, 2) === lua.LUA_TSTRING? to_jsstring(lua.lua_tostring(L, 2)): undefined;
         //! @todo lua if is dir is problematic interpolating with javascript
         if (fs.statSync(filename).isDirectory()) {
           lua.lua_pushstring(L, to_luastring('DIR'))
           return 1;
         }
-        const data = fs.readFileSync(filename, encoding as BufferEncoding);
+        const data = fs.readFileSync(filename, encoding);
         lua.lua_pushstring(L, encoding? to_luastring(data): data);
         return 1;
       },
@@ -111,7 +180,7 @@ function getJsModules(): Record<string, Record<string, (L) => number>> {
       },
       writeFileSync: (L) => {
         const filename = to_jsstring(lua.lua_tostring(L, 1));
-        let content: string | Buffer;
+        let content;
 
         if (lua.lua_type(L, 2) === lua.LUA_TSTRING) {
           content = to_jsstring(lua.lua_tostring(L, 2));
@@ -125,7 +194,7 @@ function getJsModules(): Record<string, Record<string, (L) => number>> {
           }
           content = Buffer.from(arr);
         } else {
-          return (lua as any).luaL_error(L, to_luastring("writeFileSync: segundo argumento deve ser string ou table"));
+          return lauxlib.luaL_error(L, to_luastring("writeFileSync: segundo argumento deve ser string ou table"));
         }
 
         fs.writeFileSync(filename, content);
@@ -147,11 +216,11 @@ function getJsModules(): Record<string, Record<string, (L) => number>> {
     child_process: {
       execSync: (L) => {
         const cmd = to_jsstring(lua.lua_tostring(L, 1));
-        let output: string;
+        let output;
 
         try {
           output = child_process.execSync(cmd, { encoding: "utf8" });
-        } catch (e: any) {
+        } catch (e) {
           output = e.message || "Erro";
         }
 
@@ -162,7 +231,12 @@ function getJsModules(): Record<string, Record<string, (L) => number>> {
   };
 }
 
-export function registerJsRequire(L): void {
+function registerJsRequire(L) {
+  if (!is_fengari()) {
+    L.global.set('jsRequire', (name) => require(name));
+    return;
+  }
+
   const modules = getJsModules();
 
   lua.lua_pushcfunction(L, (L) => {
@@ -181,8 +255,21 @@ export function registerJsRequire(L): void {
   lua.lua_setglobal(L, to_luastring("jsRequire"));
 }
 
-export function doScript(L, luaCode: string): void {
-  if (lauxlib.luaL_loadstring(L, luaCode) !== lua.LUA_OK) {
+async function doScript(L, luaCode) {
+  if (!is_fengari()) {
+    const code = typeof luaCode === 'string'? luaCode: Buffer.from(luaCode).toString('utf8');
+    try {
+      await L.doString(code);
+    } catch (e) {
+      console.error(e.message || e);
+      process.exit(1);
+    }
+    return;
+  }
+
+  const code = typeof luaCode === 'string' ? to_luastring(luaCode) : luaCode;
+
+  if (lauxlib.luaL_loadstring(L, code) !== lua.LUA_OK) {
     const message = lua.lua_tostring(L, -1);
     console.error(message instanceof Uint8Array ? to_jsstring(message) : message);
     lua.lua_close(L);
@@ -196,3 +283,15 @@ export function doScript(L, luaCode: string): void {
     process.exit(1);
   }
 }
+
+module.exports = {
+  is_fengari,
+  createState,
+  bootstrap,
+  addNpmToLuaPath,
+  overridePrint,
+  setLuaArgs,
+  createBufferTable,
+  registerJsRequire,
+  doScript
+};
