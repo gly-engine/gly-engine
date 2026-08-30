@@ -1,3 +1,9 @@
+local function percent_encode(str)
+    return (str:gsub('[^A-Za-z0-9%-_%.~]', function(c)
+        return string.format('%%%02X', string.byte(c))
+    end))
+end
+
 local function search_param(param_list, param_dict)
     local index, params = 1, ''
     while param_list and param_dict and index <= #param_list do
@@ -8,7 +14,7 @@ local function search_param(param_list, param_dict)
         else
             params = params..'&'
         end
-        params = params..param:gsub(' ', '%20')..'='..(value or ''):gsub(' ', '%20')
+        params = params..percent_encode(param)..'='..percent_encode(value or '')
         index = index + 1
     end
     return params
