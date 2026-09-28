@@ -1,9 +1,8 @@
 local deep_copy = require('source/shared/table/deep_copy')
 local str_url = require('source/shared/string/encode/url')
 local user_agent = require('source/agent')
-local content_length = {}
 local request_dict = {}
-local data_dict = {}
+local response_dict = {}
 
 local function handler(self)
     local uri = self.url..str_url.search_param(self.param_list, self.param_dict)
@@ -17,9 +16,11 @@ local function handler(self)
         headers['User-Agent'] = user_agent
     end
 
-    data_dict[session] = ''
     request_dict[session] = self
-    content_length[session] = -1
+    response_dict[session] = {
+        body = {},
+        size = 0
+    }
 
     self.promise()
     event.post({
@@ -39,35 +40,53 @@ local function callback(evt)
     local raise_error = false
     local session = evt.session
     local self = request_dict[session]
+    local response = response_dict[session]
 
-    if not self then return end
+    if not self or not response then return end
 
     if evt.error and #evt.error > 0 and empty then
-        self.set('error', evt.error)
+        response.error = evt.error
         raise_error = true
     end
 
     if evt.headers then
         if evt.headers['Content-Length'] then
-            content_length[session] = tonumber(evt.headers['Content-Length'])
+            response.content_length = tonumber(evt.headers['Content-Length'])
         end
-        self.set('headers', deep_copy.table(evt.headers))
+        response.headers = deep_copy.table(evt.headers)
+        local transfer_encoding = evt.headers['Transfer-Encoding']
+        response.chunked = transfer_encoding
+            and transfer_encoding:lower():find('chunked', 1, true) ~= nil
     end
 
     if evt.code then
-        self.set('ok', 200 <= tonumber(evt.code) and tonumber(evt.code) < 300)
-        self.set('status', evt.code)
+        response.ok = 200 <= tonumber(evt.code) and tonumber(evt.code) < 300
+        response.status = evt.code
     end
 
     if evt.body then
-        data_dict[session] = data_dict[session]..evt.body
+        if self.stream and response.ok ~= false then
+            self.stream(evt.body)
+        end
+        if not self.discard_body then
+            local body = response.body
+            body[#body + 1] = evt.body
+        end
+        response.size = response.size + #evt.body
     end
 
-    if evt.finished or raise_error or content_length[session] <= #data_dict[session] then
-        self.set('body', data_dict[session])
-        content_length[session] = nil
+    local status = tonumber(response.status)
+    local bodyless = self.method == 'HEAD' or status == 204 or status == 304
+    local complete_length = response.content_length and response.size >= response.content_length
+        or response.content_length == nil and not response.chunked and evt.body ~= nil
+    if evt.finished or raise_error or complete_length or bodyless then
+        self.set('headers', response.headers)
+        self.set('ok', response.ok)
+        self.set('status', response.status)
+        self.set('error', response.error)
+        self.set('body', self.discard_body and '' or table.concat(response.body))
         request_dict[session] = nil
-        data_dict[session] = nil
+        response_dict[session] = nil
         self.resolve()
     end
 end
