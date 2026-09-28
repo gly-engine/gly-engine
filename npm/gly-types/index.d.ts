@@ -65,7 +65,7 @@ declare class GlyMedia {
 declare class GlyStorage {
   public as(key: string, cast?: GlyHandlerValueString): GlyStorage;
   public default(value: string): void;
-  public callbacks(handler: GlyHandlerValueString): GlyStorage;
+  public callback(handler: GlyHandlerValueString): GlyStorage;
   public run(): void;
 }
 
