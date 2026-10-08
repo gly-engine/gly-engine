@@ -16,9 +16,8 @@ local key_bindings={
     ENTER='a'
 }
 
-local fixture_196_key = ''
-local pressed_196_key = ''
-local fixture_196_time = 0
+local unseen = {}
+local deferred = {}
 
 local function event_ginga(std, evt)
     if evt.class ~= 'key' then return end
@@ -41,34 +40,31 @@ local function event_ginga(std, evt)
         })
     end
 
-    --! @li @li https://github.com/gly-engine/gly-engine/issues/196
-    --! Fix ensures at least syncing a loop when the button is pressed.
-    if is_back_or_red and pressed then pressed_196_key = gly_key end
-    if is_back_or_red and not pressed and pressed_196_key == gly_key then 
-        fixture_196_key = gly_key
-        fixture_196_time = std.milis 
-        return
-    end
-
     --! @li https://github.com/TeleMidia/ginga/issues/190
     if canvas._dump_to_memory then pressed = not pressed end
-    std.bus.emit('rkey', gly_key, pressed)
+
+    if pressed then
+        unseen[gly_key] = true
+        deferred[gly_key] = nil -- novo press antes do release adiado: continua pressionada
+        std.bus.emit('rkey', gly_key, true)
+    elseif unseen[gly_key] then
+        deferred[gly_key] = true
+    else
+        std.bus.emit('rkey', gly_key, false)
+    end
 end
 
-local function event_fixed(std)
-    if #fixture_196_key > 0 then
-        if std.milis - fixture_196_time >= 50 then
-            std.bus.emit('rkey', fixture_196_key, 0)
-            fixture_196_key = ''
-        end
-    else
-        pressed_196_key = ''
+local function flush_releases(std)
+    for key in pairs(deferred) do
+        deferred[key] = nil
+        std.bus.emit('rkey', key, false)
     end
+    unseen = {}
 end
 
 local function install(std)
     std.bus.listen_std('ginga', event_ginga)
-    std.bus.listen_std('loop', event_fixed)
+    std.bus.listen_std('post_loop', flush_releases)
 end
 
 local P = {
