@@ -27,7 +27,6 @@ local function event_ginga(std, evt)
     local raw_key = evt.key
     local gly_key = key_bindings[evt.key]
     local is_back = raw_key == 'BACK'
-    local is_back_or_red = is_back or raw_key == 'RED'
 
     if is_back then
         event.post('out', {
