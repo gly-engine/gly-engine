@@ -45,7 +45,7 @@ local function event_ginga(std, evt)
 
     if pressed then
         unseen[gly_key] = true
-        deferred[gly_key] = nil -- novo press antes do release adiado: continua pressionada
+        deferred[gly_key] = nil
         std.bus.emit('rkey', gly_key, true)
     elseif unseen[gly_key] then
         deferred[gly_key] = true
