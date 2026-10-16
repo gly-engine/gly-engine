@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>{{ meta.title }} - {{ meta.version }}</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <meta name="theme-color" content="#000000"/>
+    <meta name="description" content="{{ meta.description }}"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+{{# assets.fonts }}
+    <link rel="preload" href="{{& fn.colon.to }}" as="font" type="font/ttf" crossorigin/>
+{{/ assets.fonts }}
+    <style>
+        *, *::after, *::before {
+            touch-action: none;
+            box-sizing: border-box;
+            border: 0;
+            padding: 0;
+            margin: 0;
+        }
+        body {
+            height: 99.998vh;
+            display: flex;
+            overflow: hidden;
+            justify-content: center;
+            align-items: start;
+        }
+        main { position: relative; width: 100%; height: 100%; }
+        video { position: absolute; }
+        canvas { position: absolute; }
+    </style>
+    {{^ args.aa }}
+    <style>canvas { image-rendering: pixelated; }</style>
+    {{/}}
+    {{# var.build.screen.has_flag }}
+    <style>#gameCanvas { width: 100%; }</style>
+    {{/ var.build.screen.has_flag }}
+    <style>body { background-color: gray; }</style>
+    {{# assets.fonts }}
+    <style>
+      @font-face {
+        font-family: "{{ fn.colon.from }}";
+        src: url("{{& fn.colon.to }}");
+      }
+    </style>
+    {{/ assets.fonts }}
+    <style>
+      #gly-boot-log {
+        position: fixed; left: 0; right: 0; bottom: 0; z-index: 99999;
+        max-height: 42vh; overflow: auto; padding: 6px 8px;
+        font: 12px/1.35 monospace; color: #0f0; background: rgba(0,0,0,.88);
+        white-space: pre-wrap; pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="gly-boot-log" aria-live="polite"></div>
+    <main>
+      <canvas id="gameCanvas" {{& var.build.screen.wh_attributes }}></canvas>
+    </main>
+    {{# var.build.html5.atobify }}
+    <script src="index.js" defer></script>
+    {{/ var.build.html5.atobify }}
+    <script>
+      (function () {
+        var IS_TV = location.protocol === 'file:' || /Smart-TV|Tizen|Web0S|webOS|LG/i.test(navigator.userAgent);
+        var FORCE_FENGARI = location.search.indexOf('runtime=fengari') >= 0;
+        var FORCE_WASMOON = location.search.indexOf('runtime=wasmoon') >= 0;
+{{# args.fengari }}
+        var GLY_BUILD_FENGARI = true;
+{{/ args.fengari }}
+{{^ args.fengari }}
+        var GLY_BUILD_FENGARI = false;
+{{/ args.fengari }}
+        window.GLY_FORCE_FENGARI = FORCE_FENGARI;
+        window.GLY_FORCE_WASMOON = FORCE_WASMOON;
+        window.GLY_BUILD_FENGARI = GLY_BUILD_FENGARI;
+        var bootOn = IS_TV || FORCE_FENGARI || GLY_BUILD_FENGARI || location.search.indexOf('debug=1') >= 0 || location.hash.indexOf('debug=1') >= 0;
+        window.GLY_BOOT_ON = bootOn;
+        var logEl = document.getElementById('gly-boot-log');
+        var lines = [];
+        window.glyBootLog = function (msg) {
+          if (!bootOn) return;
+          var t = new Date().toISOString().slice(11, 23);
+          lines.push(t + ' ' + msg);
+          if (lines.length > 22) lines.shift();
+          logEl.textContent = lines.join('\n');
+          try { console.log('[gly-boot]', msg); } catch (e) {}
+        };
+        window.IS_TV = IS_TV;
+        if (bootOn) {
+          glyBootLog('boot ua=' + navigator.userAgent.slice(0, 96));
+          glyBootLog('protocol=' + location.protocol);
+          window.addEventListener('error', function (e) { glyBootLog('ERROR: ' + (e.message || e)); });
+          window.addEventListener('unhandledrejection', function (e) {
+            glyBootLog('PROMISE: ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
+          });
+        }
+        window.scheduleLuaPump = function () {
+          setTimeout(function () {
+            try {
+              if (window.gly && window.gly.frontend && window.gly.frontend.native_callback_loop) {
+                window.gly.frontend.native_callback_loop(16);
+              }
+            } catch (e) {}
+          }, 0);
+        };
+        window.scheduleFengariPump = window.scheduleLuaPump;
+        function glyTvFileOrigin() {
+          return location.protocol === 'file:' && window.IS_TV;
+        }
+        function glyFetchViaXhr(url, init) {
+          init = init || {};
+          var method = ((init.method || 'GET') + '').toUpperCase();
+          return new Promise(function (resolve, reject) {
+            var xhr = new XMLHttpRequest();
+            xhr.open(method, url, true);
+            if (init.headers) {
+              var h = init.headers;
+              if (typeof h.forEach === 'function') {
+                h.forEach(function (v, k) { try { xhr.setRequestHeader(k, v); } catch (e) {} });
+              } else {
+                for (var hk in h) {
+                  if (Object.prototype.hasOwnProperty.call(h, hk)) {
+                    try { xhr.setRequestHeader(hk, h[hk]); } catch (e) {}
+                  }
+                }
+              }
+            }
+            xhr.responseType = 'arraybuffer';
+            xhr.onload = function () {
+              if (xhr.status === 0 || (xhr.status >= 200 && xhr.status < 300)) {
+                var ct = xhr.getResponseHeader('Content-Type') || 'application/octet-stream';
+                resolve(new Response(xhr.response, {
+                  status: xhr.status || 200,
+                  statusText: xhr.statusText || 'OK',
+                  headers: { 'Content-Type': ct }
+                }));
+              } else {
+                reject(new TypeError('Failed to fetch'));
+              }
+            };
+            xhr.onerror = function () { reject(new TypeError('Failed to fetch')); };
+            try {
+              xhr.send(init.body != null ? init.body : null);
+            } catch (e) {
+              reject(e);
+            }
+          });
+        }
+        function glyWrapLuaPump(p) {
+          return p.then(function (res) {
+            window.scheduleLuaPump();
+            return res;
+          }, function (err) {
+            window.scheduleLuaPump();
+            throw err;
+          });
+        }
+        var origFetch = window.fetch;
+        window.fetch = function (input, init) {
+          var url = (typeof input === 'string') ? input : (input && input.url) || String(input);
+          var a = document.createElement('a');
+          a.href = url;
+          if (a.protocol === 'file:') {
+            if (bootOn) glyBootLog('fetch file:// blocked (engine/game=index.js; assets≠fetch)');
+            return Promise.reject(new TypeError('fetch file:// not supported'));
+          }
+          if (bootOn && url.indexOf('cloud.zedia.tv') !== -1) glyBootLog('fetch ' + url.split('?')[0].slice(-48));
+          if (glyTvFileOrigin()) {
+            if (bootOn && (url.indexOf('.wasm') !== -1 || url.indexOf('cloud.zedia.tv') !== -1)) {
+              glyBootLog('fetch xhr ' + url.split('/').pop().slice(0, 40));
+            }
+            return glyWrapLuaPump(glyFetchViaXhr(a.href, init));
+          }
+          return glyWrapLuaPump(origFetch.call(window, input, init));
+        };
+      })();
+    </script>
+    <script>
+      (function () {
+        function signalReady() {
+          try { window.dispatchEvent(new Event('gly-wasmoon-ready')); } catch (e) {
+            var ev = document.createEvent('Event');
+            ev.initEvent('gly-wasmoon-ready', true, true);
+            window.dispatchEvent(ev);
+          }
+        }
+        function bindWasmoon() {
+          var g = window.wasmoon;
+          if (g && g.LuaFactory) {
+            window.LuaFactory = g.LuaFactory;
+            window.LuaMultiReturn = g.LuaMultiReturn;
+            return true;
+          }
+          return false;
+        }
+        function loadScript(src, onDone) {
+          var s = document.createElement('script');
+          s.src = src;
+          s.onload = function () { onDone(null); };
+          s.onerror = function () { onDone(new Error('load ' + src)); };
+          document.head.appendChild(s);
+        }
+        function loadFengari(onDone) {
+          glyBootLog('Fengari — teste PC: ?runtime=fengari&debug=1');
+          window.GLY_USE_FENGARI = true;
+          window.LuaFactory = undefined;
+          window.LuaMultiReturn = undefined;
+          loadScript('https://cdn.jsdelivr.net/npm/fengari-web@0.1.4/dist/fengari-web.js', function (err) {
+            glyBootLog(err ? 'Fengari FAIL' : 'Fengari ok');
+            onDone();
+          });
+        }
+        function loadWasmoonUmd(ver, onDone) {
+          glyBootLog('wasmoon UMD ' + ver + '…');
+          loadScript('https://cdn.jsdelivr.net/npm/wasmoon@' + ver + '/dist/index.js', function (err) {
+            if (err || !bindWasmoon()) onDone(err || new Error('LuaFactory missing'));
+            else {
+              glyBootLog('wasmoon ' + ver + ' ok');
+              onDone(null);
+            }
+          });
+        }
+        function loadFengariThenWasmoonFallback() {
+          loadFengari(function () {
+            if (window.fengari) return signalReady();
+            glyBootLog('Fengari missing — wasmoon fallback');
+            loadWasmoonUmd('1.10.0', function (err) {
+              if (!err) return signalReady();
+              loadWasmoonUmd('1.12.0', function () { signalReady(); });
+            });
+          });
+        }
+        if (window.GLY_FORCE_FENGARI || window.GLY_BUILD_FENGARI) {
+          loadFengari(signalReady);
+        } else if (window.GLY_FORCE_WASMOON) {
+          loadWasmoonUmd('1.16.0', function (err) {
+            if (err) glyBootLog('wasmoon 1.16 fail');
+            signalReady();
+          });
+        } else if (window.IS_TV) {
+          loadFengariThenWasmoonFallback();
+        } else {
+          var m = document.createElement('script');
+          m.type = 'module';
+          m.textContent =
+            "import { LuaFactory, LuaMultiReturn } from 'https://cdn.jsdelivr.net/npm/wasmoon@1.16.0/+esm';" +
+            "window.LuaFactory=LuaFactory;window.LuaMultiReturn=LuaMultiReturn;" +
+            "glyBootLog('wasmoon ESM ok');window.dispatchEvent(new Event('gly-wasmoon-ready'));";
+          document.head.appendChild(m);
+        }
+      })();
+    </script>
+    <script>window.videofake=100</script>
+    <script>
+      (function () {
+        var CORE_LOCAL = 'core-native-html5.js';
+        var CORE_CDN = 'https://cdn.jsdelivr.net/npm/@gamely/core-native-html5@0.2.3/dist/index.js';
+        function glyPreferLocalCore() {
+          return window.IS_TV || location.protocol === 'file:';
+        }
+        function glyCoreUrls() {
+          return glyPreferLocalCore() ? [CORE_LOCAL, CORE_CDN] : [CORE_CDN];
+        }
+        function patchFengariCoreSource(src) {
+          if (src.indexOf('game.lenght') !== -1) {
+            src = src.replace(/game\.lenght/g, 'game.length');
+            glyBootLog('core-native-html5 patch game.lenght→length');
+          }
+          if (src.indexOf('define_lua_callback("native_callback_init"') !== -1) {
+            src = src.replace(
+              'define_lua_callback("native_callback_init", (width, height, game) => {',
+              'define_lua_callback("native_callback_init", (width, height, game) => { try { glyBootLog("fengari init " + width + "x" + height + " gameLen=" + (game ? game.length : 0)); } catch (e) {}'
+            );
+            src = src.replace(
+              /define_lua_callback\("native_callback_init",[\s\S]*?return 3;\s*\}\);/,
+              function (block) {
+                return block.replace(
+                  'return 3;',
+                  'try { window.__glyInitOk = true; if (window.scheduleLuaPump) window.scheduleLuaPump(); } catch (e) {} return 3;'
+                );
+              }
+            );
+          }
+          if (src.indexOf('throw error_message && fengari.to_jsstring(error_message) || func_name') !== -1) {
+            src = src.replace(
+              /throw error_message && fengari\.to_jsstring\(error_message\) \|\| func_name;/g,
+              'var __glyLuaErr = error_message && fengari.to_jsstring(error_message) || func_name; try { glyBootLog("FENGARI: " + __glyLuaErr); } catch (e) {} throw __glyLuaErr;'
+            );
+          }
+          return src;
+        }
+        function loadCoreViaScriptTag(resolve, reject) {
+          if (typeof CoreNativeHtml5 === 'function') {
+            glyBootLog('core-native-html5 ok');
+            resolve();
+            return;
+          }
+          var urls = glyCoreUrls();
+          function tryScript(i) {
+            if (typeof CoreNativeHtml5 === 'function') {
+              glyBootLog('core-native-html5 ok');
+              resolve();
+              return;
+            }
+            if (i >= urls.length) {
+              reject(new Error('core-native-html5 script load failed'));
+              return;
+            }
+            glyBootLog('core-native-html5 script ' + urls[i].split('/').pop());
+            var old = document.getElementById('gly-core-native-script');
+            if (old && old.parentNode) old.parentNode.removeChild(old);
+            var s = document.createElement('script');
+            s.id = 'gly-core-native-script';
+            s.src = urls[i];
+            s.onload = function () {
+              var waits = 0;
+              var waitId = setInterval(function () {
+                waits++;
+                if (typeof CoreNativeHtml5 === 'function') {
+                  clearInterval(waitId);
+                  glyBootLog('core-native-html5 ok');
+                  resolve();
+                } else if (waits > 120) {
+                  clearInterval(waitId);
+                  tryScript(i + 1);
+                }
+              }, 25);
+            };
+            s.onerror = function () { tryScript(i + 1); };
+            document.head.appendChild(s);
+          }
+          tryScript(0);
+        }
+        function loadCoreSourceText(onOk, onErr) {
+          var urls = glyCoreUrls();
+          function tryXhr(i) {
+            if (i >= urls.length) {
+              onErr(new Error('core-native-html5 source unavailable'));
+              return;
+            }
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', urls[i], true);
+            xhr.onload = function () {
+              if (xhr.status === 200 || xhr.status === 0) {
+                onOk(xhr.responseText, urls[i]);
+              } else {
+                tryXhr(i + 1);
+              }
+            };
+            xhr.onerror = function () { tryXhr(i + 1); };
+            xhr.send();
+          }
+          tryXhr(0);
+        }
+        function loadCorePatchedInline(resolve, reject) {
+          glyBootLog('core-native-html5 patched inline…');
+          loadCoreSourceText(function (text) {
+            try {
+              var src = patchFengariCoreSource(text);
+              var tag = document.getElementById('gly-core-native-script');
+              if (tag && tag.parentNode) tag.parentNode.removeChild(tag);
+              var s = document.createElement('script');
+              s.id = 'gly-core-native-script';
+              s.textContent = src;
+              document.head.appendChild(s);
+              if (typeof CoreNativeHtml5 === 'function') {
+                glyBootLog('core-native-html5 ok (fengari patches)');
+                resolve();
+              } else {
+                reject(new Error('CoreNativeHtml5 missing after patched load'));
+              }
+            } catch (e) {
+              reject(e);
+            }
+          }, reject);
+        }
+        window.ensureCoreNativeHtml5 = function () {
+          var needFengariCore = !!(window.GLY_USE_FENGARI || window.GLY_FORCE_FENGARI || window.GLY_BUILD_FENGARI);
+          if (!needFengariCore && typeof CoreNativeHtml5 === 'function') return Promise.resolve();
+          if (window.__glyCoreNativeHtml5Promise) return window.__glyCoreNativeHtml5Promise;
+          window.__glyCoreNativeHtml5Promise = new Promise(function (resolve, reject) {
+            if (needFengariCore) {
+              loadCorePatchedInline(resolve, reject);
+            } else {
+              loadCoreViaScriptTag(resolve, reject);
+            }
+          });
+          return window.__glyCoreNativeHtml5Promise;
+        };
+      })();
+    </script>
+    <script>
+      function gamelyInline(key) {
+        var s = window[key];
+        if (typeof s === 'string' && s.length > 0) {
+          var cut = s.indexOf('\0');
+          if (cut !== -1) s = s.slice(0, cut);
+          return s;
+        }
+        throw new Error('missing inline code: ' + key);
+      }
+
+      var TV_KEYS = [
+        [13, 'a'], [37, 'left'], [38, 'up'], [39, 'right'], [40, 'down'],
+        [403, 'a'], [404, 'b'], [405, 'c'], [406, 'd'], [10009, 'menu'], [461, 'menu'],
+        ['Enter', 'a'], ['ArrowLeft', 'left'], ['ArrowRight', 'right'], ['ArrowUp', 'up'], ['ArrowDown', 'down'],
+        ['Left', 'left'], ['Right', 'right'], ['Up', 'up'], ['Down', 'down'], ['Back', 'menu']
+      ];
+      if (window.KeyEvent && KeyEvent.VK_BACK != null) TV_KEYS.push([KeyEvent.VK_BACK, 'menu']);
+
+      function gamelyKey(e) {
+        for (var i = 0; i < TV_KEYS.length; i++) {
+          var k = TV_KEYS[i][0];
+          if (k === e.key || k === e.code || k === e.keyCode) return TV_KEYS[i][1];
+        }
+        return null;
+      }
+
+      function installTvKeys(frontend) {
+        var send = frontend.native_callback_keyboard;
+        function onKey(ev) {
+          var g = gamelyKey(ev);
+          if (!g) return;
+          ev.preventDefault();
+          if (g === 'menu' && ev.type === 'keydown') {
+            send('menu', 1);
+            send('menu', 0);
+            return;
+          }
+          send(g, ev.type === 'keydown' ? 1 : 0);
+        }
+        window.addEventListener('keydown', onKey, true);
+        window.addEventListener('keyup', onKey, true);
+        glyBootLog('TV keys installed');
+      }
+
+      function ensureRuntime() {
+        if (window.LuaFactory || window.fengari) return Promise.resolve();
+        glyBootLog('waiting runtime (wasmoon/fengari)…');
+        return new Promise(function (resolve, reject) {
+          var done = false;
+          function finish(ok, msg) {
+            if (done) return;
+            done = true;
+            if (msg) glyBootLog(msg);
+            if (ok) resolve();
+            else reject(new Error(msg || 'runtime failed'));
+          }
+          function ready() {
+            var ok = !!(window.LuaFactory || window.fengari);
+            finish(ok, ok ? (window.LuaFactory ? 'wasmoon ready' : 'fengari ready') : 'runtime missing');
+          }
+          window.addEventListener('gly-wasmoon-ready', ready);
+          setTimeout(ready, 45000);
+        });
+      }
+
+      function ensureBundle() {
+        if (window.engine_code && window.game_code) return Promise.resolve();
+        glyBootLog('waiting index.js (engine_code)…');
+        return new Promise(function (resolve, reject) {
+          var n = 0;
+          var id = setInterval(function () {
+            n++;
+            if (window.engine_code && window.game_code) {
+              clearInterval(id);
+              glyBootLog('bundle ok len=' + window.engine_code.length);
+              resolve();
+            } else if (n > 900) {
+              clearInterval(id);
+              reject(new Error('index.js / engine_code timeout'));
+            }
+          }, 50);
+        });
+      }
+
+      document.addEventListener('DOMContentLoaded', function () {
+        glyBootLog('DOMContentLoaded');
+        Promise.all([ensureRuntime(), ensureBundle(), ensureCoreNativeHtml5()])
+          .then(function () {
+            if (typeof CoreNativeHtml5 !== 'function') throw new Error('CoreNativeHtml5 missing');
+            glyBootLog('CoreNativeHtml5 build…');
+            var chain = CoreNativeHtml5()
+              .setElementRoot('main')
+              .setElementCanvas('#gameCanvas')
+              .addLibrary('wasmoon', window.LuaFactory, window.LuaMultiReturn)
+              .addLibrary('fengari', window.fengari)
+              .addLibrary('fengari-or-wasmoon-check')
+              .addLibrary('runtime', {
+                unfocus_pause: !(window.GLY_USE_FENGARI || window.GLY_FORCE_FENGARI)
+              });
+            if (window.GLY_USE_FENGARI || window.GLY_FORCE_FENGARI) {
+              chain = chain.addLibrary('fengari-jsonrxi', 'https://cdn.jsdelivr.net/gh/rxi/json.lua/json.lua');
+            }
+            if (!window.IS_TV) chain = chain.addLibrary('keyboard', 'default');
+            glyBootLog('lua via index.js (engine_code/game_code)');
+            return chain
+              .addLibrary('resize')
+              .addLibrary('player-html5')
+              .addLibrary('player-youtube')
+              .addLibrary('player-fake', window.videofake)
+              .addLibrary('player-videojs', window.videojs)
+              .setEngine(gamelyInline('engine_code'))
+              .setGame(gamelyInline('game_code'))
+              .build();
+          })
+          .then(function (gly) {
+            window.gly = gly;
+            glyBootLog('gly ok' + (window.GLY_USE_FENGARI ? ' [FENGARI]' : ''));
+            if (window.GLY_USE_FENGARI || window.GLY_FORCE_FENGARI) {
+              glyBootLog('game inline len=' + gamelyInline('game_code').length);
+            }
+            if (window.GLY_USE_FENGARI || window.GLY_BUILD_FENGARI) {
+              window.__glyFengariPump = function () {
+                try {
+                  if (!window.__glyInitOk) return;
+                  if (window.gly && window.gly.frontend && window.gly.frontend.native_callback_loop) {
+                    window.gly.frontend.native_callback_loop(16);
+                  }
+                } catch (e) {}
+              };
+              (function fengariPump() {
+                window.__glyFengariPump();
+                requestAnimationFrame(fengariPump);
+              })();
+              glyBootLog('Fengari loop pump on');
+            }
+            if (window.IS_TV) installTvKeys(gly.frontend);
+          })
+          .catch(function (e) {
+            glyBootLog('BUILD FAIL: ' + (e && e.message ? e.message : e));
+            if (e && e.stack && window.GLY_BOOT_ON) glyBootLog(String(e.stack).split('\n').slice(0, 2).join(' | '));
+          });
+      });
+    </script>
+  </body>
+</html>

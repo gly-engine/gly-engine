@@ -34,7 +34,7 @@ local function build(args)
         :add_step('ginga dist/main.ncl -s 1280x720', {when=args.run})
         --
         :add_core('html5', {src='source/engine/core/vacuum/native/main.lua', force_bundler=true})
-        :add_meta('source/engine/meta/html5/index.mustache', {as='index.html'})
+        :add_meta((args.core == 'html5' and 'source/engine/meta/html5/index.tvhost.mustache' or 'source/engine/meta/html5/index.mustache'), {as='index.html'})
         --
         :add_common_func(atobify.builder('engine_code', args.outdir..'main.lua', args.outdir..'index.js'), {when=args.core=='html5' and not args.enginecdn})
         :add_common_func(atobify.builder('game_code', args.outdir..'game.lua', args.outdir..'index.js'), {when=args.core=='html5'})
