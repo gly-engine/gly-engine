@@ -340,9 +340,11 @@ local function request(method, std, engine, protocol)
             end,
             -- eval
             function()
-                if std.log and std.log.info then
-                    std.log.info('[gly] http run ' .. tostring(self.method) .. ' ' .. tostring(self.url):sub(1, 96))
-                end
+                pcall(function()
+                    if std.log and std.log.info then
+                        std.log.info('[gly] http run ' .. tostring(self.method) .. ' ' .. tostring(self.url):sub(1, 96))
+                    end
+                end)
                 protocol.handler(self, self.id)
             end,
             -- parsers
