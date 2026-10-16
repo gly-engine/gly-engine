@@ -167,8 +167,13 @@ function native_callback_loop(dt)
     if std.bus.drain_emit_queue then
         std.bus.drain_emit_queue()
     end
-    if boot_frame and std.log and std.log.info then
-        std.log.info('[gly] boot frame loop done')
+    if boot_frame then
+        if _G.__gly_schedule_pump then
+            pcall(_G.__gly_schedule_pump)
+        end
+        if std.log and std.log.info then
+            std.log.info('[gly] boot frame loop done')
+        end
     end
 end
 
