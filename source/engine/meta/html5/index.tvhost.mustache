@@ -475,13 +475,17 @@
 
       function patchFengariGameLua(src) {
         if (!(window.GLY_USE_FENGARI || window.GLY_FORCE_FENGARI || window.GLY_BUILD_FENGARI)) return src;
+        if (src.indexOf('end /* __glyFengariAsyncPump */') !== -1) {
+          src = src.replace(/end \/\* __glyFengariAsyncPump \*\//g, 'end -- __glyFengariAsyncPump');
+          glyBootLog('game patch AsyncAwaiter comment fix');
+        }
         if (src.indexOf('__glyFengariAsyncPump') >= 0) return src;
         var needle = 'function fulfilled(self, value)\nlocal success, resultOrError = coresume(asyncCoroutine, value)';
         if (src.indexOf(needle) === -1) return src;
         glyBootLog('game patch AsyncAwaiter→pump');
         return src.replace(
           needle,
-          needle + '\nif type(_G.__gly_schedule_pump) == "function" then pcall(_G.__gly_schedule_pump) end /* __glyFengariAsyncPump */'
+          needle + '\nif type(_G.__gly_schedule_pump) == "function" then pcall(_G.__gly_schedule_pump) end -- __glyFengariAsyncPump'
         );
       }
 
