@@ -102,6 +102,9 @@
         if (bootOn) {
           glyBootLog('boot ua=' + navigator.userAgent.slice(0, 96));
           glyBootLog('protocol=' + location.protocol);
+          if (location.protocol === 'file:') {
+            glyBootLog('TV file:// — se xhr falhar, sirva dist/ via http:// (LAN)');
+          }
           window.addEventListener('error', function (e) { glyBootLog('ERROR: ' + (e.message || e)); });
           window.addEventListener('unhandledrejection', function (e) {
             glyBootLog('PROMISE: ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
@@ -123,11 +126,13 @@
         function glyTvFileOrigin() {
           return location.protocol === 'file:' && window.IS_TV;
         }
+        window.glyFetchViaXhr = glyFetchViaXhr;
         function glyFetchViaXhr(url, init) {
           init = init || {};
           var method = ((init.method || 'GET') + '').toUpperCase();
           return new Promise(function (resolve, reject) {
             var xhr = new XMLHttpRequest();
+            try { xhr.timeout = 90000; xhr.withCredentials = false; } catch (e) {}
             xhr.open(method, url, true);
             if (init.headers) {
               var h = init.headers;
@@ -347,6 +352,17 @@
               '__glyXhr.ontimeout = function() { self.set("ok", false); self.set("error", "xhr timeout"); self.resolve(); try { if (window.scheduleLuaPump) window.scheduleLuaPump(); } catch (e) {} }; __glyXhr.onerror = function() { self.set("ok", false); self.set("error", "xhr error");'
             );
             glyBootLog('core-native-html5 patch xhr tv timeout');
+          }
+          if (src.indexOf('__glyXhr.responseType') === -1 && src.indexOf('__glyFengariAsyncXhr') !== -1) {
+            src = src.replace(
+              '__glyXhr.open(method, url, true);',
+              '__glyXhr.open(method, url, true); try { if (method === "GET" || method === "HEAD") __glyXhr.responseType = "text"; } catch (e) {}'
+            );
+            src = src.replace(
+              'var __ok = __glyXhr.status >= 200 && __glyXhr.status < 300;',
+              'if (__glyXhr.status === 0) { self.set("ok", false); self.set("status", 0); self.set("error", "xhr status 0"); self.resolve(); try { glyBootLog("http async status 0 (rede/file?)"); if (window.scheduleLuaPump) window.scheduleLuaPump(); } catch (e) {} return; } var __ok = __glyXhr.status >= 200 && __glyXhr.status < 300;'
+            );
+            glyBootLog('core-native-html5 patch xhr responseType text');
           }
           if (src.indexOf('glyBootLog("fengari engine chunk ok")') === -1) {
             src = src.replace(
