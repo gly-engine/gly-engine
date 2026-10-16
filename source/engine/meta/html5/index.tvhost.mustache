@@ -302,6 +302,14 @@
               );
             }
           }
+          /* Fengari: fetch().then → httplua nunca retoma; XHR síncrono na mesma stack do http:run(). */
+          if (src.indexOf('__glyFengariSyncXhr') === -1 && src.indexOf('function _native_http_handler(self)') !== -1) {
+            src = src.replace(
+              /self\.promise\(\);\s*fetch\(url,/,
+              'self.promise(); /* __glyFengariSyncXhr */ if (window.GLY_USE_FENGARI || window.GLY_FORCE_FENGARI || window.GLY_BUILD_FENGARI) { try { var __glyXhr = new XMLHttpRequest(); __glyXhr.open(method, url, false); if (headers && typeof headers.forEach === "function") { headers.forEach(function(v, k) { try { __glyXhr.setRequestHeader(k, v); } catch (e) {} }); } __glyXhr.send(body != null ? body : null); var __glyOk = __glyXhr.status >= 200 && __glyXhr.status < 300; self.set("ok", __glyOk); self.set("status", __glyXhr.status); self.set("body", __glyXhr.responseText || ""); self.resolve(); try { glyBootLog("http sync " + __glyXhr.status + " bytes=" + (__glyXhr.responseText ? __glyXhr.responseText.length : 0)); } catch (e) {} } catch (__glySyncErr) { self.set("ok", false); self.set("error", "" + __glySyncErr); self.resolve(); try { glyBootLog("http sync ERR " + __glySyncErr); } catch (e) {} } return; } fetch(url,'
+            );
+            glyBootLog('core-native-html5 patch fengari sync xhr');
+          }
           if (src.indexOf('async function install6(hv, fengari)') !== -1 && src.indexOf('__glyFengariJson') === -1) {
             src = src.replace(
               /async function install6\(hv, fengari\) \{\s*if \(!hv\.vm\.fengari\) \{\s*return;\s*\}/,
