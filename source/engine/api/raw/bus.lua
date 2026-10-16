@@ -146,16 +146,6 @@ end
 local function emit_next(key, a, b, c, d, e, f)
     buses.queue[#buses.queue + 1] = {key, a, b, c, d, e, f}
 end
-
-local function drain_emit_queue(engine)
-    local index = 1
-    while index <= #buses.queue do
-        local pid = buses.queue[index]
-        emit(engine, {''}, pid[1], pid[2], pid[3], pid[4], pid[5], pid[6])
-        index = index + 1
-    end
-    buses.queue = {}
-end
 --! @endcond
 
 --! @short send unique event
@@ -202,6 +192,18 @@ local function emit(engine, prefixes, key, a, b, c, d, e, f)
     end
     must_abort = false
 end
+
+--! @cond
+local function drain_emit_queue(engine)
+    local index = 1
+    while index <= #buses.queue do
+        local pid = buses.queue[index]
+        emit(engine, {''}, pid[1], pid[2], pid[3], pid[4], pid[5], pid[6])
+        index = index + 1
+    end
+    buses.queue = {}
+end
+--! @endcond
 
 --! @decorator
 --! @short sender event function
