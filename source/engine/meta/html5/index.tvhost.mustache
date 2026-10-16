@@ -271,14 +271,19 @@
             src = src.replace(/game\.lenght/g, 'game.length');
             glyBootLog('core-native-html5 patch game.lenght→length');
           }
-          /* wasmoon: bus.emit("init", w, h, gameString) → loadgame.script(string).
-             Fengari stock: loadbuffer(game) antes do pcall — 3º arg vira chunk, load nunca roda direito. */
-          if (src.indexOf('luaL_loadbuffer(hv.vm.lua, fengari.to_luastring(game)') !== -1) {
+          /* Fengari: 3º arg do init é o chunk (loadbuffer), não string — loadgame.script(function). */
+          if (src.indexOf('lua_pushstring(hv.vm.lua, fengari.to_luastring(game != null ? game : ""))') !== -1) {
+            src = src.replace(
+              /fengari\.lua\.lua_pushstring\(hv\.vm\.lua, fengari\.to_luastring\(game != null \? game : ""\)\);\s*try \{ glyBootLog\("fengari init[^"]*"\); \} catch \(e\) \{\}/,
+              'if (fengari.lauxlib.luaL_loadbuffer(hv.vm.lua, fengari.to_luastring(game), game.length, "game") !== 0) { var __glyGameLoadErr = fengari.lua.lua_tostring(hv.vm.lua, -1); throw fengari.to_jsstring(__glyGameLoadErr || "loadbuffer game failed"); } try { glyBootLog("fengari init " + width + "x" + height + " gameLen=" + (game ? game.length : 0)); } catch (e) {}'
+            );
+            glyBootLog('core-native-html5 patch init→loadbuffer chunk');
+          } else if (src.indexOf('luaL_loadbuffer(hv.vm.lua, fengari.to_luastring(game)') !== -1) {
             src = src.replace(
               /fengari\.lauxlib\.luaL_loadbuffer\(hv\.vm\.lua,\s*fengari\.to_luastring\(game\),\s*game\.length,\s*"game"\);/,
-              'fengari.lua.lua_pushstring(hv.vm.lua, fengari.to_luastring(game != null ? game : "")); try { glyBootLog("fengari init " + width + "x" + height + " gameLen=" + (game ? game.length : 0)); } catch (e) {}'
+              'if (fengari.lauxlib.luaL_loadbuffer(hv.vm.lua, fengari.to_luastring(game), game.length, "game") !== 0) { var __glyGameLoadErr = fengari.lua.lua_tostring(hv.vm.lua, -1); throw fengari.to_jsstring(__glyGameLoadErr || "loadbuffer game failed"); } try { glyBootLog("fengari init " + width + "x" + height + " gameLen=" + (game ? game.length : 0)); } catch (e) {}'
             );
-            glyBootLog('core-native-html5 patch init→game string (loadgame)');
+            glyBootLog('core-native-html5 patch init loadbuffer+check');
           }
           if (src.indexOf('if (fengari.lua.lua_pcall(hv.vm.lua, res, 0, 0) !== 0)') !== -1) {
             src = src.replace(
