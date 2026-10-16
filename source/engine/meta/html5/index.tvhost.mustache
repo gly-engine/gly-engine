@@ -388,12 +388,22 @@
               'if (fengari.lua.lua_pcall(hv.vm.lua, params, 1, 0) !== 0) { const err = fengari.to_jsstring(fengari.lua.lua_tostring(hv.vm.lua, -1)); fengari.lua.lua_settop(hv.vm.lua, 0); try { if (typeof glyBootLog === "function") glyBootLog("__glyHttpluaLog " + key + " id=" + reqid + " " + err); } catch (e) {} throw err; }'
             );
           }
-          if (src.indexOf('define_lua_func("native_http_handler"') !== -1 && src.indexOf('__glyHttpHandlerV2') === -1) {
-            src = src.replace(
-              /define_lua_func\("native_http_handler", func => \{\s*const request_id = fengari\.lua\.lua_tonumber\(hv\.vm\.lua, 2\);\s*fengari\.lua\.lua_settop\(hv\.vm\.lua, 0\);\s*func\(\{[\s\S]*?\}\);\s*\}\);/,
-              'define_lua_func("native_http_handler", func => { const request_id = fengari.lua.lua_tonumber(hv.vm.lua, 2); try { if (typeof glyBootLog === "function") glyBootLog("http handler lua id=" + request_id); } catch (e) {} var fullUrl = httplua(request_id, "get-fullurl"); var method = httplua(request_id, "get-method"); var body = httplua(request_id, "get-body"); func({ url: fullUrl, method: method, body: body, body_content: body, param_dict: {}, header_dict: {}, set: (key, value) => httplua(request_id, "set-".concat(key), value), promise: () => httplua(request_id, "async-promise"), resolve: () => httplua(request_id, "async-resolve") }); }); /* __glyHttpHandlerV3 */'
-            );
-            glyBootLog('core-native-html5 patch http handler v3');
+          var __glyHttpHandlerV4Body = 'define_lua_func("native_http_handler", func => { var __T = fengari.lua; var __rid = __T.lua_tonumber(hv.vm.lua, 2); if (!__rid || __rid <= 0) __rid = __T.lua_tonumber(hv.vm.lua, 1); if ((!__rid || __rid <= 0) && __T.lua_type(hv.vm.lua, 1) === __T.LUA_TTABLE) { __T.lua_getfield(hv.vm.lua, 1, fengari.to_luastring("id")); __rid = __T.lua_tonumber(hv.vm.lua, -1); __T.lua_pop(hv.vm.lua, 1); } const request_id = __rid; try { if (typeof glyBootLog === "function") glyBootLog("http handler lua id=" + request_id + " top=" + __T.lua_gettop(hv.vm.lua)); } catch (e) {} var fullUrl = httplua(request_id, "get-fullurl"); var method = httplua(request_id, "get-method"); var body = httplua(request_id, "get-body"); func({ url: fullUrl, method: method, body: body, body_content: body, param_dict: {}, header_dict: {}, set: (key, value) => httplua(request_id, "set-".concat(key), value), promise: () => httplua(request_id, "async-promise"), resolve: () => httplua(request_id, "async-resolve") }); }); /* __glyHttpHandlerV4 */';
+          if (src.indexOf('define_lua_func("native_http_handler"') !== -1 && src.indexOf('__glyHttpHandlerV4') === -1) {
+            if (src.indexOf('__glyHttpHandlerV3') >= 0) {
+              src = src.replace(
+                /const request_id = fengari\.lua\.lua_tonumber\(hv\.vm\.lua, 2\); try \{ if \(typeof glyBootLog === "function"\) glyBootLog\("http handler lua id=" \+ request_id\);/,
+                'var __T = fengari.lua; var __rid = __T.lua_tonumber(hv.vm.lua, 2); if (!__rid || __rid <= 0) __rid = __T.lua_tonumber(hv.vm.lua, 1); if ((!__rid || __rid <= 0) && __T.lua_type(hv.vm.lua, 1) === __T.LUA_TTABLE) { __T.lua_getfield(hv.vm.lua, 1, fengari.to_luastring("id")); __rid = __T.lua_tonumber(hv.vm.lua, -1); __T.lua_pop(hv.vm.lua, 1); } const request_id = __rid; try { if (typeof glyBootLog === "function") glyBootLog("http handler lua id=" + request_id + " top=" + __T.lua_gettop(hv.vm.lua));'
+              );
+              src = src.replace('__glyHttpHandlerV3', '__glyHttpHandlerV4');
+              glyBootLog('core-native-html5 patch http handler v3→v4 request id');
+            } else if (src.indexOf('__glyHttpHandlerV2') === -1) {
+              src = src.replace(
+                /define_lua_func\("native_http_handler", func => \{\s*const request_id = fengari\.lua\.lua_tonumber\(hv\.vm\.lua, 2\);\s*fengari\.lua\.lua_settop\(hv\.vm\.lua, 0\);\s*func\(\{[\s\S]*?\}\);\s*\}\);/,
+                __glyHttpHandlerV4Body
+              );
+              glyBootLog('core-native-html5 patch http handler v4');
+            }
           }
           if (src.indexOf('__glyHttpHandlerV2') >= 0 && src.indexOf('__glyHttpHandlerV3') === -1) {
             src = src.replace(
