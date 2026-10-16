@@ -280,7 +280,7 @@
           if (src.indexOf('if (fengari.lua.lua_pcall(hv.vm.lua, res, 0, 0) !== 0)') !== -1) {
             src = src.replace(
               /if \(fengari\.lua\.lua_pcall\(hv\.vm\.lua, res, 0, 0\) !== 0\) \{\s*const error_message = fengari\.lua\.lua_tostring\(hv\.vm\.lua, -1\);\s*throw error_message && fengari\.to_jsstring\(error_message\) \|\| func_name;\s*\}/,
-              'if (fengari.lua.lua_pcall(hv.vm.lua, res, 0, 0) !== 0) { const error_message = fengari.lua.lua_tostring(hv.vm.lua, -1); var __glyLuaErr = error_message && fengari.to_jsstring(error_message) || func_name; try { glyBootLog("FENGARI: " + __glyLuaErr); } catch (e) {} throw __glyLuaErr; } else if (func_name === "native_callback_init") { try { window.__glyInitOk = true; glyBootLog("fengari init lua ok (load/disparado)"); if (window.scheduleLuaPump) window.scheduleLuaPump(); } catch (e) {} }'
+              'if (fengari.lua.lua_pcall(hv.vm.lua, res, 0, 0) !== 0) { const error_message = fengari.lua.lua_tostring(hv.vm.lua, -1); var __glyLuaErr = error_message && fengari.to_jsstring(error_message) || func_name; try { glyBootLog("FENGARI: " + __glyLuaErr); } catch (e) {} throw __glyLuaErr; } else if (func_name === "native_callback_init") { try { window.__glyInitOk = true; glyBootLog("fengari init lua ok"); if (window.scheduleLuaPump) window.scheduleLuaPump(); } catch (e) {} } else if (func_name === "native_callback_loop" && !window.__glyLoopLogged) { try { window.__glyLoopLogged = true; glyBootLog("fengari first loop (load/init neste tick)"); if (window.scheduleLuaPump) window.scheduleLuaPump(); } catch (e) {} }'
             );
           }
           if (src.indexOf('function _native_http_handler(self)') !== -1) {
@@ -398,6 +398,7 @@
           loadCoreSourceText(function (text) {
             try {
               var src = patchFengariCoreSource(text);
+              glyBootLog('patch flags httplua=' + (src.indexOf('__glyHttpluaLog') >= 0) + ' httpHandler=' + (src.indexOf('http handler lua id=') >= 0));
               var tag = document.getElementById('gly-core-native-script');
               if (tag && tag.parentNode) tag.parentNode.removeChild(tag);
               var s = document.createElement('script');
@@ -565,6 +566,12 @@
                 requestAnimationFrame(fengariPump);
               })();
               glyBootLog('Fengari loop pump on');
+              var kick = 0;
+              var kickId = setInterval(function () {
+                kick++;
+                window.scheduleLuaPump();
+                if (kick >= 40) clearInterval(kickId);
+              }, 50);
             }
             if (window.IS_TV) installTvKeys(gly.frontend);
           })

@@ -43,6 +43,8 @@ local engine = {
     offset_y = 0
 }
 
+local pending_game_boot = false
+
 local cfg_system = {
     exit = native_system_exit,
     reset = native_system_reset,
@@ -143,6 +145,11 @@ end
 function native_callback_loop(dt)
     std.milis = std.milis + dt
     std.delta = dt
+    if pending_game_boot then
+        pending_game_boot = false
+        std.bus.emit('load')
+        std.bus.emit('init')
+    end
     std.bus.emit('loop')
 end
 
@@ -231,8 +238,7 @@ function native_callback_init(width, height, game_lua)
     engine.dom = dom.node_begin(application, std.app.width, std.app.height, engine.dom)
     engine.root, engine.current = application, application
 
-    std.bus.emit('load')
-    std.bus.emit('init')
+    pending_game_boot = true
 end
 
 local P = {
