@@ -142,7 +142,14 @@ local function clear(tint)
     native_draw_clear(tint, x, y, width, height)
 end
 
+local function bus_ready()
+    return std and std.bus and std.bus.emit
+end
+
 function native_callback_loop(dt)
+    if not bus_ready() then
+        return
+    end
     std.milis = std.milis + dt
     std.delta = dt
     local boot_frame = false
@@ -163,12 +170,18 @@ function native_callback_loop(dt)
 end
 
 function native_callback_draw()
+    if not bus_ready() or not native_draw_start then
+        return
+    end
     native_draw_start()
     std.bus.emit('draw')
     native_draw_flush()
 end
 
 function native_callback_resize(width, height)
+    if not bus_ready() then
+        return
+    end
     engine.root.data.width = width
     engine.root.data.height = height
     std.app.width = width
@@ -177,6 +190,9 @@ function native_callback_resize(width, height)
 end
 
 function native_callback_keyboard(key, value)
+    if not bus_ready() then
+        return
+    end
     std.bus.emit('rkey', key, value)
 end
 
