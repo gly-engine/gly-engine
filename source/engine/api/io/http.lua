@@ -340,11 +340,7 @@ local function request(method, std, engine, protocol)
             end,
             -- eval
             function()
-                pcall(function()
-                    if std.log and std.log.info then
-                        std.log.info('[gly] http run ' .. tostring(self.method) .. ' ' .. tostring(self.url):sub(1, 96))
-                    end
-                end)
+                -- Log HTTP no JS (_native_http_handler glyBootLog); log Lua aqui quebrava coroutines TSTL.
                 protocol.handler(self, self.id)
             end,
             -- parsers
