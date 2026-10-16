@@ -96,13 +96,18 @@
             glyBootLog('PROMISE: ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
           });
         }
+        window.__glyHttpResume = function () {
+          try {
+            if (!window.gly || !window.gly.frontend || !window.gly.frontend.native_callback_loop) return;
+            var loop = window.gly.frontend.native_callback_loop;
+            for (var i = 0; i < 20; i++) {
+              try { loop(16); } catch (e) { break; }
+            }
+          } catch (e) {}
+        };
         window.scheduleLuaPump = function () {
           setTimeout(function () {
-            try {
-              if (window.gly && window.gly.frontend && window.gly.frontend.native_callback_loop) {
-                window.gly.frontend.native_callback_loop(16);
-              }
-            } catch (e) {}
+            try { window.__glyHttpResume(); } catch (e) {}
           }, 0);
         };
         window.scheduleFengariPump = window.scheduleLuaPump;
@@ -150,9 +155,11 @@
         }
         function glyWrapLuaPump(p) {
           return p.then(function (res) {
+            try { if (window.__glyHttpResume) window.__glyHttpResume(); } catch (e) {}
             window.scheduleLuaPump();
             return res;
           }, function (err) {
+            try { if (window.__glyHttpResume) window.__glyHttpResume(); } catch (e) {}
             window.scheduleLuaPump();
             throw err;
           });
@@ -323,11 +330,11 @@
           if (src.indexOf('self.set("body", content);') !== -1 && src.indexOf('_native_http_handler') !== -1) {
             src = src.replace(
               /self\.set\("body", content\);\s*self\.resolve\(\);/g,
-              'self.set("body", content); self.resolve(); try { if (window.scheduleLuaPump) window.scheduleLuaPump(); } catch (e) {}'
+              'self.set("body", content); self.resolve(); try { if (window.__glyHttpResume) window.__glyHttpResume(); if (window.scheduleLuaPump) window.scheduleLuaPump(); } catch (e) {}'
             );
             src = src.replace(
               /self\.set\("error", ""\.concat\(error\)\);\s*self\.resolve\(\);/g,
-              'self.set("error", "".concat(error)); self.resolve(); try { if (window.scheduleLuaPump) window.scheduleLuaPump(); } catch (e) {}'
+              'self.set("error", "".concat(error)); self.resolve(); try { if (window.__glyHttpResume) window.__glyHttpResume(); if (window.scheduleLuaPump) window.scheduleLuaPump(); } catch (e) {}'
             );
             glyBootLog('core-native-html5 patch http resolve→pump');
           }
