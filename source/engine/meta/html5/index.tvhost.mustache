@@ -83,8 +83,12 @@
           if (!bootOn) return;
           var t = new Date().toISOString().slice(11, 23);
           lines.push(t + ' ' + msg);
-          if (lines.length > 22) lines.shift();
+          var maxLines = IS_TV ? 120 : 22;
+          if (lines.length > maxLines) lines.shift();
           logEl.textContent = lines.join('\n');
+          try {
+            logEl.scrollTop = logEl.scrollHeight;
+          } catch (e) {}
           try { console.log('[gly-boot]', msg); } catch (e) {}
         };
         window.IS_TV = IS_TV;
@@ -332,6 +336,17 @@
               'self.promise(); /* __glyFengariAsyncXhr */ if (window.GLY_USE_FENGARI || window.GLY_FORCE_FENGARI || window.GLY_BUILD_FENGARI) { var __glyXhr = new XMLHttpRequest(); __glyXhr.open(method, url, true); if (headers && typeof headers.forEach === "function") { headers.forEach(function(v, k) { try { __glyXhr.setRequestHeader(k, v); } catch (e) {} }); } __glyXhr.onload = function() { try { var __ok = __glyXhr.status >= 200 && __glyXhr.status < 300; self.set("ok", __ok); self.set("status", __glyXhr.status); self.set("body", __glyXhr.responseText || ""); self.resolve(); try { glyBootLog("http async " + __glyXhr.status); if (window.scheduleLuaPump) window.scheduleLuaPump(); } catch (e) {} } catch (err) { self.set("ok", false); self.set("error", "" + err); self.resolve(); } }; __glyXhr.onerror = function() { self.set("ok", false); self.set("error", "xhr error"); self.resolve(); try { if (window.scheduleLuaPump) window.scheduleLuaPump(); } catch (e) {} }; try { __glyXhr.send(body != null ? body : null); } catch (sendErr) { self.set("error", "" + sendErr); self.resolve(); } return; } fetch(url,'
             );
             glyBootLog('core-native-html5 patch fengari async xhr');
+          }
+          if (src.indexOf('__glyXhr.timeout') === -1 && src.indexOf('__glyFengariAsyncXhr') !== -1) {
+            src = src.replace(
+              'var __glyXhr = new XMLHttpRequest(); __glyXhr.open(method, url, true);',
+              'var __glyXhr = new XMLHttpRequest(); try { __glyXhr.timeout = 90000; __glyXhr.withCredentials = false; } catch (e) {} __glyXhr.open(method, url, true);'
+            );
+            src = src.replace(
+              '__glyXhr.onerror = function() { self.set("ok", false); self.set("error", "xhr error");',
+              '__glyXhr.ontimeout = function() { self.set("ok", false); self.set("error", "xhr timeout"); self.resolve(); try { if (window.scheduleLuaPump) window.scheduleLuaPump(); } catch (e) {} }; __glyXhr.onerror = function() { self.set("ok", false); self.set("error", "xhr error");'
+            );
+            glyBootLog('core-native-html5 patch xhr tv timeout');
           }
           if (src.indexOf('glyBootLog("fengari engine chunk ok")') === -1) {
             src = src.replace(
