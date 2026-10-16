@@ -48,6 +48,22 @@ local pending_game_boot = false
 --- HTML5 bus apps (fellow/acai): root callbacks live on application.callbacks, not node JSX bus.
 local APP_BUS_EVENTS = { 'load', 'init', 'loop', 'draw', 'key', 'exit', 'resize', 'i18n' }
 
+local function invoke_app_callback(name)
+    if not application or not application.callbacks then
+        return
+    end
+    local fn = application.callbacks[name]
+    if type(fn) ~= 'function' then
+        return
+    end
+    if std.log and std.log.info then
+        std.log.info('[gly] app ' .. name)
+    end
+    xpcall(function()
+        fn(application.data, std)
+    end, engine.handler)
+end
+
 local function wire_application_callbacks(application, std)
     if not application or not application.callbacks or not std.bus or not std.bus.listen then
         return
@@ -175,11 +191,11 @@ function native_callback_loop(dt)
         pending_game_boot = false
         boot_frame = true
         if std.log and std.log.info then
-            std.log.info('[gly] boot queue load+init (pre_loop drain)')
+            std.log.info('[gly] boot app load+init')
         end
-        -- Igual love/ginga: load/init na fila; pre_loop (início de emit loop) drena antes do loop.
-        std.bus.emit_next('load')
-        std.bus.emit_next('init')
+        -- Fellow/acai: callbacks na application (nao so node JSX); chamar direto no 1o frame.
+        invoke_app_callback('load')
+        invoke_app_callback('init')
     end
     if std.bus.drain_emit_queue then
         std.bus.drain_emit_queue()
