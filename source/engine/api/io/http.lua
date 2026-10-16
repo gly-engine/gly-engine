@@ -257,7 +257,11 @@ local function websocket_request(std, engine, protocol)
                 engine.http[self.id] = self
             end,
             function()
-                protocol.handler(self, self.id)
+                if not self.id then
+                    self.id = nextId()
+                    engine.http[self.id] = self
+                end
+                protocol.handler(self)
             end,
             function()
                 publish_response(self, std)
@@ -340,8 +344,14 @@ local function request(method, std, engine, protocol)
             end,
             -- eval
             function()
-                -- Log HTTP no JS (_native_http_handler glyBootLog); log Lua aqui quebrava coroutines TSTL.
-                protocol.handler(self, self.id)
+                if not self.id then
+                    self.id = nextId()
+                    engine.http[self.id] = self
+                    if protocol.force and not self.options['noforce'] then
+                        self.url = url:gsub("^[^:]+://", protocol.force.."://")
+                    end
+                end
+                protocol.handler(self)
             end,
             -- parsers
             function()
