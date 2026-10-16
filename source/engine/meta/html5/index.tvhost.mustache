@@ -391,9 +391,17 @@
           if (src.indexOf('define_lua_func("native_http_handler"') !== -1 && src.indexOf('__glyHttpHandlerV2') === -1) {
             src = src.replace(
               /define_lua_func\("native_http_handler", func => \{\s*const request_id = fengari\.lua\.lua_tonumber\(hv\.vm\.lua, 2\);\s*fengari\.lua\.lua_settop\(hv\.vm\.lua, 0\);\s*func\(\{[\s\S]*?\}\);\s*\}\);/,
-              'define_lua_func("native_http_handler", func => { const request_id = fengari.lua.lua_tonumber(hv.vm.lua, 2); try { if (typeof glyBootLog === "function") glyBootLog("http handler lua id=" + request_id); } catch (e) {} var fullUrl = httplua(request_id, "get-fullurl"); var method = httplua(request_id, "get-method"); var body = httplua(request_id, "get-body"); fengari.lua.lua_settop(hv.vm.lua, 0); func({ url: fullUrl, method: method, body: body, body_content: body, param_dict: {}, header_dict: {}, set: (key, value) => httplua(request_id, "set-".concat(key), value), promise: () => httplua(request_id, "async-promise"), resolve: () => httplua(request_id, "async-resolve") }); }); /* __glyHttpHandlerV2 */'
+              'define_lua_func("native_http_handler", func => { const request_id = fengari.lua.lua_tonumber(hv.vm.lua, 2); try { if (typeof glyBootLog === "function") glyBootLog("http handler lua id=" + request_id); } catch (e) {} var fullUrl = httplua(request_id, "get-fullurl"); var method = httplua(request_id, "get-method"); var body = httplua(request_id, "get-body"); func({ url: fullUrl, method: method, body: body, body_content: body, param_dict: {}, header_dict: {}, set: (key, value) => httplua(request_id, "set-".concat(key), value), promise: () => httplua(request_id, "async-promise"), resolve: () => httplua(request_id, "async-resolve") }); }); /* __glyHttpHandlerV3 */'
             );
-            glyBootLog('core-native-html5 patch http handler v2');
+            glyBootLog('core-native-html5 patch http handler v3');
+          }
+          if (src.indexOf('__glyHttpHandlerV2') >= 0 && src.indexOf('__glyHttpHandlerV3') === -1) {
+            src = src.replace(
+              'var body = httplua(request_id, "get-body"); fengari.lua.lua_settop(hv.vm.lua, 0); func({',
+              'var body = httplua(request_id, "get-body"); func({'
+            );
+            src = src.replace('__glyHttpHandlerV2', '__glyHttpHandlerV3');
+            glyBootLog('core-native-html5 patch http handler v2→v3 no settop');
           }
           if (src.indexOf('define_lua_func("native_log_info"') !== -1 && src.indexOf('__glyLogToBoot') === -1) {
             src = src.replace(
