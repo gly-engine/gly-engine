@@ -145,15 +145,21 @@ end
 function native_callback_loop(dt)
     std.milis = std.milis + dt
     std.delta = dt
+    local boot_frame = false
     if pending_game_boot then
         pending_game_boot = false
+        boot_frame = true
         if std.log and std.log.info then
-            std.log.info('[gly] boot load+init (first loop)')
+            std.log.info('[gly] boot queue load+init (pre_loop drain)')
         end
-        std.bus.emit('load')
-        std.bus.emit('init')
+        -- Igual love/ginga: load/init na fila; pre_loop (início de emit loop) drena antes do loop.
+        std.bus.emit_next('load')
+        std.bus.emit_next('init')
     end
     std.bus.emit('loop')
+    if boot_frame and std.log and std.log.info then
+        std.log.info('[gly] boot frame loop done')
+    end
 end
 
 function native_callback_draw()
