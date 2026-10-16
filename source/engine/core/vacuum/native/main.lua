@@ -196,6 +196,8 @@ function native_callback_loop(dt)
         -- Fellow/acai: callbacks na application (nao so node JSX); chamar direto no 1o frame.
         invoke_app_callback('load')
         invoke_app_callback('init')
+        -- key.lua: emit 'key' só se keyboard_lock (antes só no bus 'load'; Fellow não emite bus 'load').
+        engine.keyboard_lock = true
         if std.bus.drain_emit_queue then
             std.bus.drain_emit_queue()
         end
