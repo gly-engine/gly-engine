@@ -231,8 +231,8 @@ function native_callback_init(width, height, game_lua)
     engine.dom = dom.node_begin(application, std.app.width, std.app.height, engine.dom)
     engine.root, engine.current = application, application
 
-    std.bus.emit_next('load')
-    std.bus.emit_next('init')
+    std.bus.emit('load')
+    std.bus.emit('init')
 end
 
 local P = {

@@ -283,6 +283,18 @@
               'if (fengari.lua.lua_pcall(hv.vm.lua, res, 0, 0) !== 0) { const error_message = fengari.lua.lua_tostring(hv.vm.lua, -1); var __glyLuaErr = error_message && fengari.to_jsstring(error_message) || func_name; try { glyBootLog("FENGARI: " + __glyLuaErr); } catch (e) {} throw __glyLuaErr; } else if (func_name === "native_callback_init") { try { window.__glyInitOk = true; glyBootLog("fengari init lua ok (load/disparado)"); if (window.scheduleLuaPump) window.scheduleLuaPump(); } catch (e) {} }'
             );
           }
+          if (src.indexOf('function _native_http_handler(self)') !== -1) {
+            src = src.replace(
+              'function _native_http_handler(self) {',
+              'function _native_http_handler(self) { try { glyBootLog("http " + (self.method || "GET") + " " + String(self.url || "").split("?")[0].slice(-56)); } catch (e) {}'
+            );
+          }
+          if (src.indexOf('async function install6(hv, fengari)') !== -1 && src.indexOf('__glyFengariJson') === -1) {
+            src = src.replace(
+              /async function install6\(hv, fengari\) \{\s*if \(!hv\.vm\.fengari\) \{\s*return;\s*\}/,
+              'async function install6(hv, fengari) {\n  if (!hv.vm.fengari) {\n    return;\n  }\n  function __glyFengariJson() {\n    var f = hv.vm.fengari, L = hv.vm.lua;\n    f.lua.lua_pushcfunction(L, function(l) {\n      var s = f.to_jsstring(f.lua.lua_tostring(l, 1));\n      var o = JSON.parse(s);\n      f.lua.lua_pushstring(l, f.to_luastring(typeof o === "string" ? o : JSON.stringify(o)));\n      return 1;\n    });\n    f.lua.lua_setglobal(L, f.to_luastring("native_json_decode"));\n    f.lua.lua_pushcfunction(L, function(l) {\n      var s = f.to_jsstring(f.lua.lua_tostring(l, 1));\n      var o = JSON.parse(s);\n      f.lua.lua_pushstring(l, f.to_luastring(JSON.stringify(o)));\n      return 1;\n    });\n    f.lua.lua_setglobal(L, f.to_luastring("native_json_encode"));\n  }\n  __glyFengariJson();\n  try { glyBootLog("fengari native_json_* ok"); } catch (e) {}'
+            );
+          }
           if (src.indexOf('self.set("body", content);') !== -1 && src.indexOf('_native_http_handler') !== -1) {
             src = src.replace(
               /self\.set\("body", content\);\s*self\.resolve\(\);/g,
