@@ -196,6 +196,12 @@ function native_callback_loop(dt)
         -- Fellow/acai: callbacks na application (nao so node JSX); chamar direto no 1o frame.
         invoke_app_callback('load')
         invoke_app_callback('init')
+        if std.bus.drain_emit_queue then
+            std.bus.drain_emit_queue()
+        end
+        if _G.__gly_schedule_pump then
+            pcall(_G.__gly_schedule_pump)
+        end
     end
     if std.bus.drain_emit_queue then
         std.bus.drain_emit_queue()
