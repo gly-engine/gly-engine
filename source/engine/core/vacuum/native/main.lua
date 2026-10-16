@@ -147,6 +147,9 @@ function native_callback_loop(dt)
     std.delta = dt
     if pending_game_boot then
         pending_game_boot = false
+        if std.log and std.log.info then
+            std.log.info('[gly] boot load+init (first loop)')
+        end
         std.bus.emit('load')
         std.bus.emit('init')
     end
