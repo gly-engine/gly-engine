@@ -541,14 +541,23 @@
           src = src.replace(/end \/\* __glyFengariAsyncPump \*\//g, 'end -- __glyFengariAsyncPump');
           glyBootLog('game patch AsyncAwaiter comment fix');
         }
-        if (src.indexOf('__glyFengariAsyncPump') >= 0) return src;
+        if (src.indexOf('__glyFengariAsyncPump') >= 0 && src.indexOf('__glyPromisePump') >= 0) return src;
         var needle = 'function fulfilled(self, value)\nlocal success, resultOrError = coresume(asyncCoroutine, value)';
-        if (src.indexOf(needle) === -1) return src;
-        glyBootLog('game patch AsyncAwaiter→pump');
-        return src.replace(
-          needle,
-          needle + '\nif type(_G.__gly_schedule_pump) == "function" then pcall(_G.__gly_schedule_pump) end -- __glyFengariAsyncPump'
-        );
+        if (src.indexOf(needle) !== -1) {
+          glyBootLog('game patch AsyncAwaiter→pump');
+          src = src.replace(
+            needle,
+            needle + '\nif type(_G.__gly_schedule_pump) == "function" then pcall(_G.__gly_schedule_pump) end -- __glyFengariAsyncPump'
+          );
+        }
+        if (src.indexOf('__glyPromisePump') === -1 && src.indexOf('function __TS__Promise.prototype.invokeCallbacks') !== -1) {
+          src = src.replace(
+            'return callbacks[callbacksLength](callbacks, value)',
+            'local __glyPromiseRet = callbacks[callbacksLength](callbacks, value)\nif type(_G.__gly_schedule_pump) == "function" then pcall(_G.__gly_schedule_pump) end\nreturn __glyPromiseRet -- __glyPromisePump'
+          );
+          glyBootLog('game patch Promise invokeCallbacks→pump');
+        }
+        return src;
       }
 
       var TV_KEYS = [

@@ -163,6 +163,9 @@ function native_callback_loop(dt)
         std.bus.emit_next('load')
         std.bus.emit_next('init')
     end
+    if std.bus.drain_emit_queue then
+        std.bus.drain_emit_queue()
+    end
     std.bus.emit('loop')
     if std.bus.drain_emit_queue then
         std.bus.drain_emit_queue()
