@@ -288,11 +288,33 @@
               'function _native_http_handler(self) {',
               'function _native_http_handler(self) { try { glyBootLog("http " + (self.method || "GET") + " " + String(self.url || "").split("?")[0].slice(-56)); } catch (e) {}'
             );
+            if (src.indexOf('self.body_content != null ? self.body_content : self.body') === -1) {
+              src = src.replace(
+                'const body = ["HEAD", "GET"].includes(method) ? null : self.body_content;',
+                'const body = ["HEAD", "GET"].includes(method) ? null : (self.body_content != null ? self.body_content : self.body);'
+              );
+            }
           }
           if (src.indexOf('async function install6(hv, fengari)') !== -1 && src.indexOf('__glyFengariJson') === -1) {
             src = src.replace(
               /async function install6\(hv, fengari\) \{\s*if \(!hv\.vm\.fengari\) \{\s*return;\s*\}/,
-              'async function install6(hv, fengari) {\n  if (!hv.vm.fengari) {\n    return;\n  }\n  function __glyFengariJson() {\n    var f = hv.vm.fengari, L = hv.vm.lua;\n    f.lua.lua_pushcfunction(L, function(l) {\n      var s = f.to_jsstring(f.lua.lua_tostring(l, 1));\n      var o = JSON.parse(s);\n      f.lua.lua_pushstring(l, f.to_luastring(typeof o === "string" ? o : JSON.stringify(o)));\n      return 1;\n    });\n    f.lua.lua_setglobal(L, f.to_luastring("native_json_decode"));\n    f.lua.lua_pushcfunction(L, function(l) {\n      var s = f.to_jsstring(f.lua.lua_tostring(l, 1));\n      var o = JSON.parse(s);\n      f.lua.lua_pushstring(l, f.to_luastring(JSON.stringify(o)));\n      return 1;\n    });\n    f.lua.lua_setglobal(L, f.to_luastring("native_json_encode"));\n  }\n  __glyFengariJson();\n  try { glyBootLog("fengari native_json_* ok"); } catch (e) {}'
+              'async function install6(hv, fengari) {\n  if (!hv.vm.fengari) {\n    return;\n  }\n  function __glyFengariJson() {\n    var f = hv.vm.fengari, T = f.lua;\n    function jsToLua(L, v) {\n      if (v === null || v === undefined) { T.lua_pushnil(L); return; }\n      var ty = typeof v;\n      if (ty === "boolean") { T.lua_pushboolean(L, v); return; }\n      if (ty === "number") { T.lua_pushnumber(L, v); return; }\n      if (ty === "string") { T.lua_pushstring(L, f.to_luastring(v)); return; }\n      if (Array.isArray(v)) {\n        T.lua_createtable(L, v.length, 0);\n        for (var i = 0; i < v.length; i++) { jsToLua(L, v[i]); T.lua_rawseti(L, -2, i + 1); }\n        return;\n      }\n      T.lua_createtable(L, 0, 0);\n      for (var k in v) {\n        if (Object.prototype.hasOwnProperty.call(v, k)) {\n          T.lua_pushstring(L, f.to_luastring(k)); jsToLua(L, v[k]); T.lua_settable(L, -3);\n        }\n      }\n    }\n    function luaToJs(L, idx) {\n      var t = T.lua_type(L, idx);\n      if (t === T.LUA_TNIL || t === T.LUA_TNONE) return null;\n      if (t === T.LUA_TBOOLEAN) return T.lua_toboolean(L, idx);\n      if (t === T.LUA_TNUMBER) return T.lua_tonumber(L, idx);\n      if (t === T.LUA_TSTRING) return f.to_jsstring(T.lua_tostring(L, idx));\n      if (t !== T.LUA_TTABLE) return null;\n      var abs = idx < 0 ? T.lua_gettop(L) + idx + 1 : idx;\n      var arr = [], obj = {}, n = 0, isArr = true;\n      T.lua_pushnil(L);\n      while (T.lua_next(L, abs) !== 0) {\n        var kt = T.lua_type(L, -2);\n        var key = kt === T.LUA_TNUMBER ? T.lua_tonumber(L, -2) : f.to_jsstring(T.lua_tostring(L, -2));\n        var val = luaToJs(L, -1);\n        T.lua_pop(L, 1);\n        if (typeof key === "number" && key === n + 1) { arr.push(val); n++; } else { isArr = false; obj[key] = val; }\n      }\n      return isArr && n > 0 ? arr : (isArr ? arr : obj);\n    }\n    T.lua_pushcfunction(hv.vm.lua, function(L) {\n      var s = f.to_jsstring(T.lua_tostring(L, 1));\n      jsToLua(L, JSON.parse(s));\n      return 1;\n    });\n    T.lua_setglobal(hv.vm.lua, f.to_luastring("native_json_decode"));\n    T.lua_pushcfunction(hv.vm.lua, function(L) {\n      var o = luaToJs(L, 1);\n      T.lua_pushstring(L, f.to_luastring(JSON.stringify(o)));\n      return 1;\n    });\n    T.lua_setglobal(hv.vm.lua, f.to_luastring("native_json_encode"));\n  }\n  __glyFengariJson();\n  try { glyBootLog("fengari native_json_* ok"); } catch (e) {}'
+            );
+          }
+          if (src.indexOf('const httplua = (reqid, key, data) =>') !== -1 && src.indexOf('__glyHttpluaLog') === -1) {
+            src = src.replace(
+              /if \(fengari\.lua\.lua_pcall\(hv\.vm\.lua, params, 1, 0\) !== 0\) \{\s*const err = fengari\.to_jsstring\(fengari\.lua\.lua_tostring\(hv\.vm\.lua, -1\)\);\s*fengari\.lua\.lua_settop\(hv\.vm\.lua, 0\);\s*throw err;\s*\}/,
+              'if (fengari.lua.lua_pcall(hv.vm.lua, params, 1, 0) !== 0) { const err = fengari.to_jsstring(fengari.lua.lua_tostring(hv.vm.lua, -1)); fengari.lua.lua_settop(hv.vm.lua, 0); try { if (typeof glyBootLog === "function") glyBootLog("__glyHttpluaLog " + key + " id=" + reqid + " " + err); } catch (e) {} throw err; }'
+            );
+          }
+          if (src.indexOf('define_lua_func("native_http_handler"') !== -1 && src.indexOf('http handler lua id=') === -1) {
+            src = src.replace(
+              /define_lua_func\("native_http_handler", func => \{\s*const request_id = fengari\.lua\.lua_tonumber\(hv\.vm\.lua, 2\);\s*fengari\.lua\.lua_settop\(hv\.vm\.lua, 0\);\s*func\(\{/,
+              'define_lua_func("native_http_handler", func => { const request_id = fengari.lua.lua_tonumber(hv.vm.lua, 2); fengari.lua.lua_settop(hv.vm.lua, 0); try { if (typeof glyBootLog === "function") glyBootLog("http handler lua id=" + request_id); } catch (e) {} func({'
+            );
+            src = src.replace(
+              /body: httplua\(request_id, "get-body"\),\s*url: httplua\(request_id, "get-fullurl"\)/,
+              'body: httplua(request_id, "get-body"), body_content: httplua(request_id, "get-body"), url: httplua(request_id, "get-fullurl")'
             );
           }
           if (src.indexOf('self.set("body", content);') !== -1 && src.indexOf('_native_http_handler') !== -1) {
