@@ -398,7 +398,7 @@
           if (src.indexOf('define_lua_func("native_log_info"') !== -1 && src.indexOf('__glyLogToBoot') === -1) {
             src = src.replace(
               /define_lua_func\("native_log_info", func => \{\s*func\(fengari\.to_jsstring\(fengari\.lua\.lua_tostring\(hv\.vm\.lua, 1\)\)\);\s*\}\);/,
-              'define_lua_func("native_log_info", func => { var msg = fengari.to_jsstring(fengari.lua.lua_tostring(hv.vm.lua, 1)); fengari.lua.lua_settop(hv.vm.lua, 0); try { if (typeof glyBootLog === "function" && window.GLY_BOOT_ON && msg.indexOf("[gly]") >= 0) glyBootLog(msg); } catch (e) {} func(msg); }); /* __glyLogToBoot */'
+              'define_lua_func("native_log_info", func => { var msg = fengari.to_jsstring(fengari.lua.lua_tostring(hv.vm.lua, 1)); try { if (typeof glyBootLog === "function" && window.GLY_BOOT_ON && msg.indexOf("[gly]") >= 0) glyBootLog(msg); } catch (e) {} func(msg); return 0; }); /* __glyLogToBoot — never lua_settop(0): breaks TSTL coroutines in mount */'
             );
           }
           if (src.indexOf('self.set("body", content);') !== -1 && src.indexOf('_native_http_handler') !== -1) {
