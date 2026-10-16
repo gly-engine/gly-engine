@@ -58,7 +58,8 @@ local callbacks = {
         self.set('headers', data or {})
     end,
     ['add-body-data'] = function(self, data, std)
-        self.set('body', (std.http.body or '')..data)
+        local prev = (self._response and self._response.body) or ''
+        self.set('body', prev .. data)
     end,
     ['sock-event'] = function(self, data)
         for _, h in ipairs(self.handlers[data] or {}) do h() end

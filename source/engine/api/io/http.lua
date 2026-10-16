@@ -3,6 +3,27 @@ local create_counter = require('source/shared/functional/counter')
 
 local nextId, clearId = create_counter()
 
+--- Per-request response bag (std.http is shared; parallel async requests must not clobber it).
+local function clear_std_http(std)
+    std.http.ok = nil
+    std.http.body = nil
+    std.http.error = nil
+    std.http.status = nil
+    std.http.body_is_table = nil
+    std.http.headers = nil
+end
+
+local function publish_response(self, std)
+    clear_std_http(std)
+    for k, v in pairs(self._response) do
+        std.http[k] = v
+    end
+end
+
+local function response_set(self, key, value)
+    self._response[key] = value
+end
+
 --! @defgroup std
 --! @{
 --! @defgroup http
@@ -205,6 +226,7 @@ local function websocket_request(std, engine, protocol)
             param_list = {},
             param_dict = {},
             handlers = {},
+            _response = {},
             -- functions
             on = on,
             off = off,
@@ -222,7 +244,7 @@ local function websocket_request(std, engine, protocol)
         end
         
         self.set = function (key, value)
-            std.http[key] = value
+            response_set(self, key, value)
         end
 
         self:on('disconnect', function()
@@ -238,11 +260,13 @@ local function websocket_request(std, engine, protocol)
                 protocol.handler(self, self.id)
             end,
             function()
+                publish_response(self, std)
                 if std.http.ok then
                     local sock = websocket_create(self, engine, protocol)
                     for _, h in ipairs(self.handlers.open or {}) do h(sock) end
                 else
-                    if not std.http.error then self.set('error', 'core not upgrade to ws') end
+                    if not self._response.error then self.set('error', 'core not upgrade to ws') end
+                    publish_response(self, std)
                     for _, h in ipairs(self.handlers.error or {}) do h(std.http.error) end
                     engine.http[self.id] = nil
                     clearId(self.id)
@@ -250,8 +274,7 @@ local function websocket_request(std, engine, protocol)
                 end
             end,
             function()
-                std.http.ok = nil
-                std.http.error = nil
+                clear_std_http(std)
                 zeebo_pipeline.reset(self)
             end
         }
@@ -280,6 +303,7 @@ local function request(method, std, engine, protocol)
             success_handler = function (std, game) end,
             failed_handler = function (std, game) end,
             error_handler = function (std, game) end,
+            _response = {},
             -- functions
             fast = fast,
             json = json,
@@ -302,7 +326,7 @@ local function request(method, std, engine, protocol)
         end
 
         self.set = function (key, value)
-            std.http[key] = value
+            response_set(self, key, value)
         end
 
         self.pipeline = {
@@ -323,10 +347,10 @@ local function request(method, std, engine, protocol)
             end,
             -- parsers
             function()
-                if self.options['json'] and json_decode and std.http.body then
+                if self.options['json'] and json_decode and self._response.body then
                     local ok, err = pcall(function()
-                        local new_body = json_decode(std.http.body)
-                        std.http.body = new_body
+                        local new_body = json_decode(self._response.body)
+                        self._response.body = new_body
                     end)
                     if not ok then
                         self.set('ok', false)
@@ -335,20 +359,21 @@ local function request(method, std, engine, protocol)
                 end
 
                 local lower_header = {}
-                for k, v in pairs(std.http.headers or {}) do
+                for k, v in pairs(self._response.headers or {}) do
                     lower_header[string.lower(k)] = v
                 end
-                std.http.headers = lower_header
+                self._response.headers = lower_header
             end,
             -- callbacks
             function()
-                -- local handlers
+                publish_response(self, std)
                 if std.http.ok then
                     self.success_handler(std, game)
                 elseif std.http.error then
                     self.error_handler(std, game)
                 elseif not std.http.status then
                     self.set('error', 'missing protocol response')
+                    publish_response(self, std)
                     self.error_handler(std, game)
                 else
                     self.failed_handler(std, game)
@@ -356,11 +381,7 @@ local function request(method, std, engine, protocol)
             end,
             -- clean http
             function ()
-                std.http.ok = nil
-                std.http.body = nil
-                std.http.error = nil
-                std.http.status = nil
-                std.http.body_is_table = nil
+                clear_std_http(std)
             end,
             -- reset request
             function()
