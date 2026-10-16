@@ -45,6 +45,24 @@ local engine = {
 
 local pending_game_boot = false
 
+--- HTML5 bus apps (fellow/acai): root callbacks live on application.callbacks, not node JSX bus.
+local APP_BUS_EVENTS = { 'load', 'init', 'loop', 'draw', 'key', 'exit', 'resize', 'i18n' }
+
+local function wire_application_callbacks(application, std)
+    if not application or not application.callbacks or not std.bus or not std.bus.listen then
+        return
+    end
+    for index = 1, #APP_BUS_EVENTS do
+        local name = APP_BUS_EVENTS[index]
+        local fn = application.callbacks[name]
+        if type(fn) == 'function' then
+            std.bus.listen(name, function(a, b, c, d, e, f)
+                fn(application.data, std, a, b, c, d, e, f)
+            end)
+        end
+    end
+end
+
 local cfg_system = {
     exit = native_system_exit,
     reset = native_system_reset,
@@ -273,6 +291,8 @@ function native_callback_init(width, height, game_lua)
 
     engine.dom = dom.node_begin(application, std.app.width, std.app.height, engine.dom)
     engine.root, engine.current = application, application
+
+    wire_application_callbacks(application, std)
 
     pending_game_boot = true
 end
