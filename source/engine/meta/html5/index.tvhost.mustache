@@ -268,26 +268,31 @@
             src = src.replace(/game\.lenght/g, 'game.length');
             glyBootLog('core-native-html5 patch game.lenght→length');
           }
-          if (src.indexOf('define_lua_callback("native_callback_init"') !== -1) {
+          /* wasmoon: bus.emit("init", w, h, gameString) → loadgame.script(string).
+             Fengari stock: loadbuffer(game) antes do pcall — 3º arg vira chunk, load nunca roda direito. */
+          if (src.indexOf('luaL_loadbuffer(hv.vm.lua, fengari.to_luastring(game)') !== -1) {
             src = src.replace(
-              'define_lua_callback("native_callback_init", (width, height, game) => {',
-              'define_lua_callback("native_callback_init", (width, height, game) => { try { glyBootLog("fengari init " + width + "x" + height + " gameLen=" + (game ? game.length : 0)); } catch (e) {}'
+              /fengari\.lauxlib\.luaL_loadbuffer\(hv\.vm\.lua,\s*fengari\.to_luastring\(game\),\s*game\.length,\s*"game"\);/,
+              'fengari.lua.lua_pushstring(hv.vm.lua, fengari.to_luastring(game != null ? game : "")); try { glyBootLog("fengari init " + width + "x" + height + " gameLen=" + (game ? game.length : 0)); } catch (e) {}'
             );
+            glyBootLog('core-native-html5 patch init→game string (loadgame)');
+          }
+          if (src.indexOf('if (fengari.lua.lua_pcall(hv.vm.lua, res, 0, 0) !== 0)') !== -1) {
             src = src.replace(
-              /define_lua_callback\("native_callback_init",[\s\S]*?return 3;\s*\}\);/,
-              function (block) {
-                return block.replace(
-                  'return 3;',
-                  'try { window.__glyInitOk = true; if (window.scheduleLuaPump) window.scheduleLuaPump(); } catch (e) {} return 3;'
-                );
-              }
+              /if \(fengari\.lua\.lua_pcall\(hv\.vm\.lua, res, 0, 0\) !== 0\) \{\s*const error_message = fengari\.lua\.lua_tostring\(hv\.vm\.lua, -1\);\s*throw error_message && fengari\.to_jsstring\(error_message\) \|\| func_name;\s*\}/,
+              'if (fengari.lua.lua_pcall(hv.vm.lua, res, 0, 0) !== 0) { const error_message = fengari.lua.lua_tostring(hv.vm.lua, -1); var __glyLuaErr = error_message && fengari.to_jsstring(error_message) || func_name; try { glyBootLog("FENGARI: " + __glyLuaErr); } catch (e) {} throw __glyLuaErr; } else if (func_name === "native_callback_init") { try { window.__glyInitOk = true; glyBootLog("fengari init lua ok (load/disparado)"); if (window.scheduleLuaPump) window.scheduleLuaPump(); } catch (e) {} }'
             );
           }
-          if (src.indexOf('throw error_message && fengari.to_jsstring(error_message) || func_name') !== -1) {
+          if (src.indexOf('self.set("body", content);') !== -1 && src.indexOf('_native_http_handler') !== -1) {
             src = src.replace(
-              /throw error_message && fengari\.to_jsstring\(error_message\) \|\| func_name;/g,
-              'var __glyLuaErr = error_message && fengari.to_jsstring(error_message) || func_name; try { glyBootLog("FENGARI: " + __glyLuaErr); } catch (e) {} throw __glyLuaErr;'
+              /self\.set\("body", content\);\s*self\.resolve\(\);/g,
+              'self.set("body", content); self.resolve(); try { if (window.scheduleLuaPump) window.scheduleLuaPump(); } catch (e) {}'
             );
+            src = src.replace(
+              /self\.set\("error", ""\.concat\(error\)\);\s*self\.resolve\(\);/g,
+              'self.set("error", "".concat(error)); self.resolve(); try { if (window.scheduleLuaPump) window.scheduleLuaPump(); } catch (e) {}'
+            );
+            glyBootLog('core-native-html5 patch http resolve→pump');
           }
           return src;
         }
