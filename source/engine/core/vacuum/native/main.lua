@@ -164,6 +164,9 @@ function native_callback_loop(dt)
         std.bus.emit_next('init')
     end
     std.bus.emit('loop')
+    if std.bus.drain_emit_queue then
+        std.bus.drain_emit_queue()
+    end
     if boot_frame and std.log and std.log.info then
         std.log.info('[gly] boot frame loop done')
     end

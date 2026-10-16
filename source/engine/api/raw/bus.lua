@@ -146,6 +146,16 @@ end
 local function emit_next(key, a, b, c, d, e, f)
     buses.queue[#buses.queue + 1] = {key, a, b, c, d, e, f}
 end
+
+local function drain_emit_queue(engine)
+    local index = 1
+    while index <= #buses.queue do
+        local pid = buses.queue[index]
+        emit(engine, {''}, pid[1], pid[2], pid[3], pid[4], pid[5], pid[6])
+        index = index + 1
+    end
+    buses.queue = {}
+end
 --! @endcond
 
 --! @short send unique event
@@ -274,14 +284,12 @@ local function install(std, engine)
     end
 
     listen('pre_loop', function()
-        local index = 1
-        while index <= #buses.queue do
-            local pid = buses.queue[index]
-            emit(engine, {''}, pid[1], pid[2], pid[3], pid[4], pid[5], pid[6])
-            index = index + 1
-        end
-        buses.queue = {}
+        drain_emit_queue(engine)
     end)
+
+    std.bus.drain_emit_queue = function()
+        drain_emit_queue(engine)
+    end
 
     return {
         bus=std.bus
