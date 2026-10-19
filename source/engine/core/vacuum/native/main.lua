@@ -56,9 +56,6 @@ local function invoke_app_callback(name)
     if type(fn) ~= 'function' then
         return
     end
-    if std.log and std.log.info then
-        std.log.info('[gly] app ' .. name)
-    end
     xpcall(function()
         fn(application.data, std)
     end, engine.handler)
@@ -190,9 +187,6 @@ function native_callback_loop(dt)
     if pending_game_boot then
         pending_game_boot = false
         boot_frame = true
-        if std.log and std.log.info then
-            std.log.info('[gly] boot app load+init')
-        end
         -- Fellow/acai: callbacks na application (nao so node JSX); chamar direto no 1o frame.
         invoke_app_callback('load')
         invoke_app_callback('init')
@@ -215,9 +209,6 @@ function native_callback_loop(dt)
     if boot_frame then
         if _G.__gly_schedule_pump then
             pcall(_G.__gly_schedule_pump)
-        end
-        if std.log and std.log.info then
-            std.log.info('[gly] boot frame loop done')
         end
     end
 end

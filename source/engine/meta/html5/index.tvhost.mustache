@@ -100,11 +100,6 @@
           document.head.appendChild(tvFit);
         }
         if (bootOn) {
-          glyBootLog('boot ua=' + navigator.userAgent.slice(0, 96));
-          glyBootLog('protocol=' + location.protocol);
-          if (location.protocol === 'file:') {
-            glyBootLog('TV file:// — se xhr falhar, sirva dist/ via http:// (LAN)');
-          }
           window.addEventListener('error', function (e) { glyBootLog('ERROR: ' + (e.message || e)); });
           window.addEventListener('unhandledrejection', function (e) {
             glyBootLog('PROMISE: ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
@@ -182,14 +177,9 @@
           var a = document.createElement('a');
           a.href = url;
           if (a.protocol === 'file:') {
-            if (bootOn) glyBootLog('fetch file:// blocked (engine/game=index.js; assets≠fetch)');
             return Promise.reject(new TypeError('fetch file:// not supported'));
           }
-          if (bootOn && url.indexOf('cloud.zedia.tv') !== -1) glyBootLog('fetch ' + url.split('?')[0].slice(-48));
           if (glyTvFileOrigin()) {
-            if (bootOn && (url.indexOf('.wasm') !== -1 || url.indexOf('cloud.zedia.tv') !== -1)) {
-              glyBootLog('fetch xhr ' + url.split('/').pop().slice(0, 40));
-            }
             return glyWrapLuaPump(glyFetchViaXhr(a.href, init));
           }
           return glyWrapLuaPump(origFetch.call(window, input, init));
@@ -226,7 +216,6 @@
             onDone(new Error('script load failed'));
             return;
           }
-          glyBootLog('script ' + urls[i].split('/').pop());
           var s = document.createElement('script');
           s.src = urls[i];
           s.onload = function () { onDone(null); };
@@ -234,7 +223,6 @@
           document.head.appendChild(s);
         }
         function loadFengari(onDone) {
-          glyBootLog('Fengari — teste PC: ?runtime=fengari&debug=1');
           window.GLY_USE_FENGARI = true;
           window.LuaFactory = undefined;
           window.LuaMultiReturn = undefined;
@@ -242,24 +230,19 @@
             ? ['fengari-web.js', 'https://cdn.jsdelivr.net/npm/fengari-web@0.1.4/dist/fengari-web.js']
             : ['https://cdn.jsdelivr.net/npm/fengari-web@0.1.4/dist/fengari-web.js'];
           loadScriptTry(urls, 0, function (err) {
-            glyBootLog(err ? 'Fengari FAIL' : 'Fengari ok');
+            if (err && window.GLY_BOOT_ON) glyBootLog('Fengari FAIL');
             onDone();
           });
         }
         function loadWasmoonUmd(ver, onDone) {
-          glyBootLog('wasmoon UMD ' + ver + '…');
           loadScript('https://cdn.jsdelivr.net/npm/wasmoon@' + ver + '/dist/index.js', function (err) {
             if (err || !bindWasmoon()) onDone(err || new Error('LuaFactory missing'));
-            else {
-              glyBootLog('wasmoon ' + ver + ' ok');
-              onDone(null);
-            }
+            else onDone(null);
           });
         }
         function loadFengariThenWasmoonFallback() {
           loadFengari(function () {
             if (window.fengari) return signalReady();
-            glyBootLog('Fengari missing — wasmoon fallback');
             loadWasmoonUmd('1.10.0', function (err) {
               if (!err) return signalReady();
               loadWasmoonUmd('1.12.0', function () { signalReady(); });
@@ -269,8 +252,7 @@
         if (window.GLY_FORCE_FENGARI || window.GLY_BUILD_FENGARI) {
           loadFengari(signalReady);
         } else if (window.GLY_FORCE_WASMOON) {
-          loadWasmoonUmd('1.16.0', function (err) {
-            if (err) glyBootLog('wasmoon 1.16 fail');
+          loadWasmoonUmd('1.16.0', function () {
             signalReady();
           });
         } else if (window.IS_TV) {
@@ -281,7 +263,7 @@
           m.textContent =
             "import { LuaFactory, LuaMultiReturn } from 'https://cdn.jsdelivr.net/npm/wasmoon@1.16.0/+esm';" +
             "window.LuaFactory=LuaFactory;window.LuaMultiReturn=LuaMultiReturn;" +
-            "glyBootLog('wasmoon ESM ok');window.dispatchEvent(new Event('gly-wasmoon-ready'));";
+            "window.dispatchEvent(new Event('gly-wasmoon-ready'));";
           document.head.appendChild(m);
         }
       })();
@@ -300,33 +282,26 @@
         function patchFengariCoreSource(src) {
           if (src.indexOf('game.lenght') !== -1) {
             src = src.replace(/game\.lenght/g, 'game.length');
-            glyBootLog('core-native-html5 patch game.lenght→length');
           }
           /* Fengari: 3º arg do init é o chunk (loadbuffer), não string — loadgame.script(function). */
           if (src.indexOf('lua_pushstring(hv.vm.lua, fengari.to_luastring(game != null ? game : ""))') !== -1) {
             src = src.replace(
               /fengari\.lua\.lua_pushstring\(hv\.vm\.lua, fengari\.to_luastring\(game != null \? game : ""\)\);\s*try \{ glyBootLog\("fengari init[^"]*"\); \} catch \(e\) \{\}/,
-              'if (fengari.lauxlib.luaL_loadbuffer(hv.vm.lua, fengari.to_luastring(game), game.length, "game") !== 0) { var __glyGameLoadErr = fengari.lua.lua_tostring(hv.vm.lua, -1); throw fengari.to_jsstring(__glyGameLoadErr || "loadbuffer game failed"); } try { glyBootLog("fengari init " + width + "x" + height + " gameLen=" + (game ? game.length : 0)); } catch (e) {}'
+              'if (fengari.lauxlib.luaL_loadbuffer(hv.vm.lua, fengari.to_luastring(game), game.length, "game") !== 0) { var __glyGameLoadErr = fengari.lua.lua_tostring(hv.vm.lua, -1); throw fengari.to_jsstring(__glyGameLoadErr || "loadbuffer game failed"); }'
             );
-            glyBootLog('core-native-html5 patch init→loadbuffer chunk');
-          } else if (src.indexOf('luaL_loadbuffer(hv.vm.lua, fengari.to_luastring(game)') !== -1) {
+          } else if (src.indexOf('luaL_loadbuffer(hv.vm.lua, fengari.to_luastring(game)') !== -1 && src.indexOf('__glyGameLoadErr') === -1) {
             src = src.replace(
               /fengari\.lauxlib\.luaL_loadbuffer\(hv\.vm\.lua,\s*fengari\.to_luastring\(game\),\s*game\.length,\s*"game"\);/,
-              'if (fengari.lauxlib.luaL_loadbuffer(hv.vm.lua, fengari.to_luastring(game), game.length, "game") !== 0) { var __glyGameLoadErr = fengari.lua.lua_tostring(hv.vm.lua, -1); throw fengari.to_jsstring(__glyGameLoadErr || "loadbuffer game failed"); } try { glyBootLog("fengari init " + width + "x" + height + " gameLen=" + (game ? game.length : 0)); } catch (e) {}'
+              'if (fengari.lauxlib.luaL_loadbuffer(hv.vm.lua, fengari.to_luastring(game), game.length, "game") !== 0) { var __glyGameLoadErr = fengari.lua.lua_tostring(hv.vm.lua, -1); throw fengari.to_jsstring(__glyGameLoadErr || "loadbuffer game failed"); }'
             );
-            glyBootLog('core-native-html5 patch init loadbuffer+check');
           }
-          if (src.indexOf('if (fengari.lua.lua_pcall(hv.vm.lua, res, 0, 0) !== 0)') !== -1) {
+          if (src.indexOf('if (fengari.lua.lua_pcall(hv.vm.lua, res, 0, 0) !== 0)') !== -1 && src.indexOf('__glyInitOk') === -1) {
             src = src.replace(
               /if \(fengari\.lua\.lua_pcall\(hv\.vm\.lua, res, 0, 0\) !== 0\) \{\s*const error_message = fengari\.lua\.lua_tostring\(hv\.vm\.lua, -1\);\s*throw error_message && fengari\.to_jsstring\(error_message\) \|\| func_name;\s*\}/,
-              'if (fengari.lua.lua_pcall(hv.vm.lua, res, 0, 0) !== 0) { const error_message = fengari.lua.lua_tostring(hv.vm.lua, -1); var __glyLuaErr = error_message && fengari.to_jsstring(error_message) || func_name; try { glyBootLog("FENGARI: " + __glyLuaErr); } catch (e) {} throw __glyLuaErr; } else if (func_name === "native_callback_init") { try { window.__glyInitOk = true; glyBootLog("fengari init lua ok"); } catch (e) {} }'
+              'if (fengari.lua.lua_pcall(hv.vm.lua, res, 0, 0) !== 0) { const error_message = fengari.lua.lua_tostring(hv.vm.lua, -1); throw error_message && fengari.to_jsstring(error_message) || func_name; } else if (func_name === "native_callback_init") { window.__glyInitOk = true; }'
             );
           }
           if (src.indexOf('function _native_http_handler(self)') !== -1) {
-            src = src.replace(
-              'function _native_http_handler(self) {',
-              'function _native_http_handler(self) { try { glyBootLog("http " + (self.method || "GET") + " " + String(self.url || "").split("?")[0].slice(-56)); } catch (e) {}'
-            );
             if (src.indexOf('self.body_content != null ? self.body_content : self.body') === -1) {
               src = src.replace(
                 'const body = ["HEAD", "GET"].includes(method) ? null : self.body_content;',
@@ -338,9 +313,8 @@
           if (src.indexOf('__glyFengariAsyncXhr') === -1 && src.indexOf('function _native_http_handler(self)') !== -1) {
             src = src.replace(
               /self\.promise\(\);\s*fetch\(url,/,
-              'self.promise(); /* __glyFengariAsyncXhr */ if (window.GLY_USE_FENGARI || window.GLY_FORCE_FENGARI || window.GLY_BUILD_FENGARI) { var __glyXhr = new XMLHttpRequest(); __glyXhr.open(method, url, true); if (headers && typeof headers.forEach === "function") { headers.forEach(function(v, k) { try { __glyXhr.setRequestHeader(k, v); } catch (e) {} }); } __glyXhr.onload = function() { try { var __ok = __glyXhr.status >= 200 && __glyXhr.status < 300; self.set("ok", __ok); self.set("status", __glyXhr.status); self.set("body", __glyXhr.responseText || ""); self.resolve(); try { glyBootLog("http async " + __glyXhr.status); if (window.scheduleLuaPump) window.scheduleLuaPump(); } catch (e) {} } catch (err) { self.set("ok", false); self.set("error", "" + err); self.resolve(); } }; __glyXhr.onerror = function() { self.set("ok", false); self.set("error", "xhr error"); self.resolve(); try { if (window.scheduleLuaPump) window.scheduleLuaPump(); } catch (e) {} }; try { __glyXhr.send(body != null ? body : null); } catch (sendErr) { self.set("error", "" + sendErr); self.resolve(); } return; } fetch(url,'
+              'self.promise(); /* __glyFengariAsyncXhr */ if (window.GLY_USE_FENGARI || window.GLY_FORCE_FENGARI || window.GLY_BUILD_FENGARI) { var __glyXhr = new XMLHttpRequest(); __glyXhr.open(method, url, true); if (headers && typeof headers.forEach === "function") { headers.forEach(function(v, k) { try { __glyXhr.setRequestHeader(k, v); } catch (e) {} }); } __glyXhr.onload = function() { try { var __ok = __glyXhr.status >= 200 && __glyXhr.status < 300; self.set("ok", __ok); self.set("status", __glyXhr.status); self.set("body", __glyXhr.responseText || ""); self.resolve(); try { if (window.scheduleLuaPump) window.scheduleLuaPump(); } catch (e) {} } catch (err) { self.set("ok", false); self.set("error", "" + err); self.resolve(); } }; __glyXhr.onerror = function() { self.set("ok", false); self.set("error", "xhr error"); self.resolve(); try { if (window.scheduleLuaPump) window.scheduleLuaPump(); } catch (e) {} }; try { __glyXhr.send(body != null ? body : null); } catch (sendErr) { self.set("error", "" + sendErr); self.resolve(); } return; } fetch(url,'
             );
-            glyBootLog('core-native-html5 patch fengari async xhr');
           }
           if (src.indexOf('__glyXhr.timeout') === -1 && src.indexOf('__glyFengariAsyncXhr') !== -1) {
             src = src.replace(
@@ -351,7 +325,6 @@
               '__glyXhr.onerror = function() { self.set("ok", false); self.set("error", "xhr error");',
               '__glyXhr.ontimeout = function() { self.set("ok", false); self.set("error", "xhr timeout"); self.resolve(); try { if (window.scheduleLuaPump) window.scheduleLuaPump(); } catch (e) {} }; __glyXhr.onerror = function() { self.set("ok", false); self.set("error", "xhr error");'
             );
-            glyBootLog('core-native-html5 patch xhr tv timeout');
           }
           if (src.indexOf('__glyXhr.responseType') === -1 && src.indexOf('__glyFengariAsyncXhr') !== -1) {
             src = src.replace(
@@ -360,65 +333,35 @@
             );
             src = src.replace(
               'var __ok = __glyXhr.status >= 200 && __glyXhr.status < 300;',
-              'if (__glyXhr.status === 0) { self.set("ok", false); self.set("status", 0); self.set("error", "xhr status 0"); self.resolve(); try { glyBootLog("http async status 0 (rede/file?)"); if (window.scheduleLuaPump) window.scheduleLuaPump(); } catch (e) {} return; } var __ok = __glyXhr.status >= 200 && __glyXhr.status < 300;'
-            );
-            glyBootLog('core-native-html5 patch xhr responseType text');
-          }
-          if (src.indexOf('glyBootLog("fengari engine chunk ok")') === -1) {
-            src = src.replace(
-              /fengari\.lua\.lua_pcall\(hv\.vm\.lua, 0, 0, 0\);\s*define_lua_callback\("native_callback_init"/,
-              'fengari.lua.lua_pcall(hv.vm.lua, 0, 0, 0); try { glyBootLog("fengari engine chunk ok"); } catch (e) {} define_lua_callback("native_callback_init"'
+              'if (__glyXhr.status === 0) { self.set("ok", false); self.set("status", 0); self.set("error", "xhr status 0"); self.resolve(); try { if (window.scheduleLuaPump) window.scheduleLuaPump(); } catch (e) {} return; } var __ok = __glyXhr.status >= 200 && __glyXhr.status < 300;'
             );
           }
           if (src.indexOf('async function install6(hv, fengari)') !== -1 && src.indexOf('__glyFengariJson') === -1) {
             src = src.replace(
               /async function install6\(hv, fengari\) \{\s*if \(!hv\.vm\.fengari\) \{\s*return;\s*\}/,
-              'async function install6(hv, fengari) {\n  if (!hv.vm.fengari) {\n    return;\n  }\n  function __glyFengariJson() {\n    var f = hv.vm.fengari, T = f.lua;\n    function jsToLua(L, v) {\n      if (v === null || v === undefined) { T.lua_pushnil(L); return; }\n      var ty = typeof v;\n      if (ty === "boolean") { T.lua_pushboolean(L, v); return; }\n      if (ty === "number") { T.lua_pushnumber(L, v); return; }\n      if (ty === "string") { T.lua_pushstring(L, f.to_luastring(v)); return; }\n      if (Array.isArray(v)) {\n        T.lua_createtable(L, v.length, 0);\n        for (var i = 0; i < v.length; i++) { jsToLua(L, v[i]); T.lua_rawseti(L, -2, i + 1); }\n        return;\n      }\n      T.lua_createtable(L, 0, 0);\n      for (var k in v) {\n        if (Object.prototype.hasOwnProperty.call(v, k)) {\n          T.lua_pushstring(L, f.to_luastring(k)); jsToLua(L, v[k]); T.lua_settable(L, -3);\n        }\n      }\n    }\n    function luaToJs(L, idx) {\n      var t = T.lua_type(L, idx);\n      if (t === T.LUA_TNIL || t === T.LUA_TNONE) return null;\n      if (t === T.LUA_TBOOLEAN) return T.lua_toboolean(L, idx);\n      if (t === T.LUA_TNUMBER) return T.lua_tonumber(L, idx);\n      if (t === T.LUA_TSTRING) return f.to_jsstring(T.lua_tostring(L, idx));\n      if (t !== T.LUA_TTABLE) return null;\n      var abs = idx < 0 ? T.lua_gettop(L) + idx + 1 : idx;\n      var arr = [], obj = {}, n = 0, isArr = true;\n      T.lua_pushnil(L);\n      while (T.lua_next(L, abs) !== 0) {\n        var kt = T.lua_type(L, -2);\n        var key = kt === T.LUA_TNUMBER ? T.lua_tonumber(L, -2) : f.to_jsstring(T.lua_tostring(L, -2));\n        var val = luaToJs(L, -1);\n        T.lua_pop(L, 1);\n        if (typeof key === "number" && key === n + 1) { arr.push(val); n++; } else { isArr = false; obj[key] = val; }\n      }\n      return isArr && n > 0 ? arr : (isArr ? arr : obj);\n    }\n    T.lua_pushcfunction(hv.vm.lua, function(L) {\n      var s = f.to_jsstring(T.lua_tostring(L, 1));\n      jsToLua(L, JSON.parse(s));\n      return 1;\n    });\n    T.lua_setglobal(hv.vm.lua, f.to_luastring("native_json_decode"));\n    T.lua_pushcfunction(hv.vm.lua, function(L) {\n      var o = luaToJs(L, 1);\n      T.lua_pushstring(L, f.to_luastring(JSON.stringify(o)));\n      return 1;\n    });\n    T.lua_setglobal(hv.vm.lua, f.to_luastring("native_json_encode"));\n  }\n  __glyFengariJson();\n  try { glyBootLog("fengari native_json_* ok"); } catch (e) {}\n  var __glyPumpT = fengari.lua;\n  __glyPumpT.lua_pushcfunction(hv.vm.lua, function() { try { if (window.scheduleLuaPump) window.scheduleLuaPump(); } catch (e) {} return 0; });\n  __glyPumpT.lua_setglobal(hv.vm.lua, fengari.to_luastring("__gly_schedule_pump"));'
+              'async function install6(hv, fengari) {\n  if (!hv.vm.fengari) {\n    return;\n  }\n  function __glyFengariJson() {\n    var f = hv.vm.fengari, T = f.lua;\n    function jsToLua(L, v) {\n      if (v === null || v === undefined) { T.lua_pushnil(L); return; }\n      var ty = typeof v;\n      if (ty === "boolean") { T.lua_pushboolean(L, v); return; }\n      if (ty === "number") { T.lua_pushnumber(L, v); return; }\n      if (ty === "string") { T.lua_pushstring(L, f.to_luastring(v)); return; }\n      if (Array.isArray(v)) {\n        T.lua_createtable(L, v.length, 0);\n        for (var i = 0; i < v.length; i++) { jsToLua(L, v[i]); T.lua_rawseti(L, -2, i + 1); }\n        return;\n      }\n      T.lua_createtable(L, 0, 0);\n      for (var k in v) {\n        if (Object.prototype.hasOwnProperty.call(v, k)) {\n          T.lua_pushstring(L, f.to_luastring(k)); jsToLua(L, v[k]); T.lua_settable(L, -3);\n        }\n      }\n    }\n    function luaToJs(L, idx) {\n      var t = T.lua_type(L, idx);\n      if (t === T.LUA_TNIL || t === T.LUA_TNONE) return null;\n      if (t === T.LUA_TBOOLEAN) return T.lua_toboolean(L, idx);\n      if (t === T.LUA_TNUMBER) return T.lua_tonumber(L, idx);\n      if (t === T.LUA_TSTRING) return f.to_jsstring(T.lua_tostring(L, idx));\n      if (t !== T.LUA_TTABLE) return null;\n      var abs = idx < 0 ? T.lua_gettop(L) + idx + 1 : idx;\n      var arr = [], obj = {}, n = 0, isArr = true;\n      T.lua_pushnil(L);\n      while (T.lua_next(L, abs) !== 0) {\n        var kt = T.lua_type(L, -2);\n        var key = kt === T.LUA_TNUMBER ? T.lua_tonumber(L, -2) : f.to_jsstring(T.lua_tostring(L, -2));\n        var val = luaToJs(L, -1);\n        T.lua_pop(L, 1);\n        if (typeof key === "number" && key === n + 1) { arr.push(val); n++; } else { isArr = false; obj[key] = val; }\n      }\n      return isArr && n > 0 ? arr : (isArr ? arr : obj);\n    }\n    T.lua_pushcfunction(hv.vm.lua, function(L) {\n      var s = f.to_jsstring(T.lua_tostring(L, 1));\n      jsToLua(L, JSON.parse(s));\n      return 1;\n    });\n    T.lua_setglobal(hv.vm.lua, f.to_luastring("native_json_decode"));\n    T.lua_pushcfunction(hv.vm.lua, function(L) {\n      var o = luaToJs(L, 1);\n      T.lua_pushstring(L, f.to_luastring(JSON.stringify(o)));\n      return 1;\n    });\n    T.lua_setglobal(hv.vm.lua, f.to_luastring("native_json_encode"));\n  }\n  __glyFengariJson();\n  var __glyPumpT = fengari.lua;\n  __glyPumpT.lua_pushcfunction(hv.vm.lua, function() { try { if (window.scheduleLuaPump) window.scheduleLuaPump(); } catch (e) {} return 0; });\n  __glyPumpT.lua_setglobal(hv.vm.lua, fengari.to_luastring("__gly_schedule_pump"));'
             );
           }
           if (src.indexOf('var __T = f.lua') !== -1 && src.indexOf('__gly_schedule_pump') !== -1) {
             src = src.replace(/var __T = f\.lua;/g, 'var __glyPumpT = fengari.lua;');
             src = src.replace(/__T\.lua_setglobal\(hv\.vm\.lua, f\.to_luastring\("__gly_schedule_pump"\)\)/g, '__glyPumpT.lua_setglobal(hv.vm.lua, fengari.to_luastring("__gly_schedule_pump"))');
             src = src.replace(/__T\.lua_pushcfunction/g, '__glyPumpT.lua_pushcfunction');
-            glyBootLog('core-native-html5 patch schedule_pump f→fengari');
           }
-          if (src.indexOf('const httplua = (reqid, key, data) =>') !== -1 && src.indexOf('__glyHttpluaLog') === -1) {
-            src = src.replace(
-              /if \(fengari\.lua\.lua_pcall\(hv\.vm\.lua, params, 1, 0\) !== 0\) \{\s*const err = fengari\.to_jsstring\(fengari\.lua\.lua_tostring\(hv\.vm\.lua, -1\)\);\s*fengari\.lua\.lua_settop\(hv\.vm\.lua, 0\);\s*throw err;\s*\}/,
-              'if (fengari.lua.lua_pcall(hv.vm.lua, params, 1, 0) !== 0) { const err = fengari.to_jsstring(fengari.lua.lua_tostring(hv.vm.lua, -1)); fengari.lua.lua_settop(hv.vm.lua, 0); try { if (typeof glyBootLog === "function") glyBootLog("__glyHttpluaLog " + key + " id=" + reqid + " " + err); } catch (e) {} throw err; }'
-            );
-          }
-          var __glyHttpHandlerV5Body = 'define_lua_func("native_http_handler", func => { var __T = fengari.lua; var __top = __T.lua_gettop(hv.vm.lua); if (__top < 1 || __T.lua_type(hv.vm.lua, 1) !== __T.LUA_TTABLE) { throw new Error("native_http_handler: expected self table, top=" + __top); } __T.lua_getfield(hv.vm.lua, 1, fengari.to_luastring("id")); var request_id = __T.lua_tonumber(hv.vm.lua, -1); __T.lua_pop(hv.vm.lua, 1); if (!request_id || request_id <= 0) { throw new Error("native_http_handler: self.id missing (engine http.lua)"); } try { if (typeof glyBootLog === "function") glyBootLog("http handler lua id=" + request_id); } catch (e) {} var fullUrl = httplua(request_id, "get-fullurl"); var method = httplua(request_id, "get-method"); var body = httplua(request_id, "get-body"); func({ url: fullUrl, method: method, body: body, body_content: body, param_dict: {}, header_dict: {}, set: (key, value) => httplua(request_id, "set-".concat(key), value), promise: () => httplua(request_id, "async-promise"), resolve: () => httplua(request_id, "async-resolve") }); }); /* __glyHttpHandlerV5 */';
+          var __glyHttpHandlerV5Body = 'define_lua_func("native_http_handler", func => { var __T = fengari.lua; var __top = __T.lua_gettop(hv.vm.lua); if (__top < 1 || __T.lua_type(hv.vm.lua, 1) !== __T.LUA_TTABLE) { throw new Error("native_http_handler: expected self table, top=" + __top); } __T.lua_getfield(hv.vm.lua, 1, fengari.to_luastring("id")); var request_id = __T.lua_tonumber(hv.vm.lua, -1); __T.lua_pop(hv.vm.lua, 1); if (!request_id || request_id <= 0) { throw new Error("native_http_handler: self.id missing (engine http.lua)"); } var fullUrl = httplua(request_id, "get-fullurl"); var method = httplua(request_id, "get-method"); var body = httplua(request_id, "get-body"); func({ url: fullUrl, method: method, body: body, body_content: body, param_dict: {}, header_dict: {}, set: (key, value) => httplua(request_id, "set-".concat(key), value), promise: () => httplua(request_id, "async-promise"), resolve: () => httplua(request_id, "async-resolve") }); }); /* __glyHttpHandlerV5 */';
           if (src.indexOf('define_lua_func("native_http_handler"') !== -1 && src.indexOf('__glyHttpHandlerV5') === -1) {
-            if (src.indexOf('__glyHttpHandlerV4') >= 0 || src.indexOf('__glyHttpHandlerV3') >= 0) {
+            if (src.indexOf('__glyHttpHandlerV4') >= 0 || src.indexOf('__glyHttpHandlerV3') >= 0 || src.indexOf('__glyHttpHandlerV2') >= 0) {
               src = src.replace(
-                /define_lua_func\("native_http_handler", func => \{[\s\S]*?\}\); \/\* __glyHttpHandlerV[34] \*\//,
+                /define_lua_func\("native_http_handler", func => \{[\s\S]*?\}\); \/\* __glyHttpHandlerV[234] \*\//,
                 __glyHttpHandlerV5Body
               );
-              glyBootLog('core-native-html5 patch http handler → v5 self.id');
-            } else if (src.indexOf('__glyHttpHandlerV2') === -1) {
+            } else {
               src = src.replace(
                 /define_lua_func\("native_http_handler", func => \{\s*const request_id = fengari\.lua\.lua_tonumber\(hv\.vm\.lua, 2\);\s*fengari\.lua\.lua_settop\(hv\.vm\.lua, 0\);\s*func\(\{[\s\S]*?\}\);\s*\}\);/,
                 __glyHttpHandlerV5Body
               );
-              glyBootLog('core-native-html5 patch http handler v5');
             }
           }
-          if (src.indexOf('__glyHttpHandlerV2') >= 0 && src.indexOf('__glyHttpHandlerV3') === -1) {
-            src = src.replace(
-              'var body = httplua(request_id, "get-body"); fengari.lua.lua_settop(hv.vm.lua, 0); func({',
-              'var body = httplua(request_id, "get-body"); func({'
-            );
-            src = src.replace('__glyHttpHandlerV2', '__glyHttpHandlerV3');
-            glyBootLog('core-native-html5 patch http handler v2→v3 no settop');
-          }
-          if (src.indexOf('define_lua_func("native_log_info"') !== -1 && src.indexOf('__glyLogToBoot') === -1) {
-            src = src.replace(
-              /define_lua_func\("native_log_info", func => \{\s*func\(fengari\.to_jsstring\(fengari\.lua\.lua_tostring\(hv\.vm\.lua, 1\)\)\);\s*\}\);/,
-              'define_lua_func("native_log_info", func => { var msg = fengari.to_jsstring(fengari.lua.lua_tostring(hv.vm.lua, 1)); try { if (typeof glyBootLog === "function" && window.GLY_BOOT_ON && msg.indexOf("[gly]") >= 0) glyBootLog(msg); } catch (e) {} func(msg); }); /* __glyLogToBoot — do not lua_settop(0) here (breaks TSTL coroutines) */'
-            );
-          }
-          if (src.indexOf('self.set("body", content);') !== -1 && src.indexOf('_native_http_handler') !== -1) {
+          if (src.indexOf('self.set("body", content); self.resolve(); try { if (window.scheduleLuaPump)') === -1 && src.indexOf('_native_http_handler') !== -1) {
             src = src.replace(
               /self\.set\("body", content\);\s*self\.resolve\(\);/g,
               'self.set("body", content); self.resolve(); try { if (window.scheduleLuaPump) window.scheduleLuaPump(); } catch (e) {}'
@@ -427,20 +370,17 @@
               /self\.set\("error", ""\.concat\(error\)\);\s*self\.resolve\(\);/g,
               'self.set("error", "".concat(error)); self.resolve(); try { if (window.scheduleLuaPump) window.scheduleLuaPump(); } catch (e) {}'
             );
-            glyBootLog('core-native-html5 patch http resolve→pump');
           }
           return src;
         }
         function loadCoreViaScriptTag(resolve, reject) {
           if (typeof CoreNativeHtml5 === 'function') {
-            glyBootLog('core-native-html5 ok');
             resolve();
             return;
           }
           var urls = glyCoreUrls();
           function tryScript(i) {
             if (typeof CoreNativeHtml5 === 'function') {
-              glyBootLog('core-native-html5 ok');
               resolve();
               return;
             }
@@ -448,7 +388,6 @@
               reject(new Error('core-native-html5 script load failed'));
               return;
             }
-            glyBootLog('core-native-html5 script ' + urls[i].split('/').pop());
             var old = document.getElementById('gly-core-native-script');
             if (old && old.parentNode) old.parentNode.removeChild(old);
             var s = document.createElement('script');
@@ -460,7 +399,6 @@
                 waits++;
                 if (typeof CoreNativeHtml5 === 'function') {
                   clearInterval(waitId);
-                  glyBootLog('core-native-html5 ok');
                   resolve();
                 } else if (waits > 120) {
                   clearInterval(waitId);
@@ -480,19 +418,16 @@
               onErr(new Error('core-native-html5 source unavailable'));
               return;
             }
-            glyBootLog('core XHR ' + urls[i].split('/').pop());
             var xhr = new XMLHttpRequest();
             xhr.open('GET', urls[i], true);
             xhr.onload = function () {
               if (xhr.status === 200 || xhr.status === 0) {
                 onOk(xhr.responseText, urls[i]);
               } else {
-                glyBootLog('core XHR status=' + xhr.status);
                 tryXhr(i + 1);
               }
             };
             xhr.onerror = function () {
-              glyBootLog('core XHR error');
               tryXhr(i + 1);
             };
             xhr.send();
@@ -500,11 +435,9 @@
           tryXhr(0);
         }
         function loadCorePatchedInline(resolve, reject) {
-          glyBootLog('core-native-html5 patched inline…');
           loadCoreSourceText(function (text) {
             try {
               var src = patchFengariCoreSource(text);
-              glyBootLog('patch flags httplua=' + (src.indexOf('__glyHttpluaLog') >= 0) + ' httpHandler=' + (src.indexOf('http handler lua id=') >= 0));
               var tag = document.getElementById('gly-core-native-script');
               if (tag && tag.parentNode) tag.parentNode.removeChild(tag);
               var s = document.createElement('script');
@@ -512,7 +445,6 @@
               s.textContent = src;
               document.head.appendChild(s);
               if (typeof CoreNativeHtml5 === 'function') {
-                glyBootLog('core-native-html5 ok (fengari patches)');
                 resolve();
               } else {
                 reject(new Error('CoreNativeHtml5 missing after patched load'));
@@ -520,9 +452,7 @@
             } catch (e) {
               reject(e);
             }
-          }, function (err) {
-            glyBootLog('core patch XHR fail: ' + (err && err.message ? err.message : err));
-            glyBootLog('core fallback script tag (copie core-native-html5.js na pasta do index)');
+          }, function () {
             loadCoreViaScriptTag(resolve, reject);
           });
         }
@@ -556,12 +486,10 @@
         if (!(window.GLY_USE_FENGARI || window.GLY_FORCE_FENGARI || window.GLY_BUILD_FENGARI)) return src;
         if (src.indexOf('end /* __glyFengariAsyncPump */') !== -1) {
           src = src.replace(/end \/\* __glyFengariAsyncPump \*\//g, 'end -- __glyFengariAsyncPump');
-          glyBootLog('game patch AsyncAwaiter comment fix');
         }
         if (src.indexOf('__glyFengariAsyncPump') >= 0 && src.indexOf('__glyPromisePump') >= 0) return src;
         var needle = 'function fulfilled(self, value)\nlocal success, resultOrError = coresume(asyncCoroutine, value)';
         if (src.indexOf(needle) !== -1) {
-          glyBootLog('game patch AsyncAwaiter→pump');
           src = src.replace(
             needle,
             needle + '\nif type(_G.__gly_schedule_pump) == "function" then pcall(_G.__gly_schedule_pump) end -- __glyFengariAsyncPump'
@@ -569,14 +497,12 @@
         }
         if (src.indexOf('__glyPromiseNilThis') === -1 && src.indexOf('function __TS__Promise.prototype.invokeCallbacks') !== -1) {
           src = src.replace(/callbacks\[i\]\(callbacks, value\)/g, 'callbacks[i](nil, value) -- __glyPromiseNilThis');
-          glyBootLog('game patch Promise invokeCallbacks nil-this');
         }
         if (src.indexOf('__glyPromisePump') === -1 && src.indexOf('function __TS__Promise.prototype.invokeCallbacks') !== -1) {
           src = src.replace(
             'return callbacks[callbacksLength](callbacks, value)',
             'local __glyPromiseRet = callbacks[callbacksLength](nil, value)\nif type(_G.__gly_schedule_pump) == "function" then pcall(_G.__gly_schedule_pump) end\nreturn __glyPromiseRet -- __glyPromisePump'
           );
-          glyBootLog('game patch Promise invokeCallbacks→pump');
         }
         return src;
       }
@@ -612,24 +538,22 @@
         }
         window.addEventListener('keydown', onKey, true);
         window.addEventListener('keyup', onKey, true);
-        glyBootLog('TV keys installed');
       }
 
       function ensureRuntime() {
         if (window.LuaFactory || window.fengari) return Promise.resolve();
-        glyBootLog('waiting runtime (wasmoon/fengari)…');
         return new Promise(function (resolve, reject) {
           var done = false;
           function finish(ok, msg) {
             if (done) return;
             done = true;
-            if (msg) glyBootLog(msg);
+            if (!ok && window.GLY_BOOT_ON) glyBootLog(msg || 'runtime failed');
             if (ok) resolve();
             else reject(new Error(msg || 'runtime failed'));
           }
           function ready() {
             var ok = !!(window.LuaFactory || window.fengari);
-            finish(ok, ok ? (window.LuaFactory ? 'wasmoon ready' : 'fengari ready') : 'runtime missing');
+            finish(ok, ok ? '' : 'runtime missing');
           }
           window.addEventListener('gly-wasmoon-ready', ready);
           setTimeout(ready, 45000);
@@ -638,14 +562,12 @@
 
       function ensureBundle() {
         if (window.engine_code && window.game_code) return Promise.resolve();
-        glyBootLog('waiting index.js (engine_code)…');
         return new Promise(function (resolve, reject) {
           var n = 0;
           var id = setInterval(function () {
             n++;
             if (window.engine_code && window.game_code) {
               clearInterval(id);
-              glyBootLog('bundle ok len=' + window.engine_code.length);
               resolve();
             } else if (n > 900) {
               clearInterval(id);
@@ -656,11 +578,9 @@
       }
 
       document.addEventListener('DOMContentLoaded', function () {
-        glyBootLog('DOMContentLoaded');
         Promise.all([ensureRuntime(), ensureBundle(), ensureCoreNativeHtml5()])
           .then(function () {
             if (typeof CoreNativeHtml5 !== 'function') throw new Error('CoreNativeHtml5 missing');
-            glyBootLog('CoreNativeHtml5 build…');
             var chain = CoreNativeHtml5()
               .setElementRoot('main')
               .setElementCanvas('#gameCanvas')
@@ -671,7 +591,6 @@
                 unfocus_pause: !(window.GLY_USE_FENGARI || window.GLY_FORCE_FENGARI)
               });
             if (!window.IS_TV) chain = chain.addLibrary('keyboard', 'default');
-            glyBootLog('lua via index.js (engine_code/game_code)');
             return chain
               .addLibrary('resize')
               .addLibrary('player-html5')
@@ -684,23 +603,11 @@
           })
           .then(function (gly) {
             window.gly = gly;
-            glyBootLog('gly ok' + (window.GLY_USE_FENGARI ? ' [FENGARI]' : ''));
-            if (window.GLY_USE_FENGARI || window.GLY_FORCE_FENGARI) {
-              var ec = gamelyInline('engine_code');
-              glyBootLog('game inline len=' + gamelyInline('game_code').length);
-              glyBootLog('gly dist marker=shopping-keyboard-lock-9');
-              glyBootLog('engine pending_game_boot=' + (ec.indexOf('pending_game_boot') >= 0));
-              glyBootLog('engine http gly log=' + (ec.indexOf('[gly] http run') >= 0));
-            }
-            if (window.GLY_USE_FENGARI || window.GLY_BUILD_FENGARI) {
-              glyBootLog('Fengari loop via runtime tick');
-            }
             if (window.IS_TV) installTvKeys(gly.frontend);
             if (window.IS_TV && gly.frontend && gly.frontend.native_callback_resize) {
               function glyTvFit() {
                 var w = window.innerWidth || (screen && screen.width) || 1920;
                 var h = window.innerHeight || (screen && screen.height) || 1080;
-                glyBootLog('TV resize ' + w + 'x' + h);
                 gly.frontend.native_callback_resize(w, h);
               }
               glyTvFit();
