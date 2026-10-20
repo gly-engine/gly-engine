@@ -60,6 +60,13 @@
                 ["eq", "enterprise", "false"],
                 ["like", "core", "ginga"]
             ]
+        },
+        {
+            "message": "--overlay is not compatible with --enginecdn.",
+            "when": ["and",
+                ["neq", "overlay", "false"],
+                ["eq", "enginecdn", "true"]
+            ]
         }
     ],
     "commands": [
@@ -299,6 +306,11 @@
                     "description": "Output directory"
                 },
                 {
+                    "name": "overlay",
+                    "type": "file",
+                    "description": "JSON with files to replace during the build"
+                },
+                {
                     "name": "bundler",
                     "type": "boolean",
                     "description": "Enable Lua bundler"
@@ -327,6 +339,11 @@
                     "type": "string",
                     "description": "Output directory",
                     "default": "./dist/"
+                },
+                {
+                    "name": "overlay",
+                    "type": "file",
+                    "description": "JSON with files to replace during the build"
                 },
                 {
                     "name": "bundler",
@@ -429,6 +446,11 @@
                             "type": "string",
                             "description": "Output file path",
                             "default": "./dist/main.lua"
+                        },
+                        {
+                            "name": "overlay",
+                            "type": "file",
+                            "description": "JSON with files to replace during the build"
                         }
                     ]
                 },
@@ -449,6 +471,11 @@
                             "type": "string",
                             "description": "Output file path",
                             "default": "./dist/main.js"
+                        },
+                        {
+                            "name": "overlay",
+                            "type": "file",
+                            "description": "JSON with files to replace during the build"
                         },
                         {
                             "name": "format",

@@ -709,6 +709,8 @@ local function apply_globals(data, arg)
     return arg
 end
 
+cli2.evaluate_rules = evaluate_rules
+
 function cli2.parse(data, arg)
     return parse(data, data.commands, apply_globals(data, arg), '')
 end

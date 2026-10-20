@@ -10,6 +10,7 @@ local commands_fs = require('source/cli/commands/extra/fs')
 local commands_cli = require('source/cli/commands/extra/cli')
 local commands_love = require('source/cli/commands/extra/love')
 local commands_hazard = require('source/cli/commands/extra/hazard')
+local cli_overlay = require('source/cli/tools/overlay')
 
 --! handlers are named `command` or `command-subcommand`
 local handlers = {}
@@ -60,6 +61,10 @@ end
 
 local function run(state)
     local class = state.core
+    if type(state.overlay) == 'string' then
+        local ok, err = cli_overlay.install(state.overlay, state)
+        if not ok then return false, err end
+    end
     local name = resolve(state)
     local handler = handlers[name]
     if not handler then

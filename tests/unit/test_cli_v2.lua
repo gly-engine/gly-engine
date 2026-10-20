@@ -120,6 +120,15 @@ function test_core_none_default_hidden()
     assert(help:find('html5') ~= nil)
 end
 
+function test_overlay_not_with_enginecdn()
+    local ok, out = cli2.parse(dsl, {'build', '@pong', '--core', 'html5', '--enginecdn', '--overlay', 'source/cli/cmds.json'})
+    assert(ok == false)
+    assert(out:find('not compatible with %-%-enginecdn') ~= nil)
+    local ok2, out2, state2 = cli2.parse(dsl, {'build', '@pong', '--core', 'html5', '--overlay', 'source/cli/cmds.json'})
+    assert(ok2 == true)
+    assert(state2.overlay == 'source/cli/cmds.json')
+end
+
 function test_unknown_short_option()
     local ok, out = cli2.parse(dsl, {'build', '@pong', '-x'})
     assert(ok == false)
