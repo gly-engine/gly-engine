@@ -16,7 +16,6 @@ local engine_encoder = require('source/engine/api/data/encoder')
 local engine_game = require('source/engine/api/system/app')
 local engine_hash = require('source/engine/api/data/hash')
 local engine_http = require('source/engine/api/io/http')
-local engine_i18n = require('source/engine/api/data/i18n')
 local engine_keys = require('source/engine/api/system/key')
 local engine_log = require('source/engine/api/debug/log')
 local engine_math = require('source/engine/api/math/basic')
@@ -73,8 +72,7 @@ local engine = {
 
 
 local cfg_system = {
-    quit = function() event.post({class = 'ncl', type = 'presentation', action = 'stop'}) end,
-    get_language = function() return 'pt-BR' end
+    quit = function() event.post({class = 'ncl', type = 'presentation', action = 'stop'}) end
 }
 
 local cfg_poly = {
@@ -195,7 +193,6 @@ local function main(evt, gamefile)
         :package('http', engine_http, cfg_http_ginga2)
         :package('http', engine_http, cfg_http_ginga)
         :package('storage', engine_storage, cfg_persistent)
-        :package('i18n', engine_i18n, cfg_system)
         :run()
 
     application.data.width, application.data.height = canvas:attrSize()

@@ -9,7 +9,6 @@
 | Video Streamming | Yes        | No         | No         | Yes        | Yes        |
 | Http Requests    | Yes        | No         | No         | Yes        | Yes        |
 | Json Parse       | Yes        | No         | No         | No         | Yes        |
-| I18N API         | Yes        | No         | No         | No         | No         |
 | Cache API        | Yes        | No         | No         | Yes        | No         |
 | QRCode API       | Yes        | No         | No         | No         | No         |
 | Blend modes      | No         | No         | Yes        | Yes        | NO         |

@@ -34,23 +34,32 @@ local function v2s_size(self, s)
     return s * self.scale
 end
 
-local function i18n(self, std)
-    return {
-        ['pt-BR'] = {
-            ['lifes:'] = 'vidas:',
-            ['Continue'] = 'Continuar',
-            ['New Game'] = 'Novo Jogo',
-            ['Dificulty'] = 'Dificuldade',
-            ['Invincibility'] = 'Imortabilidade',
-            ['Object Limit'] = 'Limitador',
-            ['Graphics'] = 'Graficos',
-            ['fast'] = 'rapido',
-            ['pretty'] = 'bonito',
-            ['Language'] = 'Idioma',
-            ['Credits'] = 'Creditos',
-            ['Exit'] = 'Sair'
-        }
+local languages = {'en-US', 'pt-BR'}
+
+local translations = {
+    ['pt-BR'] = {
+        ['lifes:'] = 'vidas:',
+        ['asteroids:'] = 'asteroides:',
+        ['level:'] = 'nivel:',
+        ['score:'] = 'pontos:',
+        ['highscore:'] = 'recorde:',
+        ['Continue'] = 'Continuar',
+        ['New Game'] = 'Novo Jogo',
+        ['Dificulty'] = 'Dificuldade',
+        ['Invincibility'] = 'Imortabilidade',
+        ['Object Limit'] = 'Limitador',
+        ['Graphics'] = 'Graficos',
+        ['fast'] = 'rapido',
+        ['pretty'] = 'bonito',
+        ['Language'] = 'Idioma',
+        ['Credits'] = 'Creditos',
+        ['Exit'] = 'Sair'
     }
+}
+
+local function tr(self, text)
+    local dict = translations[languages[self.language]]
+    return dict and dict[text] or text
 end
 
 local function draw_logo(self, std, height, anim)
@@ -197,6 +206,7 @@ local function init(self, std)
     self.highscore = self.highscore or 0
     self.asteroids_max = self.asteroids_max or 60
     self.graphics_fastest = self.graphics_fastest or 0
+    self.language = self.language or 1
     -- player
     self.player_size = 3
     self.player_pos_x = self.VW/2
@@ -265,7 +275,7 @@ local function loop(self, std)
                 self.graphics_fastest = std.math.clamp(self.graphics_fastest + keyh, 0, 1)
                 self.fps_max = 100
             elseif self.menu == 7 then
-                std.i18n.next()
+                self.language = self.language % #languages + 1
             elseif self.menu == 8 then
                 self.state = 2
             elseif self.menu == 9 then
@@ -411,32 +421,36 @@ local function draw(self, std)
     std.draw.clear(death_anim and std.color.white or std.color.black)
     
     if self.state == 1 then
-        local h = self.VH/24
-        local hmenu = (self.menu*h) + (h*11) - (h/3)
-        local language = std.i18n.get_language()
-        local graphics = self.graphics_fastest == 1 and 'fast' or 'pretty'
+        local h = self.height/24
+        local language = languages[self.language]
+        local graphics = tr(self, self.graphics_fastest == 1 and 'fast' or 'pretty')
         local s = std.math.min(self.width/4, draw_logo(self, std, h*4))
         local w1, w2 = (self.width/2 - s), (self.width/2 + s)
         std.text.font_size(h/2)
+        -- small screens: font can be taller than the row
+        local _, th = std.text.mensure('A')
+        local row = std.math.max(h, th * 1.6)
+        local function y(item) return h*11 + (item - 1) * row end
+        local hmenu = y(self.menu) + th + (row - th) / 2
         std.draw.color(std.color.white)
-        if self.player_pos_x ~= (self.width/2) then
-            std.text.print(self.width/2 - s, h*11, 'Continue')
+        if self.player_pos_x ~= (self.VW/2) then
+            std.text.print(w1, y(1), tr(self, 'Continue'))
         end
-        std.text.print(w1, h*12, 'New Game')
-        std.text.print(w1, h*13, 'Dificulty')
-        std.text.print(w1, h*14, 'Invincibility')
-        std.text.print(w1, h*15, 'Object Limit')
-        std.text.print(w1, h*16, 'Graphics')
-        std.text.print(w1, h*17, 'Language')
-        std.text.print(w1, h*18, 'Credits')
-        std.text.print(w1, h*19, 'Exit')
+        std.text.print(w1, y(2), tr(self, 'New Game'))
+        std.text.print(w1, y(3), tr(self, 'Dificulty'))
+        std.text.print(w1, y(4), tr(self, 'Invincibility'))
+        std.text.print(w1, y(5), tr(self, 'Object Limit'))
+        std.text.print(w1, y(6), tr(self, 'Graphics'))
+        std.text.print(w1, y(7), tr(self, 'Language'))
+        std.text.print(w1, y(8), tr(self, 'Credits'))
+        std.text.print(w1, y(9), tr(self, 'Exit'))
         std.draw.line(w1, hmenu, w2, hmenu)
         std.draw.color(std.color.red)
-        std.text.print_ex(w2, h*13, self.level, -1)
-        std.text.print_ex(w2, h*14, self.imortal, -1)
-        std.text.print_ex(w2, h*15, self.asteroids_max, -1)
-        std.text.print_ex(w2, h*16, graphics, -1)
-        std.text.print_ex(w2, h*17, language, -1)
+        std.text.print_ex(w2, y(3), self.level, -1)
+        std.text.print_ex(w2, y(4), self.imortal, -1)
+        std.text.print_ex(w2, y(5), self.asteroids_max, -1)
+        std.text.print_ex(w2, y(6), graphics, -1)
+        std.text.print_ex(w2, y(7), language, -1)
         return
     elseif self.state == 2 then
         local height = self.height/4
@@ -518,11 +532,11 @@ local function draw(self, std)
     local wf = std.app.width - pw
     local wc = std.app.width / 2
 
-    std.text.print_ex(pw, ph, 'lifes: '..tostring(self.lifes), 1)
-    std.text.print_ex(wc, ph, 'asteroids: '..tostring(self.asteroids_count), 0)
-    std.text.print_ex(wf, ph, 'level: '..tostring(self.level), -1)    
-    std.text.print_ex(pw, hf, 'score: '..tostring(self.score), 1, -1)
-    std.text.print_ex(wf, hf, 'highscore: '..tostring(self.highscore), -1, -1)
+    std.text.print_ex(pw, ph, tr(self, 'lifes:')..' '..tostring(self.lifes), 1)
+    std.text.print_ex(wc, ph, tr(self, 'asteroids:')..' '..tostring(self.asteroids_count), 0)
+    std.text.print_ex(wf, ph, tr(self, 'level:')..' '..tostring(self.level), -1)    
+    std.text.print_ex(pw, hf, tr(self, 'score:')..' '..tostring(self.score), 1, -1)
+    std.text.print_ex(wf, hf, tr(self, 'highscore:')..' '..tostring(self.highscore), -1, -1)
 end
 
 local function exit(self, std)
@@ -548,10 +562,9 @@ local P = {
         version='2.0.0'
     },
     config = {
-        require = 'math math.random i18n?'
+        require = 'math math.random'
     },
     callbacks={
-        i18n=i18n,
         init=init,
         loop=loop,
         draw=draw,
