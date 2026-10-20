@@ -1,6 +1,6 @@
 {
     "name": "@gamely/core-native-html5",
-    "version": "0.2.4",
+    "version": "0.3.0",
     "author": "RodrigoDornelles",
     "license": "Apache-2.0",
     "homepage": "https://gly-engine.github.io/core-native-html5",
@@ -14,30 +14,34 @@
     "main": "dist/index.cjs.js",
     "exports": {
         ".": {
+            "types": "./types/index.d.ts",
             "require": "./dist/index.cjs.js",
             "import": "./dist/index.mjs"
         }
     },
+    "files": [
+        "dist",
+        "types"
+    ],
     "keywords": [
         "game engine",
         "game",
         "engine"
     ],
     "scripts": {
-        "postbuild:browser": "browserify dist/index.js -o dist/index.js -t [babelify]",
-        "postbuild:types": "sed -i 's#^declare #declare module \"@gamely/core-native-html5\" {#' types/index.d.ts && echo \"}\" >> types/index.d.ts",
-        "build:types": "bun x tsc src/index.ts --declaration --emitDeclarationOnly --noEmitOnError false --outDir types >/dev/null||true",
-        "build:browser": "bun build lib/browser.js --outfile dist/index.js",
-        "build:cjs": "bun build lib/common.js --format cjs --outfile dist/index.cjs.js",
-        "build:mjs": "bun build src/index.ts --format esm --outfile dist/index.mjs",
-        "build": "bun run build:mjs && bun run build:cjs && bun run build:browser",
-        "test": "bun test"
+        "lint": "eslint",
+        "check": "tsc -p jsconfig.json",
+        "build:browser": "cd ../.. && node cli.js bundler-js npm/core-native-html5/src/index.js --outfile npm/core-native-html5/dist/index.js --global CoreNativeHtml5",
+        "build:fengari": "cd ../.. && node cli.js bundler-js npm/core-native-html5/src/fengari.js --outfile npm/core-native-html5/dist/fengari.js --global CoreNativeHtml5",
+        "build:wasmoon": "cd ../.. && node cli.js bundler-js npm/core-native-html5/src/wasmoon.js --outfile npm/core-native-html5/dist/wasmoon.js --global CoreNativeHtml5",
+        "build:cjs": "cd ../.. && node cli.js bundler-js npm/core-native-html5/src/index.js --outfile npm/core-native-html5/dist/index.cjs.js --format cjs",
+        "build:mjs": "cd ../.. && node cli.js bundler-js npm/core-native-html5/src/index.js --outfile npm/core-native-html5/dist/index.mjs --format esm",
+        "build:types": "tsc -p jsconfig.json --noEmit false --declaration --emitDeclarationOnly --outDir types",
+        "build": "npm run build:browser && npm run build:fengari && npm run build:wasmoon && npm run build:cjs && npm run build:mjs",
+        "test": "npm run lint && npm run check"
     },
     "devDependencies": {
-        "@babel/preset-env": "^7.28.0",
-        "babelify": "^10.0.0",
-        "browserify": "^17.0.1",
-        "bun": "^1.2.4",
-        "wasmoon": "^1.16.0"
+        "eslint": "^10.13.0",
+        "typescript": "~5.9.3"
     }
 }

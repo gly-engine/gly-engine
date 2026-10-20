@@ -5,24 +5,81 @@
 
 > create your own game-engine with just javascript or lua.
 
-### Built-in Modules
+Written in ES5 (plus `async`/`await`) with JSDoc types, no transpiler.
+Bundled by the gly-cli itself, `gly-cli build-html` emits its own `core-native.js`.
 
-| driver name     | description |
-| :-------------- | :---------- |
-| fengari         | lua vm in es6
-| wasmoon         | lua vm in wasm
-| keyboard        | inputs events
-| gamepad         | inputs events
-| runtime         | tick and draw events
-| resize          | auto resize width and height 
-| player-fake     | fake video player using html element `<canvas>`
-| player-html5    | video player using html  element `<video>`
-| player-videojs  | video player using videojs library
-| player-youtube  | video player using iframe youtube integration
-| fengari-check   | check for a lua virtual machine<br/>_(also `wasmoon-check` `fengari-or-wasmoon-check`)_
-| fengari-jsonrxi | thirdy party library json for core native api<br/>_(use string: <https://cdn.jsdelivr.net/gh/rxi/json.lua/json.lua>)_
+## Bundles
 
-### Third-party Libraries
+| file              | content |
+| :---------------- | :------ |
+| `dist/index.js`   | every driver, global `CoreNativeHtml5`
+| `dist/fengari.js` | only fengari lua vm, global `CoreNativeHtml5`
+| `dist/wasmoon.js` | only wasmoon lua vm, global `CoreNativeHtml5`
+| `dist/index.mjs`  | every driver, es module
+| `dist/index.cjs.js` | every driver, commonjs
+
+## Usage
+
+`.use(name, ...args)` sets `canvas`, `root`, `engine`, `game` or adds a driver.
+
+```js
+const gly = await CoreNativeHtml5()
+    .use('root', 'main')
+    .use('canvas', '#gameCanvas')
+    .use('wasmoon', LuaFactory, LuaMultiReturn)
+    .use('runtime', {unfocus_pause: true})
+    .use('keyboard')
+    .use('resize')
+    .use('engine', 'https://cdn.jsdelivr.net/npm/@gamely/gly-engine@latest/dist/main.lua')
+    .use('game', 'game.lua')
+    .build()
+```
+
+`engine` and `game` are urls, or lua code when they have a line break.
+
+### Drivers
+
+| driver          | arguments | description |
+| :-------------- | :-------- | :---------- |
+| fengari         | `fengari`, `json.lua url?` | lua vm in javascript, [rxi json.lua](https://cdn.jsdelivr.net/gh/rxi/json.lua/json.lua) gives `native_json_*`
+| wasmoon         | `LuaFactory`, `LuaMultiReturn` | lua vm in webassembly
+| runtime         | `{uptime?, unfocus_pause?}` | tick and draw events
+| resize          | `{widescreen?}` | fit canvas to window
+| keyboard        | `keymap or preset name?` | `[[code or keyCode, key], ...]`, presets `default` and `legacy`
+| gamepad         | `padmap or preset name?` | `{pads: [...], axis: [...]}`, presets `default` and `legacy`
+| player-html5    | | media using `<video>` and `<audio>`
+| player-videojs  | `videojs` | media using videojs library
+| player-youtube  | | media using youtube iframe
+| player-fake     | `score?` | fake video player drawn in `<canvas>`
+
+A driver is any object with optional async steps `prepare`, `install`, `startup` and `destroy`,
+each one receives the hypervisor and the arguments of `.use()`.
+
+```js
+CoreNativeHtml5().use({startup: (hv, msg) => console.log(msg)}, 'hello')
+```
+
+### Instance
+
+| method | description |
+| :----- | :---------- |
+| `pause(motive?)` / `resume(motive?)` / `paused()` | pause by motive, resume without motive clears all
+| `on(event, listener)` | `init`, `loop`, `draw`, `resize`, `keyboard`
+| `backend` | every `native_*` given to the engine
+| `frontend` | every `native_callback_*`
+| `canvas` / `ctx` | the canvas and its 2d context
+| `destroy()` | stop drivers, remove listeners, clear canvas
+
+### Images and fonts
+
+Same contract of core-native desktop.
+
+ * `native_image_load(url)` returns an id at once and loads in background, every image function accepts id or url,
+   `draw`/`mensure` do nothing until ready, check with `native_image_exists`, `native_image_error` and `native_image_loading_count`.
+ * `native_text_font_face(name, url)` registers a font (FontFace api), `native_text_font_name(name)` selects it,
+   text is not drawn until the font is loaded. `native_text_font_default()` selects `default` (sans-serif).
+
+### Third-party libraries
 
 ```html
 <!-- fengari -->
@@ -39,142 +96,21 @@ window.LuaMultiReturn = LuaMultiReturn
 <script src="https://cdn.jsdelivr.net/npm/video.js@8.22.0/dist/video.min.js"></script>
 ```
 
-## Gly Engine
-
-replace `@latest` with the engine version you want.
-
- * <https://cdn.jsdelivr.net/npm/@gamely/gly-engine>
- * <https://cdn.jsdelivr.net/npm/@gamely/gly-engine-lite>
- * <https://cdn.jsdelivr.net/npm/@gamely/gly-engine-micro>
- * <https://cdn.jsdelivr.net/npm/@gamely/gly-engine-nano>
-
-```js
-const gly = await CoreNativeHtml5()
-    .setElementRoot('main')
-    .setElementCanvas('#gameCanvas')
-    .addLibrary('wasmoon', LuaFactory, LuaMultiReturn)
-    .addLibrary('runtime', {uptime: false})
-    .addLibrary('keyboard')
-    .addLibrary('resize')
-    .setEngine('https://cdn.jsdelivr.net/npm/@gamely/gly-engine@latest/dist/main.lua')
-    .setGame('game.lua')
-    .build()
-```
-
-## Love2D
-
-support wasmoon and fengari!
-
- * <https://cdn.jsdelivr.net/npm/@gamely/love-engine>
-
-```js
-const keymap = [
-    ['KeyZ', 'a'],
-    ['KeyX', 'b'],
-    ['KeyC', 'c'],
-    ['KeyV', 'd'],
-    ['Enter', 'a'],
-    ['ArrowUp', 'up'],
-    ['ArrowDown', 'down'],
-    ['ArrowLeft', 'left'],
-    ['ArrowRight', 'right'],
-    ['ShiftLeft', 'menu'],
-];
-
-const gly = await CoreNativeHtml5()
-    .setElementRoot('main')
-    .setElementCanvas('#gameCanvas')
-    .addLibrary('fengari', fengari)
-    .addLibrary('runtime', {unfocus_pause: true})
-    .addLibrary('keyboard', keymap)
-    .addLibrary('resize')
-    .setEngine('https://cdn.jsdelivr.net/npm/@gamely/love-engine@latest/dist/main.lua')
-    .setGame('main.lua')
-    .build()
-```
-
-## Engine writen in lua
-
-```js
-const gly = await CoreNativeHtml5()
-    .setElementRoot('main')
-    .setElementCanvas('#gameCanvas')
-    .addLibrary('wasmoon', window.LuaFactory, window.LuaMultiReturn)
-    .addLibrary('fengari', window.fengari)
-    .addLibrary('fengari-jsonrxi', 'https://cdn.jsdelivr.net/gh/rxi/json.lua/json.lua')
-    .addLibrary('fengari-or-wasmoon-check')
-    .addLibrary('player-videojs', window.videojs)
-    .addLibrary('runtime')
-    .addLibrary('keyboard')
-    .addLibrary('resize')
-    .setEngine('engine.lua')
-    .setGame('game.lua')
-    .build()
-```
-
 ## Baremetal javascript
 
 ```js
-const gly = await CoreNativeHtml5()
-    .setElementCanvas('#gameCanvas')
-    .build()
+const gly = await CoreNativeHtml5().use('canvas', '#gameCanvas').use('runtime').build()
 
-gly.engine.on('draw', () => {
-    gly.backend.native_draw_color(0xFFFFFFFFF)
+gly.on('draw', () => {
+    gly.backend.native_draw_color(0xFFFFFFFF)
     gly.backend.native_draw_rect(0, 50, 50, 50, 50)
 })
-
-function tick() {
-    gly.frontend.native_callback_loop()
-    gly.frontend.native_callback_draw()
-    window.requestAnimationFrame(tick)
-}
-
-gly.frontend.native_callback_init()
-tick();
 ```
 
-## Custom engine javascript
+## Development
 
-```js
-function awesome_game(loop, draw, keys) {
-    let color = 0x00FFFFFF
-
-    loop.callback(() => {
-
-    })
-    draw.callback(() => {
-        draw.color(color)
-        draw.rect(0, 10, 20, 30, 40)
-    })
-    keys.callback((key, press) => {
-        if (key == 'a' && press) {
-            color = 0xFF0000FF
-        }
-    })
-}
-```
-
-```js
-function awesome_engine(game) {
-    CoreNativeHtml5().setElementCanvas('#game').addLibrary('keyboard').addLibrary('runtime').build().then((gly) => {
-        const loop = {
-            callback: (f) => gly.on('loop', f)
-        }
-        const draw = {
-            color: gly.backend.native_draw_color,
-            rect: gly.backend.native_draw_rect,
-            callback: (f) => gly.on('draw', f)
-        }
-        const keys = {
-            callback: (f) => gly.on('keyboard', f)
-        }
-    
-        game(loop, draw, keys)
-    })
-}
-```
-
-```js
-awesome_engine(awesome_game)
+```sh
+npm run lint   # eslint, only ES5 syntax and async/await
+npm run check  # tsc over JSDoc, only ES5 builtins
+npm run build  # bundled by ../../cli.js bundler-js
 ```

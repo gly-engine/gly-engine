@@ -38,7 +38,7 @@ local function bundler_js(args)
     local from = str_fs.file(args.src)
     local to = str_fs.file(args.outfile)
     cli_fs.mkdir(to.get_sys_path())
-    return zeebo_bundler_js.build(from.get_fullfilepath(), to.get_fullfilepath(), args.global)
+    return zeebo_bundler_js.build(from.get_fullfilepath(), to.get_fullfilepath(), {format=args.format, global=args.global})
 end
 
 local function compile(args)
