@@ -1,0 +1,43 @@
+{
+    "name": "@gamely/core-native-html5",
+    "version": "0.2.4",
+    "author": "RodrigoDornelles",
+    "license": "Apache-2.0",
+    "homepage": "https://gly-engine.github.io/core-native-html5",
+    "repository": "https://github.com/gly-engine/core-native-html5",
+    "funding": "https://github.com/sponsors/RodrigoDornelles",
+    "bugs": "https://github.com/gly-engine/core-native-html5/issues",
+    "description": "create your own game-engine with just javascript or lua.",
+    "types": "types/index.d.ts",
+    "browser": "dist/index.js",
+    "module": "dist/index.mjs",
+    "main": "dist/index.cjs.js",
+    "exports": {
+        ".": {
+            "require": "./dist/index.cjs.js",
+            "import": "./dist/index.mjs"
+        }
+    },
+    "keywords": [
+        "game engine",
+        "game",
+        "engine"
+    ],
+    "scripts": {
+        "postbuild:browser": "browserify dist/index.js -o dist/index.js -t [babelify]",
+        "postbuild:types": "sed -i 's#^declare #declare module \"@gamely/core-native-html5\" {#' types/index.d.ts && echo \"}\" >> types/index.d.ts",
+        "build:types": "bun x tsc src/index.ts --declaration --emitDeclarationOnly --noEmitOnError false --outDir types >/dev/null||true",
+        "build:browser": "bun build lib/browser.js --outfile dist/index.js",
+        "build:cjs": "bun build lib/common.js --format cjs --outfile dist/index.cjs.js",
+        "build:mjs": "bun build src/index.ts --format esm --outfile dist/index.mjs",
+        "build": "bun run build:mjs && bun run build:cjs && bun run build:browser",
+        "test": "bun test"
+    },
+    "devDependencies": {
+        "@babel/preset-env": "^7.28.0",
+        "babelify": "^10.0.0",
+        "browserify": "^17.0.1",
+        "bun": "^1.2.4",
+        "wasmoon": "^1.16.0"
+    }
+}

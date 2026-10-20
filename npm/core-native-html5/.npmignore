@@ -1,0 +1,10 @@
+lib/
+src/
+tests/
+types/*
+!types/index.d.ts
+.github/
+.gitattributes
+.gitignore
+presets.json
+babel.config.json
