@@ -372,7 +372,7 @@ export interface GlyStdMicro extends GlyStdNano {
 
 /** @noSelf **/
 export interface GlyStdLite extends GlyStdMicro {
-  getenv(key: string): string;
+  getenv(key: string): string | undefined;
   hash: GlyStdHash;
   http: GlyStdHttp;
   json: GlyStdJson;
