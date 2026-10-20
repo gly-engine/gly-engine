@@ -1,0 +1,396 @@
+export type GlyNode = Record<string, unknown>;
+
+export type GlyApp = GlyNode & {
+  data: {
+    width: number;
+    height: number;
+  } & Record<string, unknown>;
+};
+
+export type GlyStdJsx = (el: string | object, attributes?: object | null, ...childs: Array<object>) => GlyApp;
+
+export type GlyHandlerArgs = (this: void, ...args: unknown[]) => unknown
+
+export type GlyHandlerValueString = (this: void, value: string) => unknown
+
+export type GlyHandlerStdData<T = GlyStd> = (this: void, std: T, data: GlyApp) => unknown
+
+type GlyEventsWS = {
+  open: (this: void, sock: GlySockWs) => void;
+  error: (this: void, message: string) => void;
+  message: (this: void, message: string) => void;
+  disconnect: () => void;
+};
+
+declare class GlySockWs {
+  public on<K extends keyof GlyEventsWS>(topic: K, handler: GlyEventsWS[K]): void;
+  public off<K extends keyof GlyEventsWS>(topic: K, handler: GlyEventsWS[K]): void;
+  public send(message: string): void;
+  public is_connected(): boolean;
+  public close(): void;
+}
+
+declare class GlyWS {
+  public on<K extends keyof GlyEventsWS>(topic: K, handler: GlyEventsWS[K]): GlyWS;
+  public off<K extends keyof GlyEventsWS>(topic: K, handler: GlyEventsWS[K]): GlyWS;
+  public param(key: string, value: string): GlyWS;
+  public header(key: string, value: string): GlyWS;
+  public run(): void;
+}
+
+declare class GlyHttp {
+  public json(): GlyHttp;
+  public fast(): GlyHttp;
+  public noforce(): GlyHttp;
+  public param(key: string, value: string): GlyHttp;
+  public header(key: string, value: string): GlyHttp;
+  public body(content: string): GlyHttp;
+  public body(content: object): GlyHttp;
+  public success(handler: GlyHandlerStdData<GlyStdWithHttpResponse>): GlyHttp;
+  public failed(handler: GlyHandlerStdData<GlyStdWithHttpResponse>): GlyHttp;
+  public error(handler: GlyHandlerStdData<GlyStdWithHttpResponse>): GlyHttp;
+  public done(handler: GlyHandlerStdData<GlyStdWithHttpResponse>): GlyHttp;
+  public run(): void;
+}
+
+declare class GlyMedia {
+  public src(url: string): GlyMedia;
+  public play(): GlyMedia;
+  public pause(): GlyMedia;
+  public resume(): GlyMedia;
+  public stop(): GlyMedia;
+  public position(x: number, y: number, w: number, h: number): GlyMedia;
+}
+
+declare class GlyStorage {
+  public as(key: string, cast?: GlyHandlerValueString): GlyStorage;
+  public default(value: string): void;
+  public callback(handler: GlyHandlerValueString): GlyStorage;
+  public run(): void;
+}
+
+declare class GlyUi {
+  public add(node: GlyNode): GlyUi;
+  public add(node: GlyNode, size: number): GlyUi;
+  public add(node: GlyNode, options: {
+    span?: number | `${number}x${number}`;
+    offset?: number;
+    after?: number;
+    id?: string;
+  }): GlyUi;
+  public get_item(id: number): GlyApp;
+  public get_items(): Array<GlyApp>;
+  public add_items(nodes: GlyNode[]): GlyUi;
+  public remove(app: GlyApp): GlyUi;
+}
+
+/** @noSelf **/
+interface GlyStdApp {
+  exit(): void;
+  height: number;
+  reset(): void;
+  width: number;
+}
+
+/** @noSelf **/
+interface GlyStdBus {
+  abort(): void;
+  emit_next(key: string, ...args: unknown[]): void;
+  emit(key: string, ...args: unknown[]): void;
+  listen(key: string, handler: GlyHandlerArgs): void;
+  trigger(key: string): void;
+}
+
+/** @noSelf **/
+interface GlyStdColor {
+  beige: number;
+  black: number;
+  blank: number;
+  blue: number;
+  brown: number;
+  darkblue: number;
+  darkbrown: number;
+  darkgray: number;
+  darkgreen: number;
+  darkpurple: number;
+  gold: number;
+  gray: number;
+  green: number;
+  lightgray: number;
+  lime: number;
+  magenta: number;
+  maroon: number;
+  orange: number;
+  pink: number;
+  purple: number;
+  red: number;
+  skyblue: number;
+  violet: number;
+  white: number;
+  yellow: number;
+}
+
+/** @noSelf **/
+interface GlyStdDraw {
+  clear(hex: number): void;
+  color(hex: number): void;
+  line(x1: number, y1: number, x2: number, y2: number): void;
+  poly(mode: number, verts: Array<number>, x?: number, y?: number, scale?: number, angle?: number, ox?: number, oy?: number): void;
+  rect(mode: number, x: number, y: number, w: number, h: number): void;
+  rect2(mode: number, x: number, y: number, w: number, h: number, r: number): void;
+}
+
+/** @noSelf **/
+interface GlyStdHash {
+  djb2(digest: string): number;
+  fingerprint(): number;
+}
+
+/** @noSelf **/
+interface GlyStdJson {
+  encode<T = unknown>(value: T): string;
+  decode<T = unknown>(text: string): T;
+}
+
+/** @noSelf **/
+interface GlyStdHttp {
+  connect(url: string, upgrade?: string | undefined): GlyWS;
+  delete(url: string): GlyHttp;
+  get(url: string): GlyHttp;
+  head(url: string): GlyHttp;
+  patch(url: string): GlyHttp;
+  post(url: string): GlyHttp;
+  put(url: string): GlyHttp;
+}
+
+/** @noSelf **/
+interface GlyStdHttpResponse {
+  ok: boolean,
+  status: number
+  error?: string
+  body: string | object
+}
+
+/** @noSelf **/
+
+/** @noSelf **/
+interface GlyStdImage {
+  mensure(src: string): LuaMultiReturn<[number, number]>;
+  draw(src: string, x?: number, y?: number): void;
+  load(src: string): number;
+  exists(src: string): boolean;
+  unload(src: string): void;
+  unload_all(): void;
+}
+
+/** @noSelf **/
+interface GlyStdKey {
+  any: boolean;
+  axis: {
+    x: -1 | 0 | 1;
+    y: -1 | 0 | 1;
+  };
+  press: {
+    a: boolean;
+    b: boolean;
+    c: boolean;
+    d: boolean;
+    down: boolean;
+    left: boolean;
+    menu: boolean;
+    right: boolean;
+    up: boolean;
+  };
+}
+
+/** @noSelf **/
+interface GlyStdLog {
+  debug(...data: any[]): void;
+  error(...data: any[]): void;
+  fatal(...data: any[]): void;
+  info(...data: any[]): void;
+  trace(...data: any[]): void;
+  warn(...data: any[]): void;
+  debug(this: any, ...data: any[]): void;
+  error(this: any, ...data: any[]): void;
+  fatal(this: any, ...data: any[]): void;
+  info(this: any, ...data: any[]): void;
+  trace(this: any, ...data: any[]): void;
+  warn(this: any, ...data: any[]): void;
+  level(level: 'none' | 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace'): void;
+}
+
+/** @noSelf **/
+interface GlyStdMath {
+  abs(n: number): number;
+  clamp(n: number, min: number, max: number): number;
+  clamp2(n: number, min: number, max: number): number;
+  dir(n: number): -1 | 0 | 1;
+  dis(n: number): number;
+  dis2(n: number): number;
+  dis3(n: number): number;
+  lerp(start: number, end: number, alpha: number): number;
+  map(n: number, in_min: number, in_max: number, out_min: number, out_max: number): number;
+  max(n: number[]): number;
+  max(n1: number, n2: number, ...nx: number[]): number;
+  min(n: number[]): number;
+  min(n1: number, n2: number, ...nx: number[]): number;
+}
+
+/** @noSelf **/
+interface GlyStdMathLibC {
+  acos(x: number): number;
+  asin(x: number): number;
+  atan(x: number): number;
+  atan2(y: number, x: number): number;
+  ceil(x: number): number;
+  cos(x: number): number;
+  cosh(x: number): number;
+  deg(x: number): number;
+  exp(x: number): number;
+  floor(x: number): number;
+  fmod(x: number, y: number): number;
+  frexp(x: number): [number, number];
+  huge: number;
+  ldexp(mantissa: number, exponent: number): number;
+  log(x: number): number;
+  log10(x: number): number;
+  modf(x: number): [number, number];
+  pi: number;
+  pow(base: number, exponent: number): number;
+  rad(x: number): number;
+  sin(x: number): number;
+  sinh(x: number): number;
+  sqrt(x: number): number;
+  tan(x: number): number;
+  tanh(x: number): number;
+}
+
+/** @noSelf **/
+interface GlyStdMedia {
+  video(channel?: number): GlyMedia;
+}
+
+/** @noSelf **/
+interface GlyStdMemory {
+  cache(key: string, load: () => unknown, unload?: (value: unknown) => void): unknown;
+  cache_get(key: string): unknown;
+  cache_set(key: string, load: () => unknown, unload?: (value: unknown) => void): void;
+  gc_clear_all(): void;
+  unset(key: string): void;
+}
+
+/** @noSelf **/
+interface GlyStdNode {
+  emit(application: GlyApp, key: string, ...args: unknown[]): void;
+  kill(application: GlyApp): void;
+  load(application: GlyNode): GlyNode;
+  pause(application: GlyApp): void;
+  pause(application: GlyApp, key: string): void;
+  resume(application: GlyApp): void;
+  resume(application: GlyApp, key: string): void;
+  spawn(application: GlyNode): GlyApp;
+}
+
+/** @noSelf **/
+interface GlyStdStorage {
+  get(key: string): GlyStorage;
+  set(key: string, value: unknown): GlyStorage;
+}
+
+/** @noSelf **/
+interface GlyStdText {
+  font_default(size: number): void;
+  font_name(face: string): void;
+  font_previous(): void;
+  font_size(size: number): void;
+  is_tui(): boolean;
+  mensure(text: string | number): LuaMultiReturn<[number, number]>;
+  print(x: number, y: number, text: string | number): void;
+  print_ex(x: number, y: number, text: string | number, align_x?: -1 | 0 | 1, align_y?: -1 | 0 | 1): [number, number];
+  put(x: number, y: number, text: string | number, size?: number): void;
+}
+
+declare class GlyQueryResult {
+  focus(index?: number): GlyQueryResult;
+  count(): number;
+  addStyle(name: string): GlyQueryResult;
+  delStyle(name: string): GlyQueryResult;
+  setAttr(key: string, value: unknown): GlyQueryResult;
+  getAttr(key: string): unknown;
+  getId(): string | undefined;
+  isVisible(): boolean;
+}
+
+type GlyFocusDirection = 'left' | 'right' | 'up' | 'down';
+type GlyFocusSelector = `#${string}` | `.${string}`;
+
+type GlyStyleProps = {
+  width?:     string | number;
+  height?:    string | number;
+  left?:      string | number;
+  right?:     string | number;
+  top?:       string | number;
+  bottom?:    string | number;
+  margin?:    string | number;
+  span?:      number | `${number}x${number}`;
+  'z-index'?: number;
+  invisible?: boolean;
+};
+
+/** @noSelf **/
+interface GlyStdUi {
+  grid(classlist: string): GlyUi;
+  style(classlist: string): GlyUi;
+  style(classlist: string, stylesheet: GlyStyleProps): GlyUi;
+  focus(target?: GlyFocusDirection | `${GlyFocusDirection} ${GlyFocusSelector}` | 'first' | GlyFocusSelector | GlyApp): GlyQueryResult | undefined;
+  isFocused(target?: `#${string}` | GlyApp): boolean;
+  span(size: number | `${number}x${number}`, target?: `#${string}` | GlyApp): void;
+  class(size: `${number}x${number}`, target?: `#${string}` | GlyApp): void;
+  queryOne(selector: GlyFocusSelector | 'focused' | 'self'): GlyQueryResult | undefined;
+  query(selector: `.${string}`): GlyQueryResult[];
+  press(): void;
+}
+
+/** @noSelf **/
+export interface GlyStdNano {
+  color: GlyStdColor;
+  delta: number;
+  draw: GlyStdDraw;
+  image: GlyStdImage;
+  key: GlyStdKey;
+  milis: number;
+  text: GlyStdText;
+}
+
+/** @noSelf **/
+export interface GlyStdMicro extends GlyStdNano {
+  app: GlyStdApp;
+  math: GlyStdMath & GlyStdMathLibC;
+  mem: GlyStdMemory;
+}
+
+/** @noSelf **/
+export interface GlyStdLite extends GlyStdMicro {
+  getenv(key: string): string | undefined;
+  hash: GlyStdHash;
+  http: GlyStdHttp;
+  json: GlyStdJson;
+  log: GlyStdLog;
+  media: GlyStdMedia;
+  storage: GlyStdStorage;
+}
+
+/** @noSelf **/
+export interface GlyStdWithHttpResponse extends GlyStd {
+  http: GlyStdHttp & GlyStdHttpResponse
+}
+
+/** @noSelf **/
+export interface GlyStd extends GlyStdLite {
+  setenv(key: string, value: string): string;
+  bus: GlyStdBus;
+  h: GlyStdJsx;
+  node: GlyStdNode;
+  ui: GlyStdUi;
+}
