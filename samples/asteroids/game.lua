@@ -26,12 +26,15 @@
 --! 8 -> 4: resume
 --! @enduml
 
+--! game logic and physics run in 1280x720, converted to the screen only when drawing
+local W, H = 1280, 720
+
 local function v2s(self, vx, vy)
-    return self.off_x + vx * self.scale, self.off_y + (vy + self.GUI_H) * self.scale
+    return vx * self.width / W, vy * self.height / H
 end
 
 local function v2s_size(self, s)
-    return s * self.scale
+    return s * self.width / W < s * self.height / H and s * self.width / W or s * self.height / H
 end
 
 local languages = {'en-US', 'pt-BR'}
@@ -129,16 +132,16 @@ local function asteroids_rain(self, std)
     local n4 = 2.5 * std.math.min(self.level/3, 1)
     local hspeed = {-n1, 0, 0, 0, 0, 0, n1}
     local vspeed = {-n4, -n3, -n2, n2, n3, n4}
-    local middle_left = self.VW/4
-    local middle_right = self.VW/4 * 3
+    local middle_left = W/4
+    local middle_right = W/4 * 3
 
     while index <= self.asteroids_max and index <= 10 do
         repeat
             local success = true
             attemps = attemps + 1
             self.asteroid_size[index] = self.asteroid_large_size
-            self.asteroid_pos_x[index] = std.math.random(1, self.VW)
-            self.asteroid_pos_y[index] = std.math.random(1, self.VH)
+            self.asteroid_pos_x[index] = std.math.random(1, W)
+            self.asteroid_pos_y[index] = std.math.random(1, H)
             self.asteroid_spd_x[index] = hspeed[std.math.random(1, #hspeed)]
             self.asteroid_spd_y[index] = vspeed[std.math.random(1, #vspeed)]
 
@@ -181,17 +184,6 @@ local function asteroid_destroy(self, std, id)
 end
 
 local function init(self, std)
-    -- resolution
-    self.VW, self.VH = 1680, 720
-    self.ASPECT = 16 / 9
-    self.TOTAL_VH = self.VW / self.ASPECT
-    self.GUI_H = (self.TOTAL_VH - self.VH) / 2
-
-    -- physics config
-    self.scale = std.math.min(self.width / self.VW, self.height / self.TOTAL_VH)
-    self.off_x = (self.width - self.VW * self.scale) / 2
-    self.off_y = (self.height - self.TOTAL_VH * self.scale) / 2
-
     -- game
     self.boost = 0.15
     self.rotation_speed = 0.06
@@ -209,8 +201,8 @@ local function init(self, std)
     self.language = self.language or 1
     -- player
     self.player_size = 3
-    self.player_pos_x = self.VW/2
-    self.player_pos_y = self.VH/2
+    self.player_pos_x = W/2
+    self.player_pos_y = H/2
     self.player_spd_x = 0
     self.player_spd_y = 0
     self.player_angle = 0
@@ -254,7 +246,7 @@ local function loop(self, std)
     if self.state == 1 then
         local keyh = std.key.axis.x + (std.key.press.a and 1 or 0)
         if std.key.axis.y ~= 0 and std.milis > self.menu_time + 250 then
-            self.menu = std.math.clamp(self.menu + std.key.axis.y, self.player_pos_x == (self.VW/2) and 2 or 1, 9)
+            self.menu = std.math.clamp(self.menu + std.key.axis.y, self.player_pos_x == (W/2) and 2 or 1, 9)
             self.menu_time = std.milis
         end
         if keyh ~= 0 and std.milis > self.menu_time + 100 then
@@ -309,15 +301,15 @@ local function loop(self, std)
         self.player_spd_y = (self.player_spd_y / mag) * self.speed_max
     end
     if self.player_pos_y < 0 then
-        self.player_pos_y = self.VH
+        self.player_pos_y = H
     end
     if self.player_pos_x < 0 then
-        self.player_pos_x = self.VW
+        self.player_pos_x = W
     end
-    if self.player_pos_y > self.VH then
+    if self.player_pos_y > H then
         self.player_pos_y = 0
     end
-    if self.player_pos_x > self.VW then
+    if self.player_pos_x > W then
         self.player_pos_x = 0
     end
     -- player teleport
@@ -328,8 +320,8 @@ local function loop(self, std)
         self.player_spd_x = 0
         self.player_spd_y = 0
         repeat
-            self.player_pos_x = std.math.random(1, self.VW)
-            self.player_pos_y = std.math.random(1, self.VH)
+            self.player_pos_x = std.math.random(1, W)
+            self.player_pos_y = std.math.random(1, H)
         until not asteroid_nest(self, std, self.player_pos_x, self.player_pos_y, -1)
     end
     -- player shoot
@@ -380,15 +372,15 @@ local function loop(self, std)
             self.asteroid_pos_x[index] = self.asteroid_pos_x[index] + self.asteroid_spd_x[index]
             self.asteroid_pos_y[index] = self.asteroid_pos_y[index] + self.asteroid_spd_y[index]
             if self.asteroid_pos_y[index] < -self.asteroid_size[index] then
-                self.asteroid_pos_y[index] = self.VH
+                self.asteroid_pos_y[index] = H
             end
             if self.asteroid_pos_x[index] < -self.asteroid_size[index] then
-                self.asteroid_pos_x[index] = self.VW
+                self.asteroid_pos_x[index] = W
             end
-            if self.asteroid_pos_y[index] > self.VH then
+            if self.asteroid_pos_y[index] > H then
                 self.asteroid_pos_y[index] = 0
             end
-            if self.asteroid_pos_x[index] > self.VW then
+            if self.asteroid_pos_x[index] > W then
                 self.asteroid_pos_x[index] = 0
             end
         end
@@ -433,7 +425,7 @@ local function draw(self, std)
         local function y(item) return h*11 + (item - 1) * row end
         local hmenu = y(self.menu) + th + (row - th) / 2
         std.draw.color(std.color.white)
-        if self.player_pos_x ~= (self.VW/2) then
+        if self.player_pos_x ~= (W/2) then
             std.text.print(w1, y(1), tr(self, 'Continue'))
         end
         std.text.print(w1, y(2), tr(self, 'New Game'))
@@ -462,22 +454,23 @@ local function draw(self, std)
         return
     end
     -- draw asteroids
+    local scale = v2s_size(self, 1)
     std.draw.color(std.color.white)
     local index = 1
     while index <= #self.asteroid_size do
         if self.asteroid_size[index] ~= -1 then
             local ax, ay = v2s(self, self.asteroid_pos_x[index], self.asteroid_pos_y[index])
             if self.graphics_fastest == 1 then
-                local s = v2s_size(self, self.asteroid_size[index])
+                local s = self.asteroid_size[index] * scale
                 std.draw.rect(1, ax, ay, s, s)
             elseif self.asteroid_size[index] == self.asteroid_large_size then
-                std.draw.poly(1, self.asteroid_large, ax, ay)
+                std.draw.poly(1, self.asteroid_large, ax, ay, scale)
             elseif self.asteroid_size[index] == self.asteroid_mid_size then
-                std.draw.poly(1, self.asteroid_mid, ax, ay)
+                std.draw.poly(1, self.asteroid_mid, ax, ay, scale)
             elseif self.asteroid_size[index] == self.asteroid_small_size then
-                std.draw.poly(1, self.asteroid_small, ax, ay)
+                std.draw.poly(1, self.asteroid_small, ax, ay, scale)
             else
-                std.draw.poly(1, self.asteroid_mini, ax, ay)
+                std.draw.poly(1, self.asteroid_mini, ax, ay, scale)
             end
         end
         index = index + 1
@@ -517,20 +510,13 @@ local function draw(self, std)
         end
     end
 
-    -- draw gui bars
-    std.draw.color(std.color.black)
-    local _, game_top_y = v2s(self, 0, 0)
-    std.draw.rect(0, 0, 0, self.width, game_top_y)
-    local _, game_bottom_y = v2s(self, 0, self.VH)
-    std.draw.rect(0, 0, game_bottom_y, self.width, self.height - game_bottom_y)
-    
+    -- draw hud
     std.draw.color(std.color.white)
-    std.text.font_size(v2s_size(self, self.width/40))
+    std.text.font_size(v2s_size(self, 24))
 
-    local pw, ph = 10, 2
-    local hf = std.app.height - ph
-    local wf = std.app.width - pw
-    local wc = std.app.width / 2
+    local pw, ph = v2s(self, 10, 2)
+    local wf, hf = v2s(self, W - 10, H - 2)
+    local wc = v2s(self, W / 2, 0)
 
     std.text.print_ex(pw, ph, tr(self, 'lifes:')..' '..tostring(self.lifes), 1)
     std.text.print_ex(wc, ph, tr(self, 'asteroids:')..' '..tostring(self.asteroids_count), 0)
