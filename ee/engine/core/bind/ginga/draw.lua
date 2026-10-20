@@ -40,44 +40,6 @@ local function clear(std, engine)
     end
 end
 
-local function rect2(std, engine)
-    return function(mode, pos_x, pos_y, width, height, radius)
-    local m = mode == 0 and 'fill' or 'frame'
-    local x = engine.offset_x + pos_x
-    local y = engine.offset_y + pos_y
-    local pip = engine.pip
-    
-    if pip then
-        if engine.canvasgly[1]._dump_to_file and engine.canvasgly[1].drawRoundRect then
-            engine.canvasgly[1]:drawRoundRect(m, x, y, width, height, radius)
-        else
-            engine.canvasgly[1]:drawRect(m, x, y, width, height)
-        end
-        if engine.canvasgly[2]._dump_to_file and engine.canvasgly[2].drawRoundRect then
-            engine.canvasgly[2]:drawRoundRect(m, x, y - pip.y, width, height, radius)
-        else
-            engine.canvasgly[2]:drawRect(m, x, y - pip.y, width, height)
-        end
-        if engine.canvasgly[3]._dump_to_file and engine.canvasgly[3].drawRoundRect then
-            engine.canvasgly[3]:drawRoundRect(m, x - (pip.x + pip.w), y - pip.y, width, height, radius)
-        else
-            engine.canvasgly[3]:drawRect(m, x - (pip.x + pip.w), y - pip.y, width, height)
-        end
-        if engine.canvasgly[4]._dump_to_file and engine.canvasgly[4].drawRoundRect then
-            engine.canvasgly[4]:drawRoundRect(m, x, y - (pip.y + pip.h), width, height, radius)
-        else
-            engine.canvasgly[4]:drawRect(m, x, y - (pip.y + pip.h), width, height)
-        end
-    else
-        if engine.canvas._dump_to_file and engine.canvas.drawRoundRect then
-            engine.canvas:drawRoundRect(m, x, y, width, height, radius)
-        else
-            engine.canvas:drawRect(m, x, y, width, height)
-        end
-    end
-    end
-end
-
 local function rect(std, engine)
     return function(mode, pos_x, pos_y, width, height, radius)
     local x = engine.offset_x + pos_x
@@ -120,8 +82,8 @@ end
 local function install(std, engine)
     std.draw.clear = clear(std, engine)
     std.draw.color = color(std, engine)
-    std.draw.rect2 = rect2(std, engine)
     std.draw.rect = rect(std, engine)
+    std.draw.rect2 = std.draw.rect
     std.draw.line = line(std, engine)
 end
 
