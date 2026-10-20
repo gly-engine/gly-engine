@@ -82,7 +82,9 @@ if not arg then
     return commands_info.meta()
 end
 
-local ok, message, state = cli2.load_cmds(json.decode_file('source/cli/cmds.json'))
+--! bootstrapped cli always use its own cmds.json, never one from the user project
+local embedded = BOOTSTRAP and BOOTSTRAP['cmds.json']
+local ok, message, state = cli2.load_cmds(embedded and json.decode(embedded) or json.decode_file('cmds.json'))
 
 if ok then
     ok, message, state = cli2.parse(state, arg)

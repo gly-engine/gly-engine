@@ -2,7 +2,7 @@ local test = require('tests/framework/microtest')
 local cli2 = require('source/shared/string/dsl/cli2')
 local json = require('source/third_party/rxi_json')
 
-local commands = json.decode_file('source/cli/cmds.json')
+local commands = json.decode_file('cmds.json')
 local ok_dsl, msg_dsl, dsl = cli2.load_cmds(commands)
 
 assert(ok_dsl, msg_dsl)
@@ -121,12 +121,12 @@ function test_core_none_default_hidden()
 end
 
 function test_overlay_not_with_enginecdn()
-    local ok, out = cli2.parse(dsl, {'build', '@pong', '--core', 'html5', '--enginecdn', '--overlay', 'source/cli/cmds.json'})
+    local ok, out = cli2.parse(dsl, {'build', '@pong', '--core', 'html5', '--enginecdn', '--overlay', 'tests/mock/overlay.json'})
     assert(ok == false)
     assert(out:find('not compatible with %-%-enginecdn') ~= nil)
-    local ok2, out2, state2 = cli2.parse(dsl, {'build', '@pong', '--core', 'html5', '--overlay', 'source/cli/cmds.json'})
+    local ok2, out2, state2 = cli2.parse(dsl, {'build', '@pong', '--core', 'html5', '--overlay', 'tests/mock/overlay.json'})
     assert(ok2 == true)
-    assert(state2.overlay == 'source/cli/cmds.json')
+    assert(state2.overlay == 'tests/mock/overlay.json')
 end
 
 function test_unknown_short_option()
