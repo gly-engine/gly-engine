@@ -6,7 +6,7 @@
 > create your own game-engine with just javascript or lua.
 
 Written in ES5 (plus `async`/`await`) with JSDoc types, no transpiler.
-Bundled by the gly-cli itself, `gly-cli build-html` emits its own `core-native.js`.
+Bundled by the gly-cli itself, `gly-cli build --core html5` emits its own `core-native.js`.
 
 ## Bundles
 
@@ -112,5 +112,5 @@ gly.on('draw', () => {
 ```sh
 npm run lint   # eslint, only ES5 syntax and async/await
 npm run check  # tsc over JSDoc, only ES5 builtins
-npm run build  # bundled by ../../cli.js bundler-js
+npm run build  # bundled by ../../cli.js bundler js
 ```

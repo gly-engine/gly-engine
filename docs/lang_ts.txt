@@ -45,7 +45,7 @@ To build you need an auxiliary tool available via npmjs, so I recommend you use 
 {
   "scripts": {
     "prebuild": "tstl",
-    "build": "gly-cli build-html --cwd build src/game.lua --fengari --enginecdn"
+    "build": "gly-cli build --cwd build src/game.lua --core html5 --fengari --enginecdn"
   },
   "dependencies": {
     "@gamely/gly-cli": "0.1.3",

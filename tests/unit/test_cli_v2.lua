@@ -2,7 +2,7 @@ local test = require('tests/framework/microtest')
 local cli2 = require('source/shared/string/dsl/cli2')
 local json = require('source/third_party/rxi_json')
 
-local commands = json.decode_file('cmds.json')
+local commands = json.decode_file('source/cli/cmds.json')
 local ok_dsl, msg_dsl, dsl = cli2.load_cmds(commands)
 
 assert(ok_dsl, msg_dsl)
@@ -74,6 +74,47 @@ function test_engine_shortcut_native()
     local ok2, out2, state2 = cli2.parse(dsl, {'build', '--core', 'html5', '@pong', '--engine', '@native'})
     assert(ok2 == true)
     assert(state2.engine == 'source/engine/core/vacuum/native/main.lua')
+end
+
+function test_global_version_anywhere()
+    local ok, out, state = cli2.parse(dsl, {'build', '@pong', '-v'})
+    assert(ok == true)
+    assert(state.command == 'version')
+    local ok2, out2, state2 = cli2.parse(dsl, {'--version'})
+    assert(state2.command == 'version')
+end
+
+function test_global_version_wins_help()
+    local ok, out, state = cli2.parse(dsl, {'build', '-h', '-v'})
+    assert(state.command == 'version')
+end
+
+function test_global_help_command()
+    local ok, out = cli2.parse(dsl, {'build', '@pong', '-h'})
+    assert(ok == true)
+    assert(out == cli2.get_help(dsl.commands, 'build'))
+end
+
+function test_global_help_class()
+    local ok, out = cli2.parse(dsl, {'build', 'html5', '-h'})
+    assert(out == cli2.get_help(dsl.commands, 'build', 'html5'))
+    local ok2, out2 = cli2.parse(dsl, {'build', '@pong', '--core', 'html5:ginga', '--help'})
+    assert(out2 == cli2.get_help(dsl.commands, 'build', 'html5:ginga'))
+    local ok3, out3 = cli2.parse(dsl, {'build', '--core=love', '-h'})
+    assert(out3 == cli2.get_help(dsl.commands, 'build', 'love'))
+end
+
+function test_global_help_subcommand()
+    local ok, out = cli2.parse(dsl, {'fs', 'copy', '-h'})
+    assert(out == cli2.get_help(dsl.commands, 'fs', 'copy'))
+    local ok2, out2 = cli2.parse(dsl, {'-h'})
+    assert(out2 == cli2.get_help(dsl.commands))
+end
+
+function test_unknown_short_option()
+    local ok, out = cli2.parse(dsl, {'build', '@pong', '-x'})
+    assert(ok == false)
+    assert(out:find('Unknown option: %-x') ~= nil)
 end
 
 test.unit(_G)

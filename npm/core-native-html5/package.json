@@ -31,11 +31,11 @@
     "scripts": {
         "lint": "eslint",
         "check": "tsc -p jsconfig.json",
-        "build:browser": "cd ../.. && node cli.js bundler-js npm/core-native-html5/src/index.js --outfile npm/core-native-html5/dist/index.js --global CoreNativeHtml5",
-        "build:fengari": "cd ../.. && node cli.js bundler-js npm/core-native-html5/src/fengari.js --outfile npm/core-native-html5/dist/fengari.js --global CoreNativeHtml5",
-        "build:wasmoon": "cd ../.. && node cli.js bundler-js npm/core-native-html5/src/wasmoon.js --outfile npm/core-native-html5/dist/wasmoon.js --global CoreNativeHtml5",
-        "build:cjs": "cd ../.. && node cli.js bundler-js npm/core-native-html5/src/index.js --outfile npm/core-native-html5/dist/index.cjs.js --format cjs",
-        "build:mjs": "cd ../.. && node cli.js bundler-js npm/core-native-html5/src/index.js --outfile npm/core-native-html5/dist/index.mjs --format esm",
+        "build:browser": "cd ../.. && node cli.js bundler js npm/core-native-html5/src/index.js --outfile npm/core-native-html5/dist/index.js --global CoreNativeHtml5",
+        "build:fengari": "cd ../.. && node cli.js bundler js npm/core-native-html5/src/fengari.js --outfile npm/core-native-html5/dist/fengari.js --global CoreNativeHtml5",
+        "build:wasmoon": "cd ../.. && node cli.js bundler js npm/core-native-html5/src/wasmoon.js --outfile npm/core-native-html5/dist/wasmoon.js --global CoreNativeHtml5",
+        "build:cjs": "cd ../.. && node cli.js bundler js npm/core-native-html5/src/index.js --outfile npm/core-native-html5/dist/index.cjs.js --format cjs",
+        "build:mjs": "cd ../.. && node cli.js bundler js npm/core-native-html5/src/index.js --outfile npm/core-native-html5/dist/index.mjs --format esm",
         "build:types": "tsc -p jsconfig.json --noEmit false --declaration --emitDeclarationOnly --outDir types",
         "build": "npm run build:browser && npm run build:fengari && npm run build:wasmoon && npm run build:cjs && npm run build:mjs",
         "test": "npm run lint && npm run check"

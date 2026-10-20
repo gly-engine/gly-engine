@@ -59,6 +59,11 @@ local function validate_dsl(data)
         if not ok then return false, err, nil end
     end
 
+    for i, global in ipairs(data.globals or {}) do
+        if not global.name then return false, "global[" .. i .. "] missing name", nil end
+        if type(global.redirect) ~= 'table' then return false, "global[" .. i .. "] (" .. global.name .. ") missing redirect", nil end
+    end
+
     return true, "DSL validated successfully", data
 end
 
@@ -151,12 +156,40 @@ local function get_width(items, key, extra)
     return math.max(max, 10)
 end
 
+local HELP_WIDTH = 80
+
+--! word wrap at HELP_WIDTH, continuation lines start at column @c indent
+local function wrap(text, indent, start)
+    local lines, line, col = {}, '', start or indent
+    for word in tostring(text):gmatch('%S+') do
+        if #line > 0 and col + #line + 1 + #word > HELP_WIDTH then
+            lines[#lines + 1] = line
+            line, col = word, indent
+        else
+            line = #line > 0 and (line .. ' ' .. word) or word
+        end
+    end
+    lines[#lines + 1] = line
+    return (table.concat(lines, '\n' .. string.rep(' ', indent)):gsub('\1', ' '))
+end
+
+--! text never broken by @c wrap
+local function nowrap(text)
+    return (tostring(text):gsub(' ', '\1'))
+end
+
+--! label padded to @c width at column @c indent, followed by wrapped description
+local function column(indent, label, width, desc)
+    local head = string.rep(' ', indent) .. label .. string.rep(' ', width - #label) .. '  '
+    return head .. wrap(desc or '', #head)
+end
+
 function cli2.list(cmds)
     local width = get_width(cmds)
     local lines = {}
     for _, cmd in ipairs(cmds) do
         if not cmd.hidden then
-            table.insert(lines, string.format('  %-' .. width .. 's  %s', cmd.name, cmd.description or ''))
+            table.insert(lines, column(2, cmd.name, width, cmd.description))
         end
     end
     return table.concat(lines, '\n')
@@ -167,9 +200,9 @@ local function render_section(title, items, formatter)
     local lines = { title .. ':' }
     local has_content = false
     for _, item in ipairs(items) do
-        local line = formatter(item)
+        local line = not item.hidden and formatter(item)
         if line then 
-            table.insert(lines, '  ' .. line) 
+            table.insert(lines, line) 
             has_content = true
         end
     end
@@ -178,8 +211,13 @@ local function render_section(title, items, formatter)
 end
 
 function cli2.render_help(cmd, display_name, all_classes)
-    local out = 'Usage: gly ' .. display_name .. ' [options]\n\n'
-    out = out .. 'Description:\n  ' .. (cmd.description or 'No description') .. '\n\n'
+    local usage = cmd.subcommands and ' <subcommand> [options]' or ' [options]'
+    local out = 'Usage: gly ' .. display_name .. usage .. '\n\n'
+    out = out .. 'Description:\n  ' .. wrap(cmd.description or 'No description', 2) .. '\n\n'
+
+    if cmd.subcommands then
+        out = out .. 'Subcommands:\n' .. cli2.list(cmd.subcommands) .. '\n\n'
+    end
 
     local label_w = 0
     local related = {}
@@ -198,20 +236,19 @@ function cli2.render_help(cmd, display_name, all_classes)
     label_w = math.max(label_w, get_width(cmd.args))
     label_w = math.max(label_w, get_width(cmd.flags, 'name', 2))
 
-    local fmt = '%-' .. label_w .. 's  %s'
     local try_cmd = nil
 
     -- Related Targets
     out = out .. render_section('Related Targets', related, function(r)
-        return string.format(fmt, r.name, r.description or '')
+        return column(2, r.name, label_w, r.description)
     end)
 
     -- Arguments
     out = out .. render_section('Arguments', cmd.args, function(arg)
         local desc = (arg.description or '') .. (arg.type and (' (' .. arg.type .. ')') or '')
         if arg.required then desc = desc .. ' (required)' end
-        if arg.default ~= nil then desc = desc .. ' [default: ' .. tostring(arg.default) .. ']' end
-        return string.format(fmt, arg.name, desc)
+        if arg.default ~= nil then desc = desc .. ' ' .. nowrap('[default: ' .. tostring(arg.default) .. ']') end
+        return column(2, arg.name, label_w, desc)
     end)
 
     -- Flags
@@ -219,12 +256,13 @@ function cli2.render_help(cmd, display_name, all_classes)
         if cmd.values and cmd.values[flag.name] ~= nil then return nil end
         
         local label = '--' .. flag.name
-        local desc = (flag.description or '') .. (flag.type and (' (' .. flag.type .. ')') or '') .. (flag.default ~= nil and (' [default: ' .. tostring(flag.default) .. ']') or '')
-        local line = string.format(fmt, label, desc)
+        local desc = (flag.description or '') .. (flag.type and (' (' .. flag.type .. ')') or '') .. (flag.default ~= nil and (' ' .. nowrap('[default: ' .. tostring(flag.default) .. ']')) or '')
+        local line = column(2, label, label_w, desc)
         
         if flag.type == 'enum' and flag.classes then
             line = line .. '\n      Available ' .. flag.name .. 's:'
             local cmd_base = display_name:match('^%S+') or display_name
+            local class_w = get_width(flag.classes)
             for _, class in ipairs(flag.classes) do
                 if not class.variant and not class.alias then
                     local variants = {}
@@ -238,7 +276,7 @@ function cli2.render_help(cmd, display_name, all_classes)
                         if is_v then table.insert(variants, v.name) end
                     end
                     local v_str = #variants > 0 and (" (variants: " .. table.concat(variants, ", ") .. ")") or ""
-                    line = line .. string.format('\n        %-10s %s%s', class.name, class.description or '', v_str)
+                    line = line .. '\n' .. column(8, class.name, class_w, (class.description or '') .. v_str)
                     if not try_cmd then try_cmd = "gly help " .. cmd_base .. " " .. class.name end
                 end
             end
@@ -373,11 +411,10 @@ function cli2.get_help(cmds, name, sub_or_class)
     return 'Unknown subcommand or class "' .. sub_or_class .. '" for ' .. name
 end
 
-function cli2.parse(data, arg)
-    local cmds = data.commands
+local function parse(data, cmds, arg, prefix)
     local input = arg[1]
 
-    if not input or input == 'help' then
+    if #prefix == 0 and (not input or input == 'help') then
         return true, cli2.get_help(cmds, arg[2], arg[3]), {}
     end
 
@@ -388,17 +425,33 @@ function cli2.parse(data, arg)
     end
 
     if #matches == 0 then
-        return false, 'Error:\nUnknown command "' .. input .. '"\n\nTry:\n\ngly help\n', {}
+        return false, 'Error:\nUnknown command "' .. prefix .. input .. '"\n\nTry:\n\ngly help ' .. prefix .. '\n', {}
     elseif #matches > 1 then
-        local lines = {'Ambiguous command "' .. input .. '". Matches:'}
-        for _, m in ipairs(matches) do table.insert(lines, '  ' .. m.name) end
+        local lines = {'Ambiguous command "' .. prefix .. input .. '". Matches:'}
+        for _, m in ipairs(matches) do table.insert(lines, '  ' .. prefix .. m.name) end
         return false, table.concat(lines, '\n'), {}
     end
 
     local base_cmd = matches[1]
+
+    if base_cmd.subcommands then
+        local path = prefix .. base_cmd.name
+        if not arg[2] then
+            return true, cli2.render_help(base_cmd, path), {}
+        end
+        local rest = {}
+        for i = 2, #arg do rest[#rest + 1] = arg[i] end
+        local ok, out, state = parse(data, base_cmd.subcommands, rest, path .. ' ')
+        if state.command then
+            state.subcommand = state.command
+            state.command = base_cmd.name
+        end
+        return ok, out, state
+    end
+
     local active_cmd = base_cmd
     local state = { command = base_cmd.name }
-    local active_help_path = base_cmd.name
+    local active_help_path = prefix .. base_cmd.name
     local errors = {}
 
     -- Pass 1: Active Target Identification
@@ -409,7 +462,7 @@ function cli2.parse(data, arg)
         local class, flag_name = _find_class(base_cmd, v or val)
         if class then
             active_cmd = class
-            active_help_path = base_cmd.name .. " " .. (v or val)
+            active_help_path = prefix .. base_cmd.name .. " " .. (v or val)
             state[flag_name or 'core'] = v or val
             break
         end
@@ -421,6 +474,8 @@ function cli2.parse(data, arg)
         for _, f in ipairs(target_cmd.flags) do
             if f.default ~= nil and state[f.name] == nil then
                 state[f.name] = f.default
+            elseif f.type == 'boolean' and state[f.name] == nil then
+                state[f.name] = false
             end
         end
     end
@@ -509,6 +564,8 @@ function cli2.parse(data, arg)
                 else
                     table.insert(errors, 'Too many arguments: ' .. val)
                 end
+            else
+                table.insert(errors, 'Unknown option: ' .. val)
             end
         end
     end
@@ -576,12 +633,12 @@ function cli2.parse(data, arg)
     end
 
     if base_cmd.name ~= input then
-        local out_partial = {'Partial match: ' .. base_cmd.name .. '\n'}
-        table.insert(out_partial, cli2.get_help(cmds, base_cmd.name))
+        local out_partial = {'Partial match: ' .. prefix .. base_cmd.name .. '\n'}
+        table.insert(out_partial, cli2.render_help(base_cmd, prefix .. base_cmd.name))
         return true, table.concat(out_partial, '\n'), state
     end
 
-    local out_final = {'Command "' .. base_cmd.name .. '" validated. State:'}
+    local out_final = {'Command "' .. prefix .. base_cmd.name .. '" validated. State:'}
     local sorted_keys = {}
     for k in pairs(state) do table.insert(sorted_keys, k) end
     table.sort(sorted_keys)
@@ -594,6 +651,56 @@ function cli2.parse(data, arg)
         end
     end
     return true, table.concat(out_final, '\n'), state
+end
+
+local function find_cmd(cmds, input)
+    local found
+    for _, c in ipairs(cmds or {}) do
+        if c.name == input then return c end
+        if input and c.name:sub(1, #input) == input then
+            if found then return nil end
+            found = c
+        end
+    end
+    return found
+end
+
+--! subcommand or class (ex: @c --core html5) mentioned in the arguments
+local function find_target(cmd, arg)
+    if cmd.subcommands then
+        local sub = find_cmd(cmd.subcommands, arg[2])
+        return sub and sub.name
+    end
+    for i = 2, #arg do
+        local value = arg[i]:match('^%-%-[^=]+=(.*)$') or arg[i]
+        if _find_class(cmd, value) then return value end
+    end
+end
+
+--! global flags replace the whole command line by its redirect
+local function apply_globals(data, arg)
+    for _, global in ipairs(data.globals or {}) do
+        for _, val in ipairs(arg) do
+            if val == '--' .. global.name or val == global.alias then
+                local cmd = find_cmd(data.commands, arg[1])
+                local vars = {
+                    command = cmd and cmd.name,
+                    target = cmd and find_target(cmd, arg)
+                }
+                local out = {}
+                for _, item in ipairs(global.redirect) do
+                    local res = item:gsub('{{(%w+)}}', function(key) return vars[key] or '' end)
+                    if #res > 0 then out[#out + 1] = res end
+                end
+                return out
+            end
+        end
+    end
+    return arg
+end
+
+function cli2.parse(data, arg)
+    return parse(data, data.commands, apply_globals(data, arg), '')
 end
 
 return cli2

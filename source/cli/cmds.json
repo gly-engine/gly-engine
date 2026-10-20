@@ -1,27 +1,26 @@
 {
+    "globals": [
+        {
+            "name": "version",
+            "alias": "-v",
+            "redirect": ["version"]
+        },
+        {
+            "name": "help",
+            "alias": "-h",
+            "redirect": ["help", "{{command}}", "{{target}}"]
+        }
+    ],
     "shortcuts": [
         {
             "name": "@{src}",
             "values": [
                 "samples/{{src}}/game.lua"
             ],
-            "when": [
-                "or",
-                [
-                    "eq",
-                    "command",
-                    "build"
-                ],
-                [
-                    "eq",
-                    "command",
-                    "meta"
-                ],
-                [
-                    "eq",
-                    "command",
-                    "run"
-                ]
+            "when": ["or",
+                ["eq", "command", "build"],
+                ["eq", "command", "meta"],
+                ["eq", "command", "run"]
             ]
         },
         {
@@ -30,18 +29,9 @@
                 "node_modules/@gamely/{{engine}}-engine/dist/main.lua",
                 "source/engine/core/vacuum/{{engine}}/main.lua"
             ],
-            "when": [
-                "and",
-                [
-                    "eq",
-                    "command",
-                    "build"
-                ],
-                [
-                    "neq",
-                    "engine",
-                    "@native"
-                ]
+            "when": ["and",
+                ["eq", "command", "build"],
+                ["neq", "engine", "@native"]
             ]
         },
         {
@@ -50,36 +40,25 @@
                 "node_modules/@gamely/gly-engine/dist/main.lua",
                 "source/engine/core/vacuum/native/main.lua"
             ],
-            "when": [
-                "and",
-                [
-                    "eq",
-                    "command",
-                    "build"
-                ],
-                [
-                    "eq",
-                    "engine",
-                    "@native"
-                ]
+            "when": ["and",
+                ["eq", "command", "build"],
+                ["eq", "engine", "@native"]
             ]
+        },
+        {
+            "name": "@{template}",
+            "values": [
+                "samples/{{template}}/game.lua"
+            ],
+            "when": ["eq", "command", "init"]
         }
     ],
     "errors": [
         {
             "message": "please use flag --enterprise to use commercial modules.",
-            "when": [
-                "and",
-                [
-                    "eq",
-                    "enterprise",
-                    "false"
-                ],
-                [
-                    "like",
-                    "core",
-                    "ginga"
-                ]
+            "when": ["and",
+                ["eq", "enterprise", "false"],
+                ["like", "core", "ginga"]
             ]
         }
     ],
@@ -173,6 +152,29 @@
                                     "name": "aa",
                                     "type": "boolean",
                                     "description": "Enable Anti-Aliasing"
+                                },
+                                {
+                                    "name": "corecdn",
+                                    "type": "boolean",
+                                    "description": "Load core-native-html5 from CDN"
+                                },
+                                {
+                                    "name": "gamepadzilla",
+                                    "type": "boolean",
+                                    "description": "Include virtual gamepad",
+                                    "hidden": true
+                                },
+                                {
+                                    "name": "videofake",
+                                    "type": "boolean",
+                                    "description": "Fake video player for testing",
+                                    "hidden": true
+                                },
+                                {
+                                    "name": "gpl3",
+                                    "type": "boolean",
+                                    "description": "Allow GPL3 libraries",
+                                    "hidden": true
                                 }
                             ]
                         },
@@ -280,6 +282,12 @@
                     ]
                 },
                 {
+                    "name": "cwd",
+                    "type": "string",
+                    "description": "Working directory of the game",
+                    "hidden": true
+                },
+                {
                     "name": "outdir",
                     "type": "string",
                     "default": "./dist/",
@@ -294,6 +302,31 @@
                     "name": "run",
                     "type": "boolean",
                     "description": "Execute after successful build"
+                }
+            ]
+        },
+        {
+            "name": "engine",
+            "description": "Build only the engine",
+            "args": [
+                {
+                    "name": "engine",
+                    "type": "string",
+                    "required": true,
+                    "description": "Engine subset: native, lite, micro or nano"
+                }
+            ],
+            "flags": [
+                {
+                    "name": "outdir",
+                    "type": "string",
+                    "description": "Output directory",
+                    "default": "./dist/"
+                },
+                {
+                    "name": "bundler",
+                    "type": "boolean",
+                    "description": "Enable Lua bundler"
                 }
             ]
         },
@@ -335,6 +368,16 @@
                     "type": "string",
                     "default": "{{& meta.title }} {{& meta.version }}",
                     "description": "Output format"
+                },
+                {
+                    "name": "infile",
+                    "type": "string",
+                    "description": "Read format from file"
+                },
+                {
+                    "name": "outfile",
+                    "type": "string",
+                    "description": "Write output to file"
                 }
             ]
         },
@@ -362,21 +405,57 @@
         },
         {
             "name": "bundler",
-            "description": "Combine multiple Lua files into a single script",
-            "args": [
+            "description": "Combine multiple source files into a single script",
+            "subcommands": [
                 {
-                    "name": "src",
-                    "type": "file",
-                    "required": true,
-                    "description": "Entry point file"
-                }
-            ],
-            "flags": [
+                    "name": "lua",
+                    "description": "Bundle Lua requires into a single script",
+                    "args": [
+                        {
+                            "name": "src",
+                            "type": "file",
+                            "required": true,
+                            "description": "Entry point file"
+                        }
+                    ],
+                    "flags": [
+                        {
+                            "name": "outfile",
+                            "type": "string",
+                            "description": "Output file path",
+                            "default": "./dist/main.lua"
+                        }
+                    ]
+                },
                 {
-                    "name": "outfile",
-                    "type": "string",
-                    "default": "./dist/main.lua",
-                    "description": "Output file path"
+                    "name": "js",
+                    "description": "Bundle CommonJS requires into a single script",
+                    "args": [
+                        {
+                            "name": "src",
+                            "type": "file",
+                            "required": true,
+                            "description": "Entry point file"
+                        }
+                    ],
+                    "flags": [
+                        {
+                            "name": "outfile",
+                            "type": "string",
+                            "description": "Output file path",
+                            "default": "./dist/main.js"
+                        },
+                        {
+                            "name": "format",
+                            "type": "string",
+                            "description": "Module format: cjs, esm or global"
+                        },
+                        {
+                            "name": "global",
+                            "type": "string",
+                            "description": "Window variable name, implies format global"
+                        }
+                    ]
                 }
             ]
         },
@@ -529,6 +608,19 @@
                             "type": "string",
                             "required": true,
                             "description": "Local destination path"
+                        }
+                    ]
+                },
+                {
+                    "name": "image-show",
+                    "description": "Show image in terminal",
+                    "hidden": true,
+                    "args": [
+                        {
+                            "name": "file",
+                            "type": "string",
+                            "required": true,
+                            "description": "Image file"
                         }
                     ]
                 }
