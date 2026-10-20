@@ -118,11 +118,11 @@ local function register_fixed_loop(fallback)
         xpcall(draw, engine.handler)
         canvas:flush()
         if fallback_restarts == fallback then
-            event.timer(engine.delay, tick)
+            event.timer(100, tick)
         end
     end
 
-    event.timer(engine.delay, tick)
+    event.timer(100, tick)
 end
 
 local function register_fallback(fallback)
@@ -139,14 +139,17 @@ local function register_fallback(fallback)
         end
     end
 
-    event.timer(engine.delay, tick)
+    event.timer(100, tick)
 end
+
+local last_loop_restart = 0
 
 local function register_event_loop()
     event.register(function(evt) 
         local uptime = event.uptime()
         pcall(std.bus.emit, 'ginga', evt)
-        if (uptime - std.milis) >= 1000 then
+        if (uptime - std.milis) >= 1000 and (uptime - last_loop_restart) >= 1000 then
+            last_loop_restart = uptime
             register_fixed_loop(fallback_restarts + 1)
         end
         if (uptime - falback_fallback_time) >= 6000 then
