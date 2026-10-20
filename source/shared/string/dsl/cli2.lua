@@ -600,17 +600,20 @@ local function parse(data, cmds, arg, prefix)
         if consumed < req_count then table.insert(errors, 'Missing required arguments') end
     end
 
-    -- Type Validation (File Existence)
+    -- Type Validation (File Existence), relative to --cwd when given
+    local function exists(path)
+        return file_exists(path) or (type(state.cwd) == 'string' and file_exists(state.cwd .. '/' .. path))
+    end
     local function validate_types(definitions, values)
         for _, def in ipairs(definitions or {}) do
             local val = values[def.name]
             if val and def.type == "file" then
                 if type(val) == "table" then
                     for _, v in ipairs(val) do
-                        if not file_exists(v) then table.insert(errors, "File not found: " .. def.name .. " -> " .. v) end
+                        if not exists(v) then table.insert(errors, "File not found: " .. def.name .. " -> " .. v) end
                     end
                 else
-                    if not file_exists(val) then table.insert(errors, "File not found: " .. def.name .. " -> " .. val) end
+                    if not exists(val) then table.insert(errors, "File not found: " .. def.name .. " -> " .. val) end
                 end
             end
         end

@@ -26,9 +26,9 @@ async function buildSelf() {
 
   gly(['cli', 'build']);
 
-  gly(['compile', 'dist/cli.lua', '--outfile', 'dist/cli.out']);
-  const bytecode = fs.readFileSync(path.join(dist, 'cli.out'));
-  const embedded = zlib.deflateRawSync(bytecode, { level: 9, memLevel: 9 }).toString('base64');
+  // lua source instead of bytecode, runs in any vm (fengari 5.3, wasmoon 5.4)
+  const source = fs.readFileSync(path.join(dist, 'cli.lua'));
+  const embedded = zlib.deflateRawSync(source, { level: 9, memLevel: 9 }).toString('base64');
 
   gly(['bundler', 'js', 'npm/gly-cli/cli.js', '--outfile', 'dist/cli.js']);
 
@@ -45,7 +45,7 @@ async function buildSelf() {
 
   gly(['fs', 'replace', 'README.md', './dist/README.md', '--format', 'lua cli.lua', '--replace', 'npx gly-cli']);
 
-  for (const file of ['cli.out', 'cli.lua', 'cli.version']) {
+  for (const file of ['cli.lua', 'cli.version']) {
     fs.rmSync(path.join(dist, file), { force: true });
   }
 }

@@ -231,9 +231,35 @@ function getJsModules() {
   };
 }
 
+function resolveFile(file) {
+  return [file, `${root}/${file}`].find(fs.existsSync);
+}
+
+// same lookup of fengari: cwd first, then gly-engine root
+const wasmoonModules = {
+  fs: Object.assign({}, fs, {
+    existsSync: (file) => resolveFile(file) !== undefined,
+    readFileSync: (file, encoding) => {
+      const filename = resolveFile(file) || file;
+      if (fs.existsSync(filename) && fs.statSync(filename).isDirectory()) {
+        return 'DIR';
+      }
+      return fs.readFileSync(filename, encoding);
+    },
+    readFileHex: (file) => {
+      const filename = resolveFile(file) || file;
+      if (fs.statSync(filename).isDirectory()) {
+        return Buffer.from('DIR').toString('hex');
+      }
+      return fs.readFileSync(filename).toString('hex');
+    },
+    writeFileHex: (file, hex) => fs.writeFileSync(file, Buffer.from(hex, 'hex'))
+  })
+};
+
 function registerJsRequire(L) {
   if (!is_fengari()) {
-    L.global.set('jsRequire', (name) => require(name));
+    L.global.set('jsRequire', (name) => wasmoonModules[name] || require(name));
     return;
   }
 
