@@ -105,7 +105,7 @@ function test_zcis_patterns()
     assert(#rectangles == 6)
     assert(rectangles[1][1] == 0 and rectangles[1][3] == 2)
     assert(rectangles[3][1] == 2 and rectangles[4][1] == 2)
-    assert(rectangles[5][1] == 4 and rectangles[5][3] == 2)
+    assert(rectangles[5][1] == 4 and rectangles[5][2] == 1 and rectangles[5][3] == 2)
     assert(rectangles[6][1] == 6)
 end
 
@@ -200,6 +200,47 @@ function test_zcis_stream_rejects_missing_header()
     decoder:push('!<arch>\n')
     decoder:finish()
     assert(not pcall(decoder.step, decoder, 1))
+end
+
+function test_zcis_stream_large_image_with_bounded_buffer()
+    local width, height = 321, 241
+    local rows, even, odd = {}, {}, {}
+    for y = 0, height - 1 do
+        local pixels = {}
+        for x = 0, width - 1 do
+            pixels[#pixels + 1] = string.char(x % 256, y % 256, (x + y) % 7 * 30)
+        end
+        rows[y + 1] = table.concat(pixels)
+        local layer = y % 2 == 0 and even or odd
+        layer[#layer + 1] = rows[y + 1]
+    end
+    local body = archive('0 0 321 241\r\n', {
+        {'1A00005B3t.ppm', ppm_data(width, #even, table.concat(even))},
+        {'2C00005B3t.ppm', ppm_data(width, #odd, table.concat(odd))}
+    })
+    local ops, get_canvas = canvas_ops()
+    local decoder = zcis.stream(ops)
+    for offset = 1, #body, 1460 do
+        decoder:push(body:sub(offset, offset + 1459))
+        local done, waiting
+        repeat
+            done, waiting = decoder:step(2048)
+        until done or waiting
+        assert(decoder.parser.length < 1460 + width * 3)
+    end
+    decoder:finish()
+    while not decoder:is_done() do decoder:step(2048) end
+    local image = {}
+    for _, rect in ipairs(get_canvas().rectangles) do
+        for y = rect[2], rect[2] + rect[4] - 1 do
+            for x = rect[1], rect[1] + rect[3] - 1 do
+                image[y * width + x + 1] = string.char(rect[5], rect[6], rect[7])
+            end
+        end
+    end
+    for y = 0, height - 1 do
+        assert(table.concat(image, '', y * width + 1, (y + 1) * width) == rows[y + 1])
+    end
 end
 
 function test_y4m_limited_range()

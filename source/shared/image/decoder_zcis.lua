@@ -74,7 +74,10 @@ end
 
 local function make_reader(chunk)
     local member = chunk.member
-    if chunk.extension == 'ppm' then
+    if member.stream then
+        local data = member.stream:read(math.min(member.size, 1024))
+        return data and ppm.new(data, 1, member.size, member.stream)
+    elseif chunk.extension == 'ppm' then
         return ppm.new(member.body, member.offset, member.size)
     elseif chunk.extension == 'yuv' then
         return yuv.raw(member.body, member.offset, member.size, chunk.width, chunk.height)
@@ -143,14 +146,17 @@ local function masked_alpha(active_masks, count, x, step, alpha)
     return result
 end
 
-local function paint(ops, canvas, x, y, width, r, g, b, a)
-    ops.color(canvas, r, g, b, a)
-    ops.pixel(canvas, x, y, width, 1)
+local function paint(self, canvas, x, y, width, r, g, b, a)
+    if width == 1 and a == 255 and self.point and self.chunk.extension == 'ppm' then
+        return self.point(canvas, x, y, r, g, b, a)
+    end
+    self.ops.color(canvas, r, g, b, a)
+    self.ops.pixel(canvas, x, y, width, 1)
 end
 
 local function begin_row(self)
     local command = self.command
-    if (command == 'c' or command == 'd') and self.target_y % 2 == 1 then
+    if (command == 'c' and self.target_y % 2 == 0) or (command == 'd' and self.target_y % 2 == 1) then
         return true
     end
 
@@ -194,6 +200,7 @@ local function draw_pixels(self, budget)
         if skipped == nil then return 0, false end
         if skipped then return 1, true end
     end
+    if self.reader.prepare and not self.reader.prepare(self.row_source_y) then return 0, false end
 
     local chunk = self.chunk
     local consumed = 0
@@ -217,7 +224,7 @@ local function draw_pixels(self, budget)
                 or self.row_run_b ~= b
                 or self.row_run_a ~= a) then
             paint(
-                self.ops,
+                self,
                 self.canvas,
                 self.row_run_x,
                 self.row_absolute_y,
@@ -255,7 +262,7 @@ local function draw_pixels(self, budget)
     if self.row_target_x >= chunk.width then
         if self.row_run_x then
             paint(
-                self.ops,
+                self,
                 self.canvas,
                 self.row_run_x,
                 self.row_absolute_y,
@@ -294,6 +301,7 @@ local function finish_chunk(self)
     if self.chunk.command == self.chunk.command:upper() then
         self.ops.commit(self.canvas)
     end
+    if self.chunk.member.stream then self.chunk.member.stream:read() end
     self.chunk = nil
     self.reader = nil
     self.command = nil
@@ -309,6 +317,7 @@ local function prepare_chunk(self)
     if not self.chunk and self.member_index <= self.member_count then
         local chunk = parse_chunk(self.members[self.member_index], self.width, self.height)
         local reader = make_reader(chunk)
+        if not reader then return false end
         local command = lower(chunk.command)
 
         if command == 'e' then
@@ -355,7 +364,7 @@ local function step(self, pixels)
         end
     end
     if self.done then return true end
-    if not self.canvas then return false end
+    if not self.canvas then return false, true end
 
     local processed = 0
     while processed < (pixels or 1) and not self.done do
@@ -365,7 +374,7 @@ local function step(self, pixels)
         elseif self.chunk then
             local used, row_done = draw_pixels(self, (pixels or 1) - processed)
             if used == 0 then
-                return false
+                return false, true
             end
             processed = processed + used
             if row_done then
@@ -375,7 +384,7 @@ local function step(self, pixels)
                 end
             end
         else
-            return false
+            return false, true
         end
     end
     return self.done
@@ -398,7 +407,7 @@ local function add_member(self, member)
             error('missing zcis header')
         end
         self.width, self.height = parse_bounds(member)
-        self.canvas = self.ops.start(self.width, self.height)
+        self.canvas, self.point = self.ops.start(self.width, self.height)
         return
     end
     self.member_count = self.member_count + 1
@@ -438,7 +447,7 @@ local function stream(ops)
     local decoder = create(ops)
     local parser = ar.new(function(member)
         add_member(decoder, member)
-    end)
+    end, '^%w[aAcC]%w+%.[pP][pP][mM]/?$')
     decoder.parser = parser
     decoder.push = function(self, data)
         parser:push(data)

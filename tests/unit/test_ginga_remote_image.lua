@@ -12,15 +12,11 @@ function test_remote_zcis_image()
     local body = '!<arch>\n'
         ..member('000000000000.txt', '0 0 1 1\r\n')
         ..member('1A00000101.ppm', ppm)
-    local texture = {rectangles = 0, commits = 0}
+    local texture = {points = 0, commits = 0}
 
-    function texture:attrColor(r, g, b, a)
-        self.color = {r, g, b, a}
-    end
-
-    function texture:drawRect(_, x, y, width, height)
-        self.rectangles = self.rectangles + 1
-        self.rectangle = {x, y, width, height}
+    function texture:pixel(x, y, r, g, b, a)
+        self.points = self.points + 1
+        self.point = {x, y, r, g, b, a}
     end
 
     function texture:flush()
@@ -100,7 +96,8 @@ function test_remote_zcis_image()
     end
     assert(std.image.exists(second_url))
     assert(std.image.error(second_url) == nil)
-    assert(texture.rectangles == 1 and texture.commits == 1)
+    assert(texture.points == 1 and texture.commits == 1)
+    assert(table.concat(texture.point, ',') == '0,0,12,34,56,255')
 
     local error_url = 'http://localhost/error.zcis'
     std.image.load(error_url)

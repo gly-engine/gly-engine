@@ -38,10 +38,20 @@ local function cancel_request(token)
     finish_request(token)
 end
 
+local function feed(decoder, data)
+    decoder:push(data)
+    local limit = math.max(32768, #data)
+    while decoder.parser.length > limit do
+        local done, waiting = decoder:step(2048)
+        if done or waiting then break end
+    end
+end
+
 local function make_canvas_ops(canvas)
     return {
         start = function(width, height)
-            return canvas.new(canvas, width, height)
+            local target = canvas.new(canvas, width, height)
+            return target, target.pixel
         end,
         color = function(target, r, g, b, a)
             target:attrColor(r, g, b, a)
@@ -177,7 +187,7 @@ local function load_remote(std, canvas, id, src, token)
     local function stream(data)
         if not is_active() or token.decode_error then return end
         streamed = true
-        local ok, message = pcall(decoder.push, decoder, data)
+        local ok, message = pcall(feed, decoder, data)
         if not ok then
             stream_error = message
             request.stream = nil
