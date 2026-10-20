@@ -24,6 +24,7 @@ handlers['version'] = commands_info.version
 
 --! each `--core` class is built by a handler with a target
 local cores = {
+    ['none'] = {'build', 'none'},
     ['html5'] = {'build-html', 'html5'},
     ['html5:webos'] = {'build-html', 'webos'},
     ['html5:tizen'] = {'build-html', 'tizen'},

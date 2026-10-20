@@ -105,9 +105,14 @@
                 {
                     "name": "core",
                     "type": "enum",
-                    "default": "html5",
+                    "default": "none",
                     "description": "Target platform core engine",
                     "classes": [
+                        {
+                            "name": "none",
+                            "hidden": true,
+                            "description": "Build only the game"
+                        },
                         {
                             "name": "html5",
                             "description": "Build for web browsers (HTML5/JS)",

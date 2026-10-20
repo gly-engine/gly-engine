@@ -256,7 +256,11 @@ function cli2.render_help(cmd, display_name, all_classes)
         if cmd.values and cmd.values[flag.name] ~= nil then return nil end
         
         local label = '--' .. flag.name
-        local desc = (flag.description or '') .. (flag.type and (' (' .. flag.type .. ')') or '') .. (flag.default ~= nil and (' ' .. nowrap('[default: ' .. tostring(flag.default) .. ']')) or '')
+        local default = flag.default
+        for _, class in ipairs(flag.classes or {}) do
+            if class.name == default and class.hidden then default = nil end
+        end
+        local desc = (flag.description or '') .. (flag.type and (' (' .. flag.type .. ')') or '') .. (default ~= nil and (' ' .. nowrap('[default: ' .. tostring(default) .. ']')) or '')
         local line = column(2, label, label_w, desc)
         
         if flag.type == 'enum' and flag.classes then
@@ -264,7 +268,7 @@ function cli2.render_help(cmd, display_name, all_classes)
             local cmd_base = display_name:match('^%S+') or display_name
             local class_w = get_width(flag.classes)
             for _, class in ipairs(flag.classes) do
-                if not class.variant and not class.alias then
+                if not class.variant and not class.alias and not class.hidden then
                     local variants = {}
                     for _, v in ipairs(flag.classes) do
                         local is_v = false

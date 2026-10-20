@@ -111,6 +111,15 @@ function test_global_help_subcommand()
     assert(out2 == cli2.get_help(dsl.commands))
 end
 
+function test_core_none_default_hidden()
+    local ok, out, state = cli2.parse(dsl, {'build', '@pong'})
+    assert(ok == true)
+    assert(state.core == 'none')
+    local help = cli2.get_help(dsl.commands, 'build')
+    assert(help:find('none') == nil)
+    assert(help:find('html5') ~= nil)
+end
+
 function test_unknown_short_option()
     local ok, out = cli2.parse(dsl, {'build', '@pong', '-x'})
     assert(ok == false)
