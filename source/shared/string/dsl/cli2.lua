@@ -279,8 +279,11 @@ function cli2.render_help(cmd, display_name, all_classes)
                         end
                         if is_v then table.insert(variants, v.name) end
                     end
-                    local v_str = #variants > 0 and (" (variants: " .. table.concat(variants, ", ") .. ")") or ""
-                    line = line .. '\n' .. column(8, class.name, class_w, (class.description or '') .. v_str)
+                    line = line .. '\n' .. column(8, class.name, class_w, class.description)
+                    if #variants > 0 then
+                        local indent = 8 + class_w + 2
+                        line = line .. '\n' .. string.rep(' ', indent) .. wrap('(variants: ' .. table.concat(variants, ', ') .. ')', indent)
+                    end
                     if not try_cmd then try_cmd = "gly help " .. cmd_base .. " " .. class.name end
                 end
             end
