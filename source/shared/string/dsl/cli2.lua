@@ -329,6 +329,8 @@ local function evaluate_rules(state, rules)
         elseif op == "or" then
             for i = 2, #rules do if evaluate_rules(state, rules[i]) then return true end end
             return false
+        elseif op == "not" then
+            return not evaluate_rules(state, rules[2])
         end
     end
 
@@ -611,16 +613,20 @@ local function parse(data, cmds, arg, prefix)
     local function exists(path)
         return file_exists(path) or (type(state.cwd) == 'string' and file_exists(state.cwd .. '/' .. path))
     end
+    -- `check` rule decides per value if it is validated, `value` is the value itself
+    local function checked(def, v)
+        if not def.check then return true end
+        local ctx = setmetatable({value = v}, {__index = state})
+        return evaluate_rules(ctx, def.check)
+    end
     local function validate_types(definitions, values)
         for _, def in ipairs(definitions or {}) do
             local val = values[def.name]
             if val and def.type == "file" then
-                if type(val) == "table" then
-                    for _, v in ipairs(val) do
-                        if not exists(v) then table.insert(errors, "File not found: " .. def.name .. " -> " .. v) end
+                for _, v in ipairs(type(val) == "table" and val or {val}) do
+                    if checked(def, v) and not exists(v) then
+                        table.insert(errors, "File not found: " .. def.name .. " -> " .. v)
                     end
-                else
-                    if not exists(val) then table.insert(errors, "File not found: " .. def.name .. " -> " .. val) end
                 end
             end
         end

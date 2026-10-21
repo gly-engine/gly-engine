@@ -379,9 +379,10 @@
                 {
                     "name": "src",
                     "type": "file",
+                    "check": ["not", ["like", "value", "="]],
                     "required": true,
                     "multiple": true,
-                    "description": "Input source files"
+                    "description": "Input source files or inline KEY=value"
                 }
             ],
             "flags": [
