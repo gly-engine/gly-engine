@@ -115,4 +115,130 @@ function test_remote_zcis_image()
     std.image.unload_all()
 end
 
+local function fake_engine()
+    local texture = {points = 0}
+    function texture:pixel(x, y, r, g, b, a)
+        self.points = self.points + 1
+        self.point = {x, y, r, g, b, a}
+    end
+    function texture:flush() end
+    function texture:attrSize()
+        return 1, 1
+    end
+
+    local canvas = {}
+    function canvas.new()
+        return texture
+    end
+
+    local requests = {}
+    local env = {texture = texture, requests = requests}
+    local std = {
+        image = {},
+        http = {},
+        bus = {
+            listen = function(_, handler)
+                env.loop = handler
+            end
+        }
+    }
+    function std.http.get(url)
+        local request = {url = url}
+        function request:success(handler)
+            self.success_handler = handler
+            return self
+        end
+        function request:failed(handler)
+            self.failed_handler = handler
+            return self
+        end
+        function request:error(handler)
+            self.error_handler = handler
+            return self
+        end
+        function request:run()
+            requests[#requests + 1] = self
+        end
+        return request
+    end
+
+    draw_image.install(std, {canvas = canvas, offset_x = 0, offset_y = 0})
+    std.image.unload_all()
+    env.std = std
+    return env
+end
+
+function test_remote_zcis_image_cobs()
+    local cobs = require('source/shared/string/encode/cobs')
+    local ppm = 'P6\n1 1\n255\n'..string.char(0, 34, 0)
+    local body = '!<arch>\n'
+        ..member('000000000000.txt', '0 0 1 1\r\n')
+        ..member('1A00000101.ppm', ppm)
+    local stuffed = cobs.encode(body)
+    local cobs_headers = {['X-Encoding'] = 'cobs'}
+
+    local env = fake_engine()
+    local std = env.std
+
+    -- only an url naming the zcis format is asked in cobs
+    std.image.load('http://localhost/a.png')
+    std.image.load('http://localhost/b.zcis?format=zcis')
+    std.image.load('http://localhost/c?format=zcis&encoding=base64')
+    for _ = 1, 3 do
+        env.loop()
+        local request = env.requests[#env.requests]
+        request.success_handler({http = {body = ''}})
+    end
+    assert(env.requests[1].url == 'http://localhost/a.png')
+    assert(env.requests[2].url == 'http://localhost/b.zcis?format=zcis&encoding=cobs')
+    assert(env.requests[3].url == 'http://localhost/c?format=zcis&encoding=base64')
+    std.image.unload_all()
+
+    -- streamed, with blocks cut at any byte
+    local streamed_url = 'http://localhost/streamed?format=zcis'
+    std.image.load(streamed_url)
+    env.loop()
+    local request = env.requests[#env.requests]
+    for index = 1, #stuffed, 5 do
+        request.stream(stuffed:sub(index, index + 4), cobs_headers)
+    end
+    request.success_handler({http = {body = '', headers = cobs_headers}})
+    for _ = 1, 4 do
+        env.loop()
+    end
+    assert(std.image.error(streamed_url) == nil)
+    assert(std.image.exists(streamed_url))
+    assert(table.concat(env.texture.point, ',') == '0,0,0,34,0,255')
+    std.image.unload_all()
+
+    -- whole body, the way a ginga without streaming hands it over
+    env.texture.point = nil
+    local whole_url = 'http://localhost/whole?format=zcis'
+    std.image.load(whole_url)
+    env.loop()
+    request = env.requests[#env.requests]
+    request.success_handler({http = {body = stuffed, headers = {['x-encoding'] = 'cobs'}}})
+    for _ = 1, 4 do
+        env.loop()
+    end
+    assert(std.image.error(whole_url) == nil)
+    assert(std.image.exists(whole_url))
+    assert(table.concat(env.texture.point, ',') == '0,0,0,34,0,255')
+    std.image.unload_all()
+
+    -- a server that ignores the param answers plain zcis, and it is not decoded
+    env.texture.point = nil
+    local plain_url = 'http://localhost/plain?format=zcis'
+    std.image.load(plain_url)
+    env.loop()
+    request = env.requests[#env.requests]
+    request.success_handler({http = {body = body, headers = {}}})
+    for _ = 1, 4 do
+        env.loop()
+    end
+    assert(std.image.error(plain_url) == nil)
+    assert(table.concat(env.texture.point, ',') == '0,0,0,34,0,255')
+    std.image.unload_all()
+end
+
 test.unit(_G)

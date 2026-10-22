@@ -66,7 +66,7 @@ local function callback(evt)
 
     if evt.body then
         if self.stream and response.ok ~= false then
-            self.stream(evt.body)
+            self.stream(evt.body, response.headers)
         end
         if not self.discard_body then
             local body = response.body

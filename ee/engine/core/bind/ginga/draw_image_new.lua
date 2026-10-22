@@ -1,6 +1,7 @@
 local png_validator = require('source/shared/image/check_png')
 local zcis_decoder = require('source/shared/image/decoder_zcis')
 local create_counter = require('source/shared/functional/counter')
+local cobs = require('source/shared/string/encode/cobs')
 
 local next_id, clear_id, clear_all = create_counter()
 local image_ids = {}
@@ -36,6 +37,26 @@ local function cancel_request(token)
         token.request = nil
     end
     finish_request(token)
+end
+
+-- some ginga hand a tcp read to lua as a c string and lose everything after a zero
+-- byte, so a zcis asked to haio comes without zeros. only the url naming the format
+-- is touched, an url signed by somebody else would stop working with one more param.
+local function with_cobs(src)
+    if not src:find('[?&]format=zcis') or src:find('[?&]encoding=') then
+        return src
+    end
+    return src..'&encoding=cobs'
+end
+
+-- decoded only when the server says it did it, a server that ignores the param still works
+local function is_cobs(headers)
+    for name, value in pairs(headers or {}) do
+        if string.lower(name) == 'x-encoding' then
+            return string.lower(tostring(value)) == 'cobs'
+        end
+    end
+    return false
 end
 
 local function feed(decoder, data)
@@ -159,6 +180,7 @@ local function load_remote(std, canvas, id, src, token)
     local decoder = zcis_decoder.stream(make_canvas_ops(canvas))
     local streamed = false
     local stream_error
+    local unstuff
     local request
 
     local function is_active()
@@ -184,10 +206,15 @@ local function load_remote(std, canvas, id, src, token)
         end
     end
 
-    local function stream(data)
+    local function stream(data, headers)
         if not is_active() or token.decode_error then return end
         streamed = true
-        local ok, message = pcall(feed, decoder, data)
+        if unstuff == nil then
+            unstuff = is_cobs(headers) and cobs.decoder() or false
+        end
+        local ok, message = pcall(function()
+            feed(decoder, unstuff and unstuff:push(data) or data)
+        end)
         if not ok then
             stream_error = message
             request.stream = nil
@@ -217,7 +244,13 @@ local function load_remote(std, canvas, id, src, token)
         if streamed then
             ok, message = pcall(decoder.finish, decoder)
         else
-            ok, message = pcall(zcis_decoder.new, http_std.http.body, make_canvas_ops(canvas))
+            ok, message = pcall(function()
+                local body = http_std.http.body
+                if is_cobs(http_std.http.headers) then
+                    body = cobs.decode(body)
+                end
+                return zcis_decoder.new(body, make_canvas_ops(canvas))
+            end)
             if ok then
                 decoder = message
             end
@@ -230,7 +263,7 @@ local function load_remote(std, canvas, id, src, token)
         publish()
     end
 
-    request = std.http.get(src)
+    request = std.http.get(with_cobs(src))
     token.request = request
     request.stream = stream
     request.discard_body = true
