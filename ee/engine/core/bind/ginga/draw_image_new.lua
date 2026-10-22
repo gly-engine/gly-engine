@@ -126,8 +126,9 @@ local function process_decoders()
         return
     end
 
-    local ok, done = pcall(state.decoder.step, state.decoder, 2048)
-    if ok and state.decoder.canvas then
+    -- one blit a frame, as many frames as the container has commits
+    local ok, done = pcall(state.decoder.step_commit, state.decoder)
+    if ok and state.decoder.canvas and state.decoder.commits > 0 then
         image_canvas[id] = state.decoder.canvas
     end
     if not ok then
@@ -198,7 +199,8 @@ local function load_remote(std, canvas, id, src, token)
 
     local function publish()
         if not is_active() or token.decode_error then return end
-        if decoder.canvas then
+        -- nothing is shown before the first commit, the canvas is only half drawn
+        if decoder.canvas and decoder.commits > 0 then
             image_canvas[id] = decoder.canvas
         end
         if not image_decoder[id] then

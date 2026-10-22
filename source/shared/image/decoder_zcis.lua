@@ -300,6 +300,7 @@ end
 local function finish_chunk(self)
     if self.chunk.command == self.chunk.command:upper() then
         self.ops.commit(self.canvas)
+        self.commits = self.commits + 1
     end
     if self.chunk.member.stream then self.chunk.member.stream:read() end
     self.chunk = nil
@@ -356,7 +357,8 @@ end
 
 local finish_input
 
-local function step(self, pixels)
+local function step(self, pixels, until_commit)
+    local commits = self.commits
     if self.parser and not self.parser.closed then
         local parser_done = self.parser:step(2)
         if parser_done and not self.input_done then
@@ -381,6 +383,9 @@ local function step(self, pixels)
                 self.target_y = self.target_y + 1
                 if self.target_y >= self.chunk.height then
                     finish_chunk(self)
+                    if until_commit and self.commits ~= commits then
+                        return self.done
+                    end
                 end
             end
         else
@@ -388,6 +393,19 @@ local function step(self, pixels)
         end
     end
     return self.done
+end
+
+--! decodes up to the next commit, an uppercase command, so each call is one blit
+--! as the container lays them out: a lowercase command is drawn in the same call
+--! as the commit that follows it. stops early only when the data is not there yet.
+local function step_commit(self)
+    local commits = self.commits
+    while true do
+        local done, waiting = step(self, 2048, true)
+        if done or waiting or self.commits ~= commits then
+            return done, waiting
+        end
+    end
 end
 
 local function is_done(self)
@@ -437,7 +455,9 @@ local function create(ops)
         ops = ops,
         done = false,
         input_done = false,
+        commits = 0,
         step = step,
+        step_commit = step_commit,
         is_done = is_done,
         close = close
     }

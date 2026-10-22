@@ -263,4 +263,25 @@ function test_y4m_rejects_high_bit_depth()
     assert(not pcall(yuv.y4m, data, 1, #data))
 end
 
+function test_zcis_step_commit_is_one_blit()
+    local row = string.rep(string.char(10, 20, 30), 4)
+    local body = archive('0 0 4 2\r\n', {
+        {'1A00000402.ppm', ppm_data(4, 1, row)},
+        {'2b00000402.ppm', ppm_data(4, 1, row)},
+        {'3C00000402.ppm', ppm_data(4, 1, row)}
+    })
+    local ops, current = canvas_ops()
+    local decoder = zcis.new(body, ops)
+
+    -- the base layer, low quality, in one call
+    local done = decoder:step_commit()
+    assert(not done)
+    assert(decoder.commits == 1 and current().commits == 1)
+
+    -- the lowercase command is drawn along with the commit after it, in the next call
+    done = decoder:step_commit()
+    assert(done)
+    assert(decoder.commits == 2 and current().commits == 2)
+end
+
 test.unit(_G)
