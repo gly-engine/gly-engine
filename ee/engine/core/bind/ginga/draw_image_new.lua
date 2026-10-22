@@ -39,9 +39,6 @@ local function cancel_request(token)
     finish_request(token)
 end
 
--- some ginga hand a tcp read to lua as a c string and lose everything after a zero
--- byte, so a zcis asked to haio comes without zeros. only the url naming the format
--- is touched, an url signed by somebody else would stop working with one more param.
 local function with_cobs(src)
     if not src:find('[?&]format=zcis') or src:find('[?&]encoding=') then
         return src
@@ -49,7 +46,6 @@ local function with_cobs(src)
     return src..'&encoding=cobs'
 end
 
--- decoded only when the server says it did it, a server that ignores the param still works
 local function is_cobs(headers)
     for name, value in pairs(headers or {}) do
         if string.lower(name) == 'x-encoding' then
@@ -126,7 +122,6 @@ local function process_decoders()
         return
     end
 
-    -- one blit a frame, as many frames as the container has commits
     local ok, done = pcall(state.decoder.step_commit, state.decoder)
     if ok and state.decoder.canvas and state.decoder.commits > 0 then
         image_canvas[id] = state.decoder.canvas
@@ -199,7 +194,6 @@ local function load_remote(std, canvas, id, src, token)
 
     local function publish()
         if not is_active() or token.decode_error then return end
-        -- nothing is shown before the first commit, the canvas is only half drawn
         if decoder.canvas and decoder.commits > 0 then
             image_canvas[id] = decoder.canvas
         end

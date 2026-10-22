@@ -156,7 +156,7 @@ end
 
 local function begin_row(self)
     local command = self.command
-    if (command == 'c' and self.target_y % 2 == 0) or (command == 'd' and self.target_y % 2 == 1) then
+    if (command == 'c' or command == 'd') and self.target_y % 2 == 1 then
         return true
     end
 
@@ -395,9 +395,6 @@ local function step(self, pixels, until_commit)
     return self.done
 end
 
---! decodes up to the next commit, an uppercase command, so each call is one blit
---! as the container lays them out: a lowercase command is drawn in the same call
---! as the commit that follows it. stops early only when the data is not there yet.
 local function step_commit(self)
     local commits = self.commits
     while true do
@@ -421,7 +418,7 @@ end
 
 local function add_member(self, member)
     if not self.canvas then
-        if member.name ~= '000000000000.txt' then
+        if not member.name:match('^0+%.txt$') then
             error('missing zcis header')
         end
         self.width, self.height = parse_bounds(member)

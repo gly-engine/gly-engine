@@ -10,11 +10,11 @@ local function raw_member(name, data)
 end
 
 local function member(name, data)
-    return raw_member(#name < 16 and name..'/' or name, data)
+    return raw_member(name, data)
 end
 
 local function archive(bounds, chunks)
-    local body = '!<arch>\n'..member('000000000000.txt', bounds)
+    local body = '!<arch>\n'..member('0000000000.txt', bounds)
     for index = 1, #chunks do
         body = body..member(chunks[index][1], chunks[index][2])
     end
@@ -105,7 +105,7 @@ function test_zcis_patterns()
     assert(#rectangles == 6)
     assert(rectangles[1][1] == 0 and rectangles[1][3] == 2)
     assert(rectangles[3][1] == 2 and rectangles[4][1] == 2)
-    assert(rectangles[5][1] == 4 and rectangles[5][2] == 1 and rectangles[5][3] == 2)
+    assert(rectangles[5][1] == 4 and rectangles[5][2] == 0 and rectangles[5][3] == 2)
     assert(rectangles[6][1] == 6)
 end
 
@@ -156,7 +156,7 @@ function test_zcis_skips_bsd_symbol_table()
     local ppm = ppm_data(1, 1, string.char(4, 5, 6))
     local body = '!<arch>\n'
         ..raw_member('#1/9', '__.SYMDEF'..'index')
-        ..member('000000000000.txt', bounds)
+        ..member('0000000000.txt', bounds)
         ..member('1A00000101.ppm', ppm)
     local ops, get_canvas = canvas_ops()
     zcis.decode(body, ops)
@@ -215,8 +215,8 @@ function test_zcis_stream_large_image_with_bounded_buffer()
         layer[#layer + 1] = rows[y + 1]
     end
     local body = archive('0 0 321 241\r\n', {
-        {'1A00005B3t.ppm', ppm_data(width, #even, table.concat(even))},
-        {'2C00005B3t.ppm', ppm_data(width, #odd, table.concat(odd))}
+        {'1A00005B3t.ppm', ppm_data(width, #odd, table.concat(odd))},
+        {'2C00005B3t.ppm', ppm_data(width, #even, table.concat(even))}
     })
     local ops, get_canvas = canvas_ops()
     local decoder = zcis.stream(ops)
@@ -273,12 +273,10 @@ function test_zcis_step_commit_is_one_blit()
     local ops, current = canvas_ops()
     local decoder = zcis.new(body, ops)
 
-    -- the base layer, low quality, in one call
     local done = decoder:step_commit()
     assert(not done)
     assert(decoder.commits == 1 and current().commits == 1)
 
-    -- the lowercase command is drawn along with the commit after it, in the next call
     done = decoder:step_commit()
     assert(done)
     assert(decoder.commits == 2 and current().commits == 2)

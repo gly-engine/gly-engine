@@ -2,15 +2,14 @@ local test = require('tests/framework/microtest')
 local draw_image = require('ee/engine/core/bind/ginga/draw_image_new')
 
 local function member(name, data)
-    local stored_name = #name < 16 and name..'/' or name
-    local header = string.format('%-16s%-12d%-6d%-6d%-8o%-10d`\n', stored_name, 0, 0, 0, 420, #data)
+    local header = string.format('%-16s%-12d%-6d%-6d%-8o%-10d`\n', name, 0, 0, 0, 420, #data)
     return header..data..(#data % 2 == 1 and '\n' or '')
 end
 
 function test_remote_zcis_image()
     local ppm = 'P6\n1 1\n255\n'..string.char(12, 34, 56)
     local body = '!<arch>\n'
-        ..member('000000000000.txt', '0 0 1 1\r\n')
+        ..member('0000000000.txt', '0 0 1 1\r\n')
         ..member('1A00000101.ppm', ppm)
     local texture = {points = 0, commits = 0}
 
@@ -172,7 +171,7 @@ function test_remote_zcis_image_cobs()
     local cobs = require('source/shared/string/encode/cobs')
     local ppm = 'P6\n1 1\n255\n'..string.char(0, 34, 0)
     local body = '!<arch>\n'
-        ..member('000000000000.txt', '0 0 1 1\r\n')
+        ..member('0000000000.txt', '0 0 1 1\r\n')
         ..member('1A00000101.ppm', ppm)
     local stuffed = cobs.encode(body)
     local cobs_headers = {['X-Encoding'] = 'cobs'}
@@ -180,7 +179,6 @@ function test_remote_zcis_image_cobs()
     local env = fake_engine()
     local std = env.std
 
-    -- only an url naming the zcis format is asked in cobs
     std.image.load('http://localhost/a.png')
     std.image.load('http://localhost/b.zcis?format=zcis')
     std.image.load('http://localhost/c?format=zcis&encoding=base64')
@@ -194,7 +192,6 @@ function test_remote_zcis_image_cobs()
     assert(env.requests[3].url == 'http://localhost/c?format=zcis&encoding=base64')
     std.image.unload_all()
 
-    -- streamed, with blocks cut at any byte
     local streamed_url = 'http://localhost/streamed?format=zcis'
     std.image.load(streamed_url)
     env.loop()
@@ -211,7 +208,6 @@ function test_remote_zcis_image_cobs()
     assert(table.concat(env.texture.point, ',') == '0,0,0,34,0,255')
     std.image.unload_all()
 
-    -- whole body, the way a ginga without streaming hands it over
     env.texture.point = nil
     local whole_url = 'http://localhost/whole?format=zcis'
     std.image.load(whole_url)
@@ -226,7 +222,6 @@ function test_remote_zcis_image_cobs()
     assert(table.concat(env.texture.point, ',') == '0,0,0,34,0,255')
     std.image.unload_all()
 
-    -- a server that ignores the param answers plain zcis, and it is not decoded
     env.texture.point = nil
     local plain_url = 'http://localhost/plain?format=zcis'
     std.image.load(plain_url)

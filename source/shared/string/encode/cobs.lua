@@ -1,15 +1,4 @@
---! @short Consistent Overhead Byte Stuffing
---! @brief body without zero bytes, as haio writes with @c ?encoding=cobs
---! @details
---! some ginga televisions hand a tcp read to lua as a c string, so everything after
---! a zero byte in each read is lost. cobs removes every zero at the cost of at most
---! one byte in 254.
---!
---! every block starts with a code: the code minus one bytes follow it, and a zero
---! comes after them unless the code is 255 or the block is the last one.
---! @note no frame delimiter is written or expected.
 
---! @cond
 local function encode(data)
     local out, block = {}, {}
 
@@ -19,7 +8,6 @@ local function encode(data)
     end
 
     for index = 1, #data do
-        -- a full block is only closed when something follows it
         if #block == 254 then
             close()
         end
@@ -35,7 +23,6 @@ local function encode(data)
     return table.concat(out)
 end
 
---! decodes a chunk and keeps where it stopped, so a block may span any number of chunks
 local function push(self, chunk)
     local parts, index, size = {}, 1, #chunk
 
@@ -46,7 +33,6 @@ local function push(self, chunk)
             self.left = self.left - (stop - index + 1)
             index = stop + 1
         else
-            -- the zero of the block before is only written once another block exists
             if self.zero then
                 parts[#parts + 1] = '\0'
             end
@@ -62,10 +48,7 @@ local function push(self, chunk)
 
     return table.concat(parts)
 end
---! @endcond
 
---! @short streaming decoder
---! @return object with @c push(self, chunk) that returns the decoded bytes of that chunk
 local function decoder()
     return {left = 0, zero = false, push = push}
 end
