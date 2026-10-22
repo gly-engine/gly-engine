@@ -54,9 +54,6 @@ local function callback(evt)
             response.content_length = tonumber(evt.headers['Content-Length'])
         end
         response.headers = deep_copy.table(evt.headers)
-        local transfer_encoding = evt.headers['Transfer-Encoding']
-        response.chunked = transfer_encoding
-            and transfer_encoding:lower():find('chunked', 1, true) ~= nil
     end
 
     if evt.code then
@@ -78,7 +75,7 @@ local function callback(evt)
     local status = tonumber(response.status)
     local bodyless = self.method == 'HEAD' or status == 204 or status == 304
     local complete_length = response.content_length and response.size >= response.content_length
-        or response.content_length == nil and not response.chunked and evt.body ~= nil
+        or response.content_length == nil and evt.body ~= nil
     if evt.finished or raise_error or complete_length or bodyless then
         self.set('headers', response.headers)
         self.set('ok', response.ok)

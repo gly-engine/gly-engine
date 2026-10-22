@@ -4,7 +4,7 @@ local convert = require('source/shared/image/convert_color')
 local floor = math.floor
 local ceil = math.ceil
 local yuv2rgb = convert.yuv2rgb
-local inv_256 = 1 / 256
+local yuv2rgb_limited = convert.yuv2rgb_limited
 
 local chroma_420 = {
     ['420'] = true,
@@ -12,17 +12,6 @@ local chroma_420 = {
     ['420mpeg2'] = true,
     ['420paldv'] = true
 }
-
-local function limited_yuv2rgb(y, u, v)
-    local c = y - 16
-    local r = floor((298 * c + 409 * v + 128) * inv_256)
-    local g = floor((298 * c - 100 * u - 208 * v + 128) * inv_256)
-    local b = floor((298 * c + 516 * u + 128) * inv_256)
-    if r < 0 then r = 0 elseif r > 255 then r = 255 end
-    if g < 0 then g = 0 elseif g > 255 then g = 255 end
-    if b < 0 then b = 0 elseif b > 255 then b = 255 end
-    return r, g, b
-end
 
 local function raw(data, offset, size, width, height, limited)
     if width <= 0 or height <= 0 then
@@ -40,7 +29,7 @@ local function raw(data, offset, size, width, height, limited)
 
     local u_offset = offset + y_size
     local v_offset = u_offset + uv_size
-    local convert_pixel = limited ~= false and limited_yuv2rgb or yuv2rgb
+    local convert_pixel = limited ~= false and yuv2rgb_limited or yuv2rgb
 
     local cached_y = -1
     local cached_uv = -1
