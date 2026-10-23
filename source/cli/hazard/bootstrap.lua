@@ -93,11 +93,7 @@ local function build(input_name, output_name, input_paths)
         do 
             local f = io.open(path_src, 'rb')
             if not f then 
-                return false, 'directory not found'
-            end
-            local can_read = f:read(3)
-            if can_read and can_read ~= 'DIR' then
-                return false, 'path src must be a directory'
+                return false, 'path not found: '..path_src
             end
             f:close()
         end

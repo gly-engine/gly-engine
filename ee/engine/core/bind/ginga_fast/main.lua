@@ -4,10 +4,11 @@ local version = require('source/version')
 --
 local tree = require('source/shared/engine/tree')
 local loadcore = require('source/shared/engine/loadcore')
+local error_module = require('source/engine/core/error')
 local loadgame = require('source/shared/engine/loadgame')
 --
 local core_draw = require('ee/engine/core/bind/ginga/draw')
-local core_draw_image = require('ee/engine/core/bind/ginga/draw_image')
+local core_draw_image = require('ee/engine/core/bind/ginga/draw_image_old')
 local core_text = require('ee/engine/core/bind/ginga/text')
 local core_keys = require('ee/engine/core/bind/ginga/keys')
 --
@@ -15,7 +16,6 @@ local engine_encoder = require('source/engine/api/data/encoder')
 local engine_game = require('source/engine/api/system/app')
 local engine_hash = require('source/engine/api/data/hash')
 local engine_http = require('source/engine/api/io/http')
-local engine_i18n = require('source/engine/api/data/i18n')
 local engine_keys = require('source/engine/api/system/key')
 local engine_log = require('source/engine/api/debug/log')
 local engine_math = require('source/engine/api/math/basic')
@@ -72,8 +72,7 @@ local engine = {
 
 
 local cfg_system = {
-    quit = function() event.post({class = 'ncl', type = 'presentation', action = 'stop'}) end,
-    get_language = function() return 'pt-BR' end
+    quit = function() event.post({class = 'ncl', type = 'presentation', action = 'stop'}) end
 }
 
 local cfg_poly = {
@@ -124,11 +123,9 @@ local function main(evt, gamefile)
     if evt.class and evt.class ~= 'ncl' or evt.action ~= 'start' and evt.type ~= 'presentation' then return end
 
     engine.envs = evt
-    engine.handler = function(msg) 
-        if select(2, pcall(engine.root.callbacks.error or function() end, engine.root.data, std, tostring(msg))) == true then
-            os.exit()
-        end
-    end
+    engine.handler = error_module.make_handler(engine, std, function()
+        os.exit()
+    end)
     application = loadgame.script(gamefile, application_default)
 
     loadcore.setup(std, application, engine)
@@ -161,7 +158,6 @@ local function main(evt, gamefile)
         :package('http', engine_http, cfg_http_ginga2)
         :package('http', engine_http, cfg_http_ginga)
         :package('storage', engine_storage, cfg_persistent)
-        :package('i18n', engine_i18n, cfg_system)
         :run()
 
     application.data.width, application.data.height = canvas:attrSize()

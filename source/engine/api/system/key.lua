@@ -1,32 +1,27 @@
----@ todo remove all its not @c x oy @c y from std.key.axis
-
 local function real_key(std, engine, rkey, rvalue)
     local value = (rvalue == 1 or rvalue == true) or false
-    local key = engine.key_bindings[rkey] or (std.key.axis[rkey] and rkey)
-    local key_media = std.key.media and std.key.media[rkey] ~= nil and rkey
+    local key = engine.key_bindings[rkey] or rkey
 
-    if key_media then
-        std.key.media[key_media] = value
-        std.bus.emit('key_media')
-    end
-
-    if key then
-        std.key.axis[key] = value and 1 or 0
+    if std.key.press[key] ~= nil or not engine.keyboard_lock then
         std.key.press[key] = value
 
         if key == 'right' or key == 'left' then
-            std.key.axis.x = std.key.axis.right - std.key.axis.left
+            std.key.axis.x = (std.key.press['right'] and 1 or 0) - (std.key.press['left'] and 1 or 0) 
         end
         
         if key == 'down' or key == 'up' then
-            std.key.axis.y = std.key.axis.down - std.key.axis.up
+            std.key.axis.y = (std.key.press['down'] and 1 or 0) - (std.key.press['up'] and 1 or 0)
         end
         
-        std.bus.emit('key')
-    end
+        std.key.any = false
+        for _, value in pairs(std.key.press) do
+            if value then std.key.any = true end
+        end
 
-    local a = std.key.axis
-    std.key.press.any = (a.left + a.right + a.down + a.up + a.a + a.b + a.c + a.d + a.menu) > 0
+        if std.bus and std.bus.emit and engine.keyboard_lock then
+            std.bus.emit('key', key, value)
+        end
+    end
 end
 
 local function real_keydown(std, engine, key)
@@ -41,19 +36,17 @@ local function install(std, engine, config)
     config = config or {}
     engine.key_bindings = config.bindings or {}
     engine.keyboard = real_key
-    
-    if config.has_media then
-        std.key.media = {
-            ch_up = false,
-            ch_down = false,
-            vol_up = false,
-            vol_down = false
-        }
+
+    for _, key in pairs(engine.key_bindings) do
+        real_key(std, engine, key, false)
     end
 
-    std.bus.listen_std_engine('rkey', real_key)
-    std.bus.listen_std_engine('rkey1', real_keydown)
-    std.bus.listen_std_engine('rkey0', real_keyup)
+    if std.bus.listen_std_engine then
+        std.bus.listen('load', function() engine.keyboard_lock = true end)
+        std.bus.listen_std_engine('rkey', real_key)
+        std.bus.listen_std_engine('rkey1', real_keydown)
+        std.bus.listen_std_engine('rkey0', real_keyup)
+    end
 end
 
 return {

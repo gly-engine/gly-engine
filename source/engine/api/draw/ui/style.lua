@@ -1,4 +1,4 @@
-local tree = require('source/shared/engine/tree')
+local ss = require('source/engine/browser/stylesheet')
 
 --! @defgroup std
 --! @{
@@ -43,7 +43,19 @@ local tree = require('source/shared/engine/tree')
 --! @}
 
 local function add(engine, self, node)
-    tree.css_add(engine.dom, self.func, node)
+    local dom_obj = engine.dom
+    -- css_add tracks style_names (and resolves span/z) when a name is passed
+    ss.css_add(dom_obj, self.func, node, self.name)
+
+    -- check for :focus variant
+    if self.name then
+        local focus_name = self.name .. ':focus'
+        if dom_obj.stylesheet_func and dom_obj.stylesheet_func[focus_name] then
+            node.config.style_focus = node.config.style_focus or {}
+            node.config.style_focus[self.name] = dom_obj.stylesheet_func[focus_name]
+        end
+    end
+
     return self
 end
 
@@ -57,13 +69,14 @@ local function add_items(engine, self, nodes)
 end
 
 local function remove(engine, self, node)
-    tree.css_del(engine.dom, self.func, node)
+    ss.css_del(engine.dom, self.func, node, self.name)
     return self
 end
 
 local function component(engine, name, options)
     local self = {
-        func = tree.stylesheet(engine.dom, name, options),
+        name = name,
+        func = ss.stylesheet(engine.dom, name, options),
         add = function(a, b) return add(engine, a, b) end,
         add_items = function(a, b) return add_items(engine, a, b) end,
         remove = function(a, b) return remove(engine, a, b) end
