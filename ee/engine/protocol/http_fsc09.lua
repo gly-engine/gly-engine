@@ -34,6 +34,14 @@ local function handler(self)
     })
 end
 
+local function find_header(headers, name)
+    for key, value in pairs(headers) do
+        if string.lower(key) == name then
+            return value
+        end
+    end
+end
+
 local function callback(evt)
     if evt.class ~= 'http' then return end
     local empty = not evt.headers or not evt.body or not evt.code
@@ -50,11 +58,16 @@ local function callback(evt)
     end
 
     if evt.headers then
-        if evt.headers['Content-Length'] then
-            response.content_length = tonumber(evt.headers['Content-Length'])
+        local content_length = find_header(evt.headers, 'content-length')
+        local content_encoding = find_header(evt.headers, 'content-encoding')
+        local encoded = content_encoding and content_encoding:lower() ~= 'identity'
+        -- body arrives decompressed, so Content-Length (compressed size) is useless
+        if content_length and not encoded then
+            response.content_length = tonumber(content_length)
         end
         response.headers = deep_copy.table(evt.headers)
-        local transfer_encoding = evt.headers['Transfer-Encoding']
+        local transfer_encoding = find_header(evt.headers, 'transfer-encoding')
+        response.encoded = encoded
         response.chunked = transfer_encoding
             and transfer_encoding:lower():find('chunked', 1, true) ~= nil
     end
@@ -78,7 +91,7 @@ local function callback(evt)
     local status = tonumber(response.status)
     local bodyless = self.method == 'HEAD' or status == 204 or status == 304
     local complete_length = response.content_length and response.size >= response.content_length
-        or response.content_length == nil and not response.chunked and evt.body ~= nil
+        or response.content_length == nil and not response.chunked and not response.encoded and evt.body ~= nil
     if evt.finished or raise_error or complete_length or bodyless then
         self.set('headers', response.headers)
         self.set('ok', response.ok)
