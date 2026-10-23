@@ -1,6 +1,7 @@
 local png_validator = require('source/shared/image/check_png')
 local zcis_decoder = require('source/shared/image/decoder_zcis')
 local create_counter = require('source/shared/functional/counter')
+local cobs = require('source/shared/string/encode/cobs')
 
 local next_id, clear_id, clear_all = create_counter()
 local image_ids = {}
@@ -38,10 +39,36 @@ local function cancel_request(token)
     finish_request(token)
 end
 
+local function with_cobs(src)
+    if not src:find('[?&]format=zcis') or src:find('[?&]encoding=') then
+        return src
+    end
+    return src..'&encoding=cobs'
+end
+
+local function is_cobs(headers)
+    for name, value in pairs(headers or {}) do
+        if string.lower(name) == 'x-encoding' then
+            return string.lower(tostring(value)) == 'cobs'
+        end
+    end
+    return false
+end
+
+local function feed(decoder, data)
+    decoder:push(data)
+    local limit = math.max(32768, #data)
+    while decoder.parser.length > limit do
+        local done, waiting = decoder:step(2048)
+        if done or waiting then break end
+    end
+end
+
 local function make_canvas_ops(canvas)
     return {
         start = function(width, height)
-            return canvas.new(canvas, width, height)
+            local target = canvas.new(canvas, width, height)
+            return target, target.pixel
         end,
         color = function(target, r, g, b, a)
             target:attrColor(r, g, b, a)
@@ -95,8 +122,8 @@ local function process_decoders()
         return
     end
 
-    local ok, done = pcall(state.decoder.step, state.decoder, 2048)
-    if ok and state.decoder.canvas then
+    local ok, done = pcall(state.decoder.step_commit, state.decoder)
+    if ok and state.decoder.canvas and state.decoder.commits > 0 then
         image_canvas[id] = state.decoder.canvas
     end
     if not ok then
@@ -149,6 +176,7 @@ local function load_remote(std, canvas, id, src, token)
     local decoder = zcis_decoder.stream(make_canvas_ops(canvas))
     local streamed = false
     local stream_error
+    local unstuff
     local request
 
     local function is_active()
@@ -166,7 +194,7 @@ local function load_remote(std, canvas, id, src, token)
 
     local function publish()
         if not is_active() or token.decode_error then return end
-        if decoder.canvas then
+        if decoder.canvas and decoder.commits > 0 then
             image_canvas[id] = decoder.canvas
         end
         if not image_decoder[id] then
@@ -174,10 +202,15 @@ local function load_remote(std, canvas, id, src, token)
         end
     end
 
-    local function stream(data)
+    local function stream(data, headers)
         if not is_active() or token.decode_error then return end
         streamed = true
-        local ok, message = pcall(decoder.push, decoder, data)
+        if unstuff == nil then
+            unstuff = is_cobs(headers) and cobs.decoder() or false
+        end
+        local ok, message = pcall(function()
+            feed(decoder, unstuff and unstuff:push(data) or data)
+        end)
         if not ok then
             stream_error = message
             request.stream = nil
@@ -207,7 +240,13 @@ local function load_remote(std, canvas, id, src, token)
         if streamed then
             ok, message = pcall(decoder.finish, decoder)
         else
-            ok, message = pcall(zcis_decoder.new, http_std.http.body, make_canvas_ops(canvas))
+            ok, message = pcall(function()
+                local body = http_std.http.body
+                if is_cobs(http_std.http.headers) then
+                    body = cobs.decode(body)
+                end
+                return zcis_decoder.new(body, make_canvas_ops(canvas))
+            end)
             if ok then
                 decoder = message
             end
@@ -220,7 +259,7 @@ local function load_remote(std, canvas, id, src, token)
         publish()
     end
 
-    request = std.http.get(src)
+    request = std.http.get(with_cobs(src))
     token.request = request
     request.stream = stream
     request.discard_body = true

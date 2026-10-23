@@ -33,7 +33,7 @@ local function next_token(data, offset, limit)
     return data:sub(start, offset - 1), offset
 end
 
-local function new(data, offset, size)
+local function new(data, offset, size, source)
     local limit = offset + size - 1
     local magic
     magic, offset = next_token(data, offset, limit)
@@ -69,6 +69,24 @@ local function new(data, offset, size)
         error('truncated ppm pixels')
     end
 
+    local prepare
+    if source then
+        local buffer = data:sub(offset)
+        local row = -1
+        prepare = function(y)
+            while row < y do
+                local size = width * 3
+                local extra = source:read(math.max(0, size - #buffer))
+                if not extra then return false end
+                data = #buffer == 0 and extra or (buffer..extra):sub(1, size)
+                buffer = buffer:sub(size + 1)
+                row = row + 1
+            end
+            offset = 1 - y * width * 3
+            return true
+        end
+    end
+
     local pixel
     if maxval == 255 then
         pixel = function(x, y)
@@ -88,6 +106,7 @@ local function new(data, offset, size)
     return {
         width = width,
         height = height,
+        prepare = prepare,
         pixel = pixel
     }
 end
