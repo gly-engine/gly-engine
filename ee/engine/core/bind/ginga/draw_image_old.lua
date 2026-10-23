@@ -30,7 +30,15 @@ local function image_draw(std, engine, canvas)
         if image then
             local x = engine.offset_x + (pos_x or 0)
             local y = engine.offset_y + (pos_y or 0)
-            canvas:compose(x, y, image)
+            local pip = engine.pip
+            if pip then
+                engine.canvasgly[1]:compose(x, y, image)
+                engine.canvasgly[2]:compose(x, -pip.y, image)
+                engine.canvasgly[3]:compose(-(pip.x + pip.w), -pip.y, image)
+                engine.canvasgly[4]:compose(0, -(pip.y + pip.h), image)
+            else
+                canvas:compose(x, y, image)
+            end
         end
     end
 end
