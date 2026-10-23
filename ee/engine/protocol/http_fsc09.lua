@@ -61,7 +61,6 @@ local function callback(evt)
         local content_length = find_header(evt.headers, 'content-length')
         local content_encoding = find_header(evt.headers, 'content-encoding')
         local encoded = content_encoding and content_encoding:lower() ~= 'identity'
-        -- body arrives decompressed, so Content-Length (compressed size) is useless
         if content_length and not encoded then
             response.content_length = tonumber(content_length)
         end
