@@ -19,15 +19,19 @@ end
 --! @brief Flatten nested child arrays ({arr} / {...arr} JSX sugar).
 --! @details Plain sequences ([1] set, no node/config marker) are child
 --! arrays from expression children; real childs (grid/item/node/style)
---! never have positional indexes.
+--! never have positional indexes. nil, booleans and empty tables are
+--! skipped, as in React, so {cond && <x/>} and {[]} render nothing.
 --! @param src table
+--! @param n number  count of src, nil holes included
 --! @param dest table
 --! @return table dest
-local function flat_childs(src, dest)
-    for i = 1, #src do
+local function flat_childs(src, n, dest)
+    for i = 1, n do
         local c = src[i]
-        if type(c) == 'table' and c[1] ~= nil and not c.node and not c.config then
-            flat_childs(c, dest)
+        if c == nil or type(c) == 'boolean' or (type(c) == 'table' and next(c) == nil) then
+            -- nothing to render
+        elseif type(c) == 'table' and c[1] ~= nil and not c.node and not c.config then
+            flat_childs(c, #c, dest)
         else
             dest[#dest + 1] = c
         end
@@ -43,7 +47,7 @@ local function create_h(std, engine)
     local function h(element, attribute, ...)
         local el_type = type(element)
         attribute = attribute or {}
-        local childs = flat_childs({...}, {})
+        local childs = flat_childs({...}, select('#', ...), {})
 
         if element == std then
             return error

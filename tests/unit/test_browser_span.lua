@@ -79,4 +79,19 @@ function test_jsx_node_child_no_span_untouched()
     assert(child.config.size == nil, 'no span attr leaves config.size untouched')
 end
 
+-- ─── jsx: false/nil/empty childs render nothing ({cond && <x/>}) ─────────────
+
+function test_jsx_node_skips_false_nil_and_empty()
+    local spawned = {}
+    local s = { ui = {}, node = {} }
+    s.node.load  = function(x) return x end
+    s.node.spawn = function(n, parent) if parent then spawned[#spawned + 1] = n end return n end
+    s.ui.style   = function() return { add = function() end } end
+    local hh = jsx.create_h(s, engine)
+    local a, b = { config = {} }, { config = {} }
+    hh('node', {}, false, a, nil, {}, true, { b, false })
+    assert(#spawned == 2, 'only real childs are spawned, got ' .. #spawned)
+    assert(spawned[1] == a and spawned[2] == b, 'order kept, nil hole does not stop the rest')
+end
+
 test.unit(_G)
