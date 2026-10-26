@@ -16,7 +16,6 @@ local engine_encoder = require('source/engine/api/data/encoder')
 local engine_game = require('source/engine/api/system/app')
 local engine_hash = require('source/engine/api/data/hash')
 local engine_http = require('source/engine/api/io/http')
-local engine_i18n = require('source/engine/api/data/i18n')
 local engine_keys = require('source/engine/api/system/key')
 local engine_log = require('source/engine/api/debug/log')
 local engine_math = require('source/engine/api/math/basic')
@@ -73,8 +72,7 @@ local engine = {
 
 
 local cfg_system = {
-    quit = function() event.post({class = 'ncl', type = 'presentation', action = 'stop'}) end,
-    get_language = function() return 'pt-BR' end
+    quit = function() event.post({class = 'ncl', type = 'presentation', action = 'stop'}) end
 }
 
 local cfg_poly = {
@@ -120,11 +118,11 @@ local function register_fixed_loop(fallback)
         xpcall(draw, engine.handler)
         canvas:flush()
         if fallback_restarts == fallback then
-            event.timer(engine.delay, tick)
+            event.timer(100, tick)
         end
     end
 
-    event.timer(engine.delay, tick)
+    event.timer(100, tick)
 end
 
 local function register_fallback(fallback)
@@ -141,14 +139,17 @@ local function register_fallback(fallback)
         end
     end
 
-    event.timer(engine.delay, tick)
+    event.timer(100, tick)
 end
+
+local last_loop_restart = 0
 
 local function register_event_loop()
     event.register(function(evt) 
         local uptime = event.uptime()
         pcall(std.bus.emit, 'ginga', evt)
-        if (uptime - std.milis) >= 1000 then
+        if (uptime - std.milis) >= 1000 and (uptime - last_loop_restart) >= 1000 then
+            last_loop_restart = uptime
             register_fixed_loop(fallback_restarts + 1)
         end
         if (uptime - falback_fallback_time) >= 6000 then
@@ -195,7 +196,6 @@ local function main(evt, gamefile)
         :package('http', engine_http, cfg_http_ginga2)
         :package('http', engine_http, cfg_http_ginga)
         :package('storage', engine_storage, cfg_persistent)
-        :package('i18n', engine_i18n, cfg_system)
         :run()
 
     application.data.width, application.data.height = canvas:attrSize()

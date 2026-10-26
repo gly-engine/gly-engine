@@ -91,13 +91,24 @@ local str_fs = require('source/shared/string/schema/fs')
 --!     error(msg)
 --! end
 --! @endcode
+--! deterministic id from entry content (djb2), avoids name collision of nested bundles
+local function identify(filepath)
+    local file = filepath and io.open(filepath, 'r')
+    local content = file and file:read('*a') or ''
+    local hash = 5381
+    if file then file:close() end
+    for index = 1, #content do
+        hash = (hash * 33 + content:byte(index)) % 16777216
+    end
+    return string.format('%x', hash)
+end
+
 local function build(src, dest)
     local from = 'main'
     local src_path = str_fs.file(src)
     local dest_path = str_fs.file(dest)
     local relative = src_path and dest_path and src_path.get_unix_path()
     local src_file, src_err = io.open((src_path and src_path.get_fullfilepath()) or '')
-    local pattern_identify = '^table: (%w+)$'
     local pattern_require1 = '^%s*require%([\'"](.-)[\'"]%)(.*)'
     local pattern_require2 = '^%s*([%w_%-]+)%s*=%s*require%([\'"](.-)[\'"]%)(.*)'
     local pattern_require3 = '^%s*local%s*([%w_%-]+)%s*=%s*require%([\'"](.-)[\'"]%)(.*)'
@@ -107,9 +118,10 @@ local function build(src, dest)
     local before_lib_declaration = 'b{id}[{index}] = r{id}({index}, function()\n'
     local after_lib_declaration = 'end)\n'
     local require_lib = 'b{id}[{index}](\'{alias}\')'
-    local id = tostring({}):gsub('0x', ''):match(pattern_identify)
+    local id = identify(src_path and src_path.get_fullfilepath())
     local deps_list = {}
     local deps_dict = {}
+    local deps_count = 0
     local main_content = ''
     local main_before = ''
     local main_after = ''
@@ -161,7 +173,8 @@ local function build(src, dest)
             if line_package then
                 if not deps_dict[line_package] then
                     deps_list[#deps_list + 1] = line_package
-                    deps_dict[line_package]={line={}, var={}, suffix={}}
+                    deps_count = deps_count + 1
+                    deps_dict[line_package]={line={}, var={}, suffix={}, uid=id..'x'..deps_count}
                 end
                 if line_variable == '-' then
                     line = '-'..'- part '
@@ -173,8 +186,7 @@ local function build(src, dest)
 
                 --@ todo remove lib_func??
                 local index = #deps_dict[line_package].line + 1
-                local lib_id = tostring(deps_dict[line_package]):gsub('0x', ''):match(pattern_identify)
-                local lib_func = line_package:gsub('/', '_'):gsub('%.', '_'):gsub('\\', '_')..'_'..lib_id
+                local lib_func = line_package:gsub('/', '_'):gsub('%.', '_'):gsub('\\', '_')..'_'..deps_dict[line_package].uid
 
                 line = line..lib_func..' '..line_variable..' '
                 deps_dict[line_package].line[index] = line

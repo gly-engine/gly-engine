@@ -1,0 +1,47 @@
+{
+    "name": "@gamely/core-native-html5",
+    "version": "0.3.0",
+    "author": "RodrigoDornelles",
+    "license": "Apache-2.0",
+    "homepage": "https://gly-engine.github.io/core-native-html5",
+    "repository": "https://github.com/gly-engine/core-native-html5",
+    "funding": "https://github.com/sponsors/RodrigoDornelles",
+    "bugs": "https://github.com/gly-engine/core-native-html5/issues",
+    "description": "create your own game-engine with just javascript or lua.",
+    "types": "types/index.d.ts",
+    "browser": "dist/index.js",
+    "module": "dist/index.mjs",
+    "main": "dist/index.cjs.js",
+    "exports": {
+        ".": {
+            "types": "./types/index.d.ts",
+            "require": "./dist/index.cjs.js",
+            "import": "./dist/index.mjs"
+        }
+    },
+    "files": [
+        "dist",
+        "types"
+    ],
+    "keywords": [
+        "game engine",
+        "game",
+        "engine"
+    ],
+    "scripts": {
+        "lint": "eslint",
+        "check": "tsc -p jsconfig.json",
+        "build:browser": "cd ../.. && node cli.js bundler js npm/core-native-html5/src/index.js --outfile npm/core-native-html5/dist/index.js --global CoreNativeHtml5",
+        "build:fengari": "cd ../.. && node cli.js bundler js npm/core-native-html5/src/fengari.js --outfile npm/core-native-html5/dist/fengari.js --global CoreNativeHtml5",
+        "build:wasmoon": "cd ../.. && node cli.js bundler js npm/core-native-html5/src/wasmoon.js --outfile npm/core-native-html5/dist/wasmoon.js --global CoreNativeHtml5",
+        "build:cjs": "cd ../.. && node cli.js bundler js npm/core-native-html5/src/index.js --outfile npm/core-native-html5/dist/index.cjs.js --format cjs",
+        "build:mjs": "cd ../.. && node cli.js bundler js npm/core-native-html5/src/index.js --outfile npm/core-native-html5/dist/index.mjs --format esm",
+        "build:types": "tsc -p jsconfig.json --noEmit false --declaration --emitDeclarationOnly --outDir types",
+        "build": "npm run build:browser && npm run build:fengari && npm run build:wasmoon && npm run build:cjs && npm run build:mjs",
+        "test": "npm run lint && npm run check"
+    },
+    "devDependencies": {
+        "eslint": "^10.13.0",
+        "typescript": "~5.9.3"
+    }
+}

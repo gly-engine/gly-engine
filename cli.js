@@ -24,13 +24,13 @@ async function buildSelf() {
     stdio: capture ? ['inherit', 'pipe', 'ignore'] : ['inherit', 'inherit', 'ignore']
   });
 
-  gly(['cli-build']);
+  gly(['cli', 'build']);
 
-  gly(['compile', 'dist/cli.lua', '--outfile', 'dist/cli.out']);
-  const bytecode = fs.readFileSync(path.join(dist, 'cli.out'));
-  const embedded = zlib.deflateRawSync(bytecode, { level: 9, memLevel: 9 }).toString('base64');
+  // lua source instead of bytecode, runs in any vm (fengari 5.3, wasmoon 5.4)
+  const source = fs.readFileSync(path.join(dist, 'cli.lua'));
+  const embedded = zlib.deflateRawSync(source, { level: 9, memLevel: 9 }).toString('base64');
 
-  gly(['bundler-js', 'npm/gly-cli/cli.js', '--outfile', 'dist/cli.js']);
+  gly(['bundler', 'js', 'npm/gly-cli/cli.js', '--outfile', 'dist/cli.js']);
 
   const bundlePath = path.join(dist, 'cli.js');
   const bundle = fs.readFileSync(bundlePath, 'utf8').replace('@bootstrap-cli', () => embedded);
@@ -43,14 +43,14 @@ async function buildSelf() {
   const pkg = gly(['meta', 'package.json', 'dist/cli.version', '--format', '{{& dump.raw.json}}'], true);
   fs.writeFileSync(path.join(dist, 'package.json'), pkg);
 
-  gly(['fs-replace', 'README.md', './dist/README.md', '--format', 'lua cli.lua', '--replace', 'npx gly-cli']);
+  gly(['fs', 'replace', 'README.md', './dist/README.md', '--format', 'lua cli.lua', '--replace', 'npx gly-cli']);
 
-  for (const file of ['cli.out', 'cli.lua', 'cli.version']) {
+  for (const file of ['cli.lua', 'cli.version']) {
     fs.rmSync(path.join(dist, file), { force: true });
   }
 }
 
-if (process.argv[2] === 'cli-build') {
+if (process.argv[2] === 'cli' && process.argv[3] === 'build') {
   buildSelf();
 } else {
   require('./npm/gly-cli/cli.js');

@@ -31,7 +31,7 @@ local P = {
         version='1.0.0'
     },
     config={
-        require='math.random i18n math'
+        require='math.random math'
     },
     callbacks={
         load=load,
