@@ -38,7 +38,7 @@ local function emit_member(context, name, body, offset, size)
         if embedded > size then
             error('invalid ar embedded name')
         end
-        name = body:sub(offset, offset + embedded - 1):match('^[^\0]*')
+        name = body:sub(offset, offset + embedded - 1):match('^[^%z]*')
         offset = offset + embedded
         size = size - embedded
     elseif name:sub(-1) == '/' then
@@ -136,8 +136,18 @@ local function read_bytes(self, size)
 end
 
 local function step(self, budget)
+    if self.stage == 'skip' then
+        local take = math.min(self.length, self.needed)
+        read_bytes(self, take)
+        self.needed = self.needed - take
+        if self.needed == 0 then
+            self.stage = 'header'
+            self.needed = 60
+        end
+    end
+
     local remaining = budget or 1
-    while remaining > 0 and self.length >= self.needed do
+    while remaining > 0 and self.stage ~= 'body' and self.stage ~= 'skip' and self.length >= self.needed do
         remaining = remaining - 1
 
         if self.stage == 'member' then
@@ -183,6 +193,10 @@ local function step(self, budget)
                 self.member_size = size
                 self.stage = 'member'
                 self.needed = size + size % 2
+                if self.pattern and self.name:match(self.pattern) then
+                    self.stage = 'body'
+                    self.handler({name = self.name:gsub('/$', ''), size = size, stream = self})
+                end
             end
         end
     end
@@ -194,6 +208,18 @@ local function step(self, budget)
         self.closed = true
     end
     return self.closed
+end
+
+local function read(self, size)
+    if not size then
+        self.stage = 'skip'
+        return
+    end
+    if size > self.member_size then error('ar member overflow') end
+    if self.length < size then return nil end
+    self.member_size = self.member_size - size
+    self.needed = self.needed - size
+    return read_bytes(self, size)
 end
 
 local function push(self, data)
@@ -218,9 +244,10 @@ local function close(self)
     end
 end
 
-local function new(handler)
+local function new(handler, pattern)
     return {
         handler = handler,
+        pattern = pattern,
         chunks = {},
         head = 1,
         tail = 0,
@@ -233,7 +260,8 @@ local function new(handler)
         push = push,
         finish = finish,
         step = step,
-        close = close
+        close = close,
+        read = read
     }
 end
 

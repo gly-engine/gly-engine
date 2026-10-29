@@ -12,7 +12,6 @@ local lib_api_encoder = require('source/engine/api/data/encoder')
 local lib_api_game = require('source/engine/api/system/app')
 local lib_api_hash = require('source/engine/api/data/hash')
 local lib_api_http = require('source/engine/api/io/http')
-local lib_api_i18n = require('source/engine/api/data/i18n')
 local lib_api_key = require('source/engine/api/system/key')
 local lib_api_env = require('source/engine/api/system/getenv')
 local engine_log = require('source/engine/api/debug/log')
@@ -33,7 +32,6 @@ local cfg_http_love = require('source/engine/protocol/http_love')
 local cfg_logsystem = require('source/engine/protocol/logsystem_print')
 --
 local util_arg = require('source/shared/string/parse/args')
-local util_envruntime = require('source/shared/var/runtime/lang')
 --
 local application_default = require('source/shared/var/object/root')
 local color = require('source/engine/api/system/color')
@@ -61,7 +59,6 @@ local cfg_keys = {
 }
 
 local cfg_system = {
-    get_language = util_envruntime.get_sys_lang,
     set_fullscreen = love.window.setFullscreen,
     get_fullscreen = love.window.getFullscreen,
     set_title = love.window.setTitle,
@@ -122,7 +119,6 @@ function love.load(args)
         :package('mock.music', lib_api_media)
         :package('http', lib_api_http, cfg_http_love)
         :package('json', lib_api_encoder, cfg_json_rxi)
-        :package('i18n', lib_api_i18n, cfg_system)
         :package('hash', lib_api_hash, cfg_system)
         :run()
 

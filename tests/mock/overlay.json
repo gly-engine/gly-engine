@@ -1,0 +1,5 @@
+{
+    "replace": [
+        {"file": "source/third_party/rxi_json.lua", "with": "json.lua"}
+    ]
+}

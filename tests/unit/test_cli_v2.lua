@@ -76,4 +76,78 @@ function test_engine_shortcut_native()
     assert(state2.engine == 'source/engine/core/vacuum/native/main.lua')
 end
 
+function test_global_version_anywhere()
+    local ok, out, state = cli2.parse(dsl, {'build', '@pong', '-v'})
+    assert(ok == true)
+    assert(state.command == 'version')
+    local ok2, out2, state2 = cli2.parse(dsl, {'--version'})
+    assert(state2.command == 'version')
+end
+
+function test_global_version_wins_help()
+    local ok, out, state = cli2.parse(dsl, {'build', '-h', '-v'})
+    assert(state.command == 'version')
+end
+
+function test_global_help_command()
+    local ok, out = cli2.parse(dsl, {'build', '@pong', '-h'})
+    assert(ok == true)
+    assert(out == cli2.get_help(dsl.commands, 'build'))
+end
+
+function test_global_help_class()
+    local ok, out = cli2.parse(dsl, {'build', 'html5', '-h'})
+    assert(out == cli2.get_help(dsl.commands, 'build', 'html5'))
+    local ok2, out2 = cli2.parse(dsl, {'build', '@pong', '--core', 'html5:ginga', '--help'})
+    assert(out2 == cli2.get_help(dsl.commands, 'build', 'html5:ginga'))
+    local ok3, out3 = cli2.parse(dsl, {'build', '--core=love', '-h'})
+    assert(out3 == cli2.get_help(dsl.commands, 'build', 'love'))
+end
+
+function test_global_help_subcommand()
+    local ok, out = cli2.parse(dsl, {'fs', 'copy', '-h'})
+    assert(out == cli2.get_help(dsl.commands, 'fs', 'copy'))
+    local ok2, out2 = cli2.parse(dsl, {'-h'})
+    assert(out2 == cli2.get_help(dsl.commands))
+end
+
+function test_core_none_default_hidden()
+    local ok, out, state = cli2.parse(dsl, {'build', '@pong'})
+    assert(ok == true)
+    assert(state.core == 'none')
+    local help = cli2.get_help(dsl.commands, 'build')
+    assert(help:find('none') == nil)
+    assert(help:find('html5') ~= nil)
+end
+
+function test_overlay_not_with_enginecdn()
+    local ok, out = cli2.parse(dsl, {'build', '@pong', '--core', 'html5', '--enginecdn', '--overlay', 'tests/mock/overlay.json'})
+    assert(ok == false)
+    assert(out:find('not compatible with %-%-enginecdn') ~= nil)
+    local ok2, out2, state2 = cli2.parse(dsl, {'build', '@pong', '--core', 'html5', '--overlay', 'tests/mock/overlay.json'})
+    assert(ok2 == true)
+    assert(state2.overlay == 'tests/mock/overlay.json')
+end
+
+function test_meta_inline_env_check()
+    local ok, out, state = cli2.parse(dsl, {'meta', 'cmds.json', 'WORKSPACE_ID=x', 'AWS_KEY='})
+    assert(ok == true, out)
+    assert(state.src[1] == 'cmds.json' and state.src[2] == 'WORKSPACE_ID=x' and state.src[3] == 'AWS_KEY=')
+    local ok2, out2 = cli2.parse(dsl, {'meta', 'cmds.jsno', 'WORKSPACE_ID=x'})
+    assert(ok2 == false)
+    assert(out2:find('File not found: src %-> cmds.jsno') ~= nil)
+    assert(out2:find('WORKSPACE_ID') == nil)
+end
+
+function test_rule_not()
+    assert(cli2.evaluate_rules({a = 'x'}, {'not', {'eq', 'a', 'y'}}) == true)
+    assert(cli2.evaluate_rules({a = 'x'}, {'not', {'eq', 'a', 'x'}}) == false)
+end
+
+function test_unknown_short_option()
+    local ok, out = cli2.parse(dsl, {'build', '@pong', '-x'})
+    assert(ok == false)
+    assert(out:find('Unknown option: %-x') ~= nil)
+end
+
 test.unit(_G)

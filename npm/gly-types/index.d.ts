@@ -172,13 +172,6 @@ interface GlyStdHttpResponse {
 }
 
 /** @noSelf **/
-interface GlyStdI18n {
-  back(): void;
-  get_language(): string;
-  get_text(old_text: string): string;
-  next(): void;
-  set_language(language: string): void;
-}
 
 /** @noSelf **/
 interface GlyStdImage {
@@ -379,10 +372,9 @@ export interface GlyStdMicro extends GlyStdNano {
 
 /** @noSelf **/
 export interface GlyStdLite extends GlyStdMicro {
-  getenv(key: string): string;
+  getenv(key: string): string | undefined;
   hash: GlyStdHash;
   http: GlyStdHttp;
-  i18n: GlyStdI18n;
   json: GlyStdJson;
   log: GlyStdLog;
   media: GlyStdMedia;

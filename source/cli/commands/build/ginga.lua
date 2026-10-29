@@ -3,6 +3,7 @@
 
 local buildsystem = require('source/cli/tools/buildsystem')
 local atobify = require('source/cli/tools/atobify')
+local corenative = require('source/cli/tools/corenative')
 local cli_fs = require('source/cli/tools/fs')
 local str_fs = require('source/shared/string/schema/fs')
 
@@ -36,6 +37,7 @@ local function build(args)
         :add_core('html5', {src='source/engine/core/vacuum/native/main.lua', force_bundler=true})
         :add_meta('source/engine/meta/html5/index.mustache', {as='index.html'})
         --
+        :add_common_func(corenative.builder(args), {when=args.core=='html5'})
         :add_common_func(atobify.builder('engine_code', args.outdir..'main.lua', args.outdir..'index.js'), {when=args.core=='html5' and not args.enginecdn})
         :add_common_func(atobify.builder('game_code', args.outdir..'game.lua', args.outdir..'index.js'), {when=args.core=='html5'})
         :add_common_func(cli_fs.lazy_del(args.outdir..'main.lua'), {when=args.core=='html5'})

@@ -8,7 +8,7 @@ local function cli_build(args)
     local dist = args.dist
     cli_fs.clear(dist)
     zeebo_bundler.build('source/cli/main.lua', dist..'main.lua')
-    local deps = { './source', './assets', './samples', './tests/mock', './ee'}
+    local deps = { './cmds.json', './source', './assets', './samples', './tests/mock', './ee', './npm/core-native-html5/src'}
     local ok, message = zeebo_bootstrap.build(dist..'main.lua', dist..'cli.lua', deps)
     os.remove(dist..'main.lua')
     return ok, message

@@ -10,11 +10,11 @@ local function raw_member(name, data)
 end
 
 local function member(name, data)
-    return raw_member(#name < 16 and name..'/' or name, data)
+    return raw_member(name, data)
 end
 
 local function archive(bounds, chunks)
-    local body = '!<arch>\n'..member('000000000000.txt', bounds)
+    local body = '!<arch>\n'..member('0000000000.txt', bounds)
     for index = 1, #chunks do
         body = body..member(chunks[index][1], chunks[index][2])
     end
@@ -105,7 +105,7 @@ function test_zcis_patterns()
     assert(#rectangles == 6)
     assert(rectangles[1][1] == 0 and rectangles[1][3] == 2)
     assert(rectangles[3][1] == 2 and rectangles[4][1] == 2)
-    assert(rectangles[5][1] == 4 and rectangles[5][3] == 2)
+    assert(rectangles[5][1] == 4 and rectangles[5][2] == 0 and rectangles[5][3] == 2)
     assert(rectangles[6][1] == 6)
 end
 
@@ -156,7 +156,7 @@ function test_zcis_skips_bsd_symbol_table()
     local ppm = ppm_data(1, 1, string.char(4, 5, 6))
     local body = '!<arch>\n'
         ..raw_member('#1/9', '__.SYMDEF'..'index')
-        ..member('000000000000.txt', bounds)
+        ..member('0000000000.txt', bounds)
         ..member('1A00000101.ppm', ppm)
     local ops, get_canvas = canvas_ops()
     zcis.decode(body, ops)
@@ -202,6 +202,47 @@ function test_zcis_stream_rejects_missing_header()
     assert(not pcall(decoder.step, decoder, 1))
 end
 
+function test_zcis_stream_large_image_with_bounded_buffer()
+    local width, height = 321, 241
+    local rows, even, odd = {}, {}, {}
+    for y = 0, height - 1 do
+        local pixels = {}
+        for x = 0, width - 1 do
+            pixels[#pixels + 1] = string.char(x % 256, y % 256, (x + y) % 7 * 30)
+        end
+        rows[y + 1] = table.concat(pixels)
+        local layer = y % 2 == 0 and even or odd
+        layer[#layer + 1] = rows[y + 1]
+    end
+    local body = archive('0 0 321 241\r\n', {
+        {'1A00005B3t.ppm', ppm_data(width, #odd, table.concat(odd))},
+        {'2C00005B3t.ppm', ppm_data(width, #even, table.concat(even))}
+    })
+    local ops, get_canvas = canvas_ops()
+    local decoder = zcis.stream(ops)
+    for offset = 1, #body, 1460 do
+        decoder:push(body:sub(offset, offset + 1459))
+        local done, waiting
+        repeat
+            done, waiting = decoder:step(2048)
+        until done or waiting
+        assert(decoder.parser.length < 1460 + width * 3)
+    end
+    decoder:finish()
+    while not decoder:is_done() do decoder:step(2048) end
+    local image = {}
+    for _, rect in ipairs(get_canvas().rectangles) do
+        for y = rect[2], rect[2] + rect[4] - 1 do
+            for x = rect[1], rect[1] + rect[3] - 1 do
+                image[y * width + x + 1] = string.char(rect[5], rect[6], rect[7])
+            end
+        end
+    end
+    for y = 0, height - 1 do
+        assert(table.concat(image, '', y * width + 1, (y + 1) * width) == rows[y + 1])
+    end
+end
+
 function test_y4m_limited_range()
     local frame = string.char(16, 235, 81, 145, 128, 128)
     local data = 'YUV4MPEG2 W2 H2 F1:1 Ip A1:1 C420\nFRAME\n'..frame
@@ -220,6 +261,25 @@ end
 function test_y4m_rejects_high_bit_depth()
     local data = 'YUV4MPEG2 W2 H2 C420p10\nFRAME\n'..string.rep('\0', 12)
     assert(not pcall(yuv.y4m, data, 1, #data))
+end
+
+function test_zcis_step_commit_is_one_blit()
+    local row = string.rep(string.char(10, 20, 30), 4)
+    local body = archive('0 0 4 2\r\n', {
+        {'1A00000402.ppm', ppm_data(4, 1, row)},
+        {'2b00000402.ppm', ppm_data(4, 1, row)},
+        {'3C00000402.ppm', ppm_data(4, 1, row)}
+    })
+    local ops, current = canvas_ops()
+    local decoder = zcis.new(body, ops)
+
+    local done = decoder:step_commit()
+    assert(not done)
+    assert(decoder.commits == 1 and current().commits == 1)
+
+    done = decoder:step_commit()
+    assert(done)
+    assert(decoder.commits == 2 and current().commits == 2)
 end
 
 test.unit(_G)

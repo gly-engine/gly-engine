@@ -28,6 +28,15 @@ local function bootstrap_io_open(filename, mode)
     }
 end
 
+--! wasmoon cannot pass binary strings, they cross as hex
+local function to_hex(content)
+    return (content:gsub('.', function(c) return string.format('%02x', c:byte()) end))
+end
+
+local function from_hex(content)
+    return (content:gsub('%x%x', function(x) return string.char(tonumber(x, 16)) end))
+end
+
 local function javascript_io_open(filename, mode)
     if (not mode or mode:find('r')) and not javascript_fs.existsSync(filename) then
         return nil
@@ -39,8 +48,11 @@ local function javascript_io_open(filename, mode)
         lines = common_io_lines,
         read = function(self, size)
             return file_reader(self, mode, size, function()
-                local encoding = (not (mode or ''):find('b')) and 'utf8' or nil
-                return javascript_fs.readFileSync(filename, encoding)
+                local binary = (mode or ''):find('b')
+                if binary and javascript_fs.readFileHex then
+                    return from_hex(javascript_fs.readFileHex(filename))
+                end
+                return javascript_fs.readFileSync(filename, not binary and 'utf8' or nil)
             end)
         end,
         write = function(self, content)
@@ -49,7 +61,9 @@ local function javascript_io_open(filename, mode)
         close = function(self)
             if not (mode or ''):find('w') then return end
             javascript_fs.mkdirSync(javascript_path.dirname(filename), {recursive = true, mode = 0})
-            if (mode or ''):find('b') then
+            if (mode or ''):find('b') and javascript_fs.writeFileHex then
+                javascript_fs.writeFileHex(filename, to_hex(self.content))
+            elseif (mode or ''):find('b') then
                 local blob, index = {}, 1
                 while index <= #self.content do
                     blob[index] = string.byte(self.content, index)
@@ -77,6 +91,22 @@ io.open = function(filename, mode)
     end
 
     return file
+end
+
+--! wasmoon os library works in emscripten virtual filesystem and environment
+if javascript_fs and javascript_fs.unlinkSync then
+    local javascript_env = jsRequire('process').env
+    os.remove = function(filename)
+        local ok, err = pcall(javascript_fs.unlinkSync, filename)
+        if not ok then
+            ok, err = pcall(javascript_fs.rmdirSync, filename)
+        end
+        if ok then return true end
+        return nil, tostring(err)
+    end
+    os.getenv = function(name)
+        return javascript_env[name]
+    end
 end
 
 if jsRequire then

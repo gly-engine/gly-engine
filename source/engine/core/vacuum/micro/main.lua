@@ -24,15 +24,13 @@ local application={
 }
 std.log={fatal=f,error=f,warn=f,info=f,debug=f}
 std.bus={emit=f,emit_next=f,listen=f,listen_std_engine=f}
-std.i18n={next=f,back=f,get_language=function()return'en-US'end}
 
 local cfg_system={
     exit=native_system_exit,
     reset=native_system_reset,
     title=native_system_title,
     get_fps=native_system_get_fps,
-    get_secret=native_system_get_secret,
-    get_language=native_system_get_language
+    get_secret=native_system_get_secret
 }
 
 local cfg_poly={

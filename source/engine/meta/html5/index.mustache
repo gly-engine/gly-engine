@@ -11,9 +11,6 @@
     <meta property="twitter:title" content="{{ meta.title }}" />
     <meta property="twitter:description" content="{{ meta.description }}" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-{{# assets.fonts }}
-    <link rel="preload" href="{{& fn.colon.to }}" as="font" type="font/ttf"/>
-{{/ assets.fonts }}
     <style>
         *, *::after, *::before {
             touch-action: none;
@@ -62,14 +59,6 @@
       }
     </style>
     {{/ args.gamepadzilla }}
-    {{# assets.fonts }}
-    <style>
-      @font-face {
-        font-family: "{{ fn.colon.from }}";
-        src: url("{{& fn.colon.to }}");
-      }
-    </style>
-    {{/ assets.fonts }}
   </head>
   <body>
     <main>
@@ -84,9 +73,6 @@
         data-gpz-bind="KeyC KeyV KeyZ KeyX">
       </canvas>
       {{/ args.gamepadzilla }}
-      {{# assets.png }}
-      <img src="{{& fn.colon.to }}" alt="{{# fn.case.msdos }}{{& fn.colon.from }}{{/ fn.case.msdos }}" style="display:none;"/>
-      {{/ assets.fonts }}
     </main>
     {{# args.videofake }}
     <script>window.videofake=100</script>
@@ -110,27 +96,36 @@
     window.LuaMultiReturn = LuaMultiReturn
     </script>
     {{/ args.fengari }}
-    <script src="https://cdn.jsdelivr.net/npm/@gamely/core-native-html5@0.2.3" defer></script>
+    <script src="{{& var.build.html5.src_core }}" defer></script>
     <script>
-      document.addEventListener('DOMContentLoaded', async () => {
-        window.gly = await CoreNativeHtml5()
-          .setElementRoot('main')
-          .setElementCanvas('#gameCanvas')
-          .addLibrary('wasmoon', window.LuaFactory, window.LuaMultiReturn)
-          .addLibrary('fengari', window.fengari)
-          .addLibrary('fengari-jsonrxi', 'https://cdn.jsdelivr.net/gh/rxi/json.lua/json.lua')
-          .addLibrary('fengari-or-wasmoon-check')
-          .addLibrary('runtime', {unfocus_pause: true})
-          .addLibrary('gamepad')
-          .addLibrary('keyboard')
-          .addLibrary('{{ var.build.html5.lib_resize }}')
-          .addLibrary('player-html5')
-          .addLibrary('player-youtube')
-          .addLibrary('player-fake', window.videofake)
-          .addLibrary('player-videojs', window.videojs)
-          .setEngine(`{{& var.build.html5.src_engine }}`)
-          .setGame(`{{& var.build.html5.src_game }}`)
+      document.addEventListener('DOMContentLoaded', function () {
+        CoreNativeHtml5()
+          .use('root', 'main')
+          .use('canvas', '#gameCanvas')
+          {{# args.fengari }}
+          .use('fengari', window.fengari, 'https://cdn.jsdelivr.net/gh/rxi/json.lua/json.lua')
+          {{/ args.fengari }}
+          {{^ args.fengari }}
+          .use('wasmoon', window.LuaFactory, window.LuaMultiReturn)
+          {{/ args.fengari }}
+          .use('runtime', {unfocus_pause: true})
+          .use('gamepad')
+          .use('keyboard')
+          {{^ args.screen }}
+          .use('resize')
+          {{/ args.screen }}
+          .use('player-html5')
+          .use('player-youtube')
+          .use('player-fake', window.videofake)
+          {{# args.videojs }}
+          .use('player-videojs', window.videojs)
+          {{/ args.videojs }}
+          .use('engine', {{& var.build.html5.src_engine }})
+          .use('game', {{& var.build.html5.src_game }})
           .build()
+          .then(function (gly) {
+            window.gly = gly
+          })
       })
     </script>
   </body>

@@ -38,7 +38,7 @@ local function bundler_js(args)
     local from = str_fs.file(args.src)
     local to = str_fs.file(args.outfile)
     cli_fs.mkdir(to.get_sys_path())
-    return zeebo_bundler_js.build(from.get_fullfilepath(), to.get_fullfilepath(), args.global)
+    return zeebo_bundler_js.build(from.get_fullfilepath(), to.get_fullfilepath(), {format=args.format, global=args.global})
 end
 
 local function compile(args)
@@ -85,7 +85,7 @@ local function meta(args)
 
     local content = cli_meta.render(args.src, format)
     if not content then
-        return false, 'cannot parse: '..args.src
+        return false, 'cannot parse: '..(type(args.src) == 'table' and table.concat(args.src, ' ') or args.src)
     end
 
     if args.outfile and #args.outfile > 0 then

@@ -6,7 +6,6 @@ local engine_encoder = require('source/engine/api/data/encoder')
 local engine_game = require('source/engine/api/system/app')
 local engine_hash = require('source/engine/api/data/hash')
 local engine_http = require('source/engine/api/io/http')
-local engine_i18n = require('source/engine/api/data/i18n')
 local engine_key = require('source/engine/api/system/key')
 local engine_env = require('source/engine/api/system/getenv')
 local engine_log = require('source/engine/api/debug/log')
@@ -37,8 +36,7 @@ local cfg_system = {
     reset = native_system_reset,
     title = native_system_title,
     get_fps = native_system_get_fps,
-    get_secret = native_system_get_secret,
-    get_language = native_system_get_language
+    get_secret = native_system_get_secret
 }
 
 local cfg_media = {
@@ -183,7 +181,6 @@ function native_callback_init(width, height, game_lua)
         :package('base64', engine_encoder, cfg_base64)
         :package('json', engine_encoder, cfg_json)
         :package('xml', engine_encoder, cfg_xml)
-        :package('i18n', engine_i18n, cfg_system)
         :package('hash', engine_hash, cfg_system)
         :package('media.video', engine_media, cfg_media)
         :package('mock.video', engine_media)
