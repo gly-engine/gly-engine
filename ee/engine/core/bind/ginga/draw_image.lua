@@ -293,7 +293,7 @@ local function image_load(std, canvas)
         return id, true
     end
 end
-''
+
 local function image_draw(canvas, load)
     return function(src, pos_x, pos_y)
         local id = load(src)
