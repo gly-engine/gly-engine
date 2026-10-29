@@ -34,6 +34,8 @@ local P = {
         description='a logo bouncing between the corners',
         version='1.0.0'
     },
+    config = {
+        require='http'    },
     assets={
       'assets/icon80x80.png:icon80x80.png'
     },

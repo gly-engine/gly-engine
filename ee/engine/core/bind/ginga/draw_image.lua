@@ -1,10 +1,12 @@
 local png_validator = require('source/shared/image/check_png')
 local zcis_decoder = require('source/shared/image/decoder_zcis')
 local create_counter = require('source/shared/functional/counter')
+local engine_draw_img = require('source/engine/api/draw/image')
 local cobs = require('source/shared/string/encode/cobs')
 
 local next_id, clear_id, clear_all = create_counter()
 local image_ids = {}
+local image_keys = {}
 local image_error = {}
 local image_canvas = {}
 local image_request = {}
@@ -27,7 +29,6 @@ end
 local function cancel_request(token)
     local request = token and token.request
     if request then
-        request.stream = nil
         request.success_handler = ignore
         request.failed_handler = ignore
         request.error_handler = ignore
@@ -55,12 +56,21 @@ local function is_cobs(headers)
     return false
 end
 
-local function feed(decoder, data)
-    decoder:push(data)
-    local limit = math.max(32768, #data)
-    while decoder.parser.length > limit do
-        local done, waiting = decoder:step(2048)
-        if done or waiting then break end
+local function content_type(headers)
+    for name, value in pairs(headers or {}) do
+        if string.lower(name) == 'content-type' then
+            return string.lower(tostring(value)):match('^%s*([^;%s]+)')
+        end
+    end
+end
+
+local function unsupported_format(headers, body)
+    local kind = content_type(headers)
+    if kind and kind:find('^image/') and not kind:find('zcis') then
+        return 'remote '..kind:sub(7)..' not supported, use format=zcis'
+    end
+    if body:sub(1, 8) ~= '!<arch>\n' then
+        return 'remote image must be zcis'
     end
 end
 
@@ -129,14 +139,9 @@ local function process_decoders()
     if not ok then
         remove_decoder(id)
         image_canvas[id] = nil
-        if state.token.request then
-            state.token.decode_error = done
-            state.token.request.stream = nil
-        else
-            image_request[id] = nil
-            finish_request(state.token)
-            image_error[id] = done
-        end
+        image_request[id] = nil
+        finish_request(state.token)
+        image_error[id] = done
     elseif done then
         remove_decoder(id)
         finish_request(state.token)
@@ -173,10 +178,6 @@ local function process_images()
 end
 
 local function load_remote(std, canvas, id, src, token)
-    local decoder = zcis_decoder.stream(make_canvas_ops(canvas))
-    local streamed = false
-    local stream_error
-    local unstuff
     local request
 
     local function is_active()
@@ -192,77 +193,42 @@ local function load_remote(std, canvas, id, src, token)
         image_error[id] = message
     end
 
-    local function publish()
-        if not is_active() or token.decode_error then return end
-        if decoder.canvas and decoder.commits > 0 then
-            image_canvas[id] = decoder.canvas
-        end
-        if not image_decoder[id] then
-            add_decoder(id, decoder, token)
-        end
-    end
-
-    local function stream(data, headers)
-        if not is_active() or token.decode_error then return end
-        streamed = true
-        if unstuff == nil then
-            unstuff = is_cobs(headers) and cobs.decoder() or false
-        end
-        local ok, message = pcall(function()
-            feed(decoder, unstuff and unstuff:push(data) or data)
-        end)
-        if not ok then
-            stream_error = message
-            request.stream = nil
-            remove_decoder(id)
-            image_canvas[id] = nil
-            return
-        end
-        publish()
-    end
-
     local function set_error(http_std)
         fail(http_std.http.error or tostring(http_std.http.status))
     end
 
     local function finish(http_std)
         if not is_active() then return end
-        if stream_error then
-            fail(stream_error)
-            return
-        end
-        if token.decode_error then
-            fail(token.decode_error)
-            return
+
+        local body = http_std.http.body or ''
+        local headers = http_std.http.headers
+        if is_cobs(headers) then
+            local ok, message = pcall(cobs.decode, body)
+            if not ok then
+                fail(message)
+                return
+            end
+            body = message
         end
 
-        local ok, message
-        if streamed then
-            ok, message = pcall(decoder.finish, decoder)
-        else
-            ok, message = pcall(function()
-                local body = http_std.http.body
-                if is_cobs(http_std.http.headers) then
-                    body = cobs.decode(body)
-                end
-                return zcis_decoder.new(body, make_canvas_ops(canvas))
-            end)
-            if ok then
-                decoder = message
-            end
-        end
-        if not ok then
+        local message = unsupported_format(headers, body)
+        if message then
             fail(message)
             return
         end
+
+        local ok, decoder = pcall(zcis_decoder.new, body, make_canvas_ops(canvas))
+        if not ok then
+            fail(decoder)
+            return
+        end
+
         token.request = nil
-        publish()
+        add_decoder(id, decoder, token)
     end
 
     request = std.http.get(with_cobs(src))
     token.request = request
-    request.stream = stream
-    request.discard_body = true
     request
         :success(finish)
         :failed(set_error)
@@ -275,6 +241,9 @@ local function image_load(std, canvas)
         if src == nil then
             return nil, false
         end
+        if type(src) == 'number' then
+            return src, image_canvas[src] ~= nil
+        end
 
         local key = tostring(src)
         local id = image_ids[key]
@@ -284,6 +253,7 @@ local function image_load(std, canvas)
 
         id = next_id()
         image_ids[key] = id
+        image_keys[id] = key
 
         local is_userdata = type(src) == 'userdata'
         local is_remote = type(src) == 'string' and src:find('^https?://') ~= nil
@@ -305,9 +275,12 @@ local function image_load(std, canvas)
             return id, false
         end
 
-        if not is_userdata and not png_validator.check_error(src) then
-            image_error[id] = 'invalid png'
-            return id, false
+        if not is_userdata then
+            local valid, message = png_validator.check_error(src)
+            if not valid then
+                image_error[id] = message or 'invalid png'
+                return id, false
+            end
         end
 
         local ok, texture, message = pcall(canvas.new, canvas, src)
@@ -320,15 +293,13 @@ local function image_load(std, canvas)
         return id, true
     end
 end
-
-local function image_draw(engine, canvas, load)
+''
+local function image_draw(canvas, load)
     return function(src, pos_x, pos_y)
         local id = load(src)
         local image = id and image_canvas[id]
         if image then
-            local x = engine.offset_x + (pos_x or 0)
-            local y = engine.offset_y + (pos_y or 0)
-            canvas:compose(x, y, image)
+            canvas:compose(pos_x, pos_y, image)
         end
     end
 end
@@ -351,17 +322,25 @@ local function image_exists(load)
     end
 end
 
+local function image_id(src)
+    if type(src) == 'number' then
+        return src
+    end
+    return src ~= nil and image_ids[tostring(src)]
+end
+
 local function get_image_error(src)
-    local id = image_ids[tostring(src)]
+    local id = image_id(src)
     return id and image_error[id]
 end
 
 local function image_unload(src)
-    local key = tostring(src)
-    local id = image_ids[key]
-    if id then
+    local id = image_id(src)
+    local key = id and image_keys[id]
+    if key then
         cancel_request(image_request[id])
         image_ids[key] = nil
+        image_keys[id] = nil
         image_canvas[id] = nil
         image_error[id] = nil
         image_request[id] = nil
@@ -375,6 +354,7 @@ local function image_unload_all()
         cancel_request(token)
     end
     image_ids = {}
+    image_keys = {}
     image_canvas = {}
     image_error = {}
     image_request = {}
@@ -391,13 +371,15 @@ end
 local function install(std, engine)
     local load = image_load(std, engine.canvas)
     std.bus.listen('loop', process_images)
-    std.image.load = load
-    std.image.draw = image_draw(engine, engine.canvas, load)
-    std.image.exists = image_exists(load)
-    std.image.mensure = image_mensure(load)
-    std.image.error = get_image_error
-    std.image.unload = image_unload
-    std.image.unload_all = image_unload_all
+    engine_draw_img.install(std, engine, {
+        load = load,
+        draw = image_draw(engine.canvas, load),
+        exists = image_exists(load),
+        mensure = image_mensure(load),
+        error = get_image_error,
+        unload = image_unload,
+        unload_all = image_unload_all
+    })
 end
 
 return {

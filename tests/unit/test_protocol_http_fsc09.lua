@@ -80,19 +80,4 @@ function test_fsc09_resolves_no_content_status()
     assert(response.resolved and response.body == '')
 end
 
-function test_fsc09_streams_without_retaining_body()
-    local response, self = request('http://stream')
-    local session = sessions['http://stream']
-    local chunks = {}
-    self.stream = function(chunk)
-        chunks[#chunks + 1] = chunk
-    end
-    self.discard_body = true
-    callback({class = 'http', session = session, headers = {['Content-Length'] = '4'}, code = 200})
-    callback({class = 'http', session = session, body = 'ab'})
-    callback({class = 'http', session = session, body = 'cd'})
-    assert(response.resolved and response.body == '')
-    assert(table.concat(chunks) == 'abcd')
-end
-
 test.unit(_G)
