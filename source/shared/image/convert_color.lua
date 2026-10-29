@@ -24,6 +24,14 @@ local function yuv2rgb(y, u, v)
     return clamp(r), clamp(g), clamp(b)
 end
 
+local function yuv2rgb_limited(y, u, v)
+    local c = y - 16
+    local r = floor((298 * c + 409 * v + 128) / 256)
+    local g = floor((298 * c - 100 * u - 208 * v + 128) / 256)
+    local b = floor((298 * c + 516 * u + 128) / 256)
+    return clamp(r), clamp(g), clamp(b)
+end
+
 --! @todo return 4? how to encoder detect stride in?
 local function rgba(r, g, b, a)
     local color = (r * 0xFFFFFF) + (g * 0xFFFF) + (b * 0xFF) + a
@@ -35,4 +43,5 @@ return {
     bw2rgb = bw2rgb,
     bw2rgba = bw2rgba,
     yuv2rgb = yuv2rgb,
+    yuv2rgb_limited = yuv2rgb_limited,
 }

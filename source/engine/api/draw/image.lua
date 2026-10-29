@@ -24,6 +24,12 @@ local function image_exists(func)
     end
 end
 
+local function image_error(func)
+    return function(src)
+        return func(src)
+    end
+end
+
 local function image_unload(func)
     return function(src)
         return func(src)
@@ -40,8 +46,9 @@ local function install(std, engine, func)
     local f = func.unload or function() end
     std.image.load = image_load(func.load)
     std.image.draw = image_draw(func.draw, engine)
-    std.image.exists = image_exists(func.load)
+    std.image.exists = image_exists(func.exists or func.load)
     std.image.mensure = image_mensure(func.mensure)
+    std.image.error = image_error(func.error or function() end)
     std.image.unload = image_unload(func.unload or f)
     std.image.unload_all = image_unload_all(func.unload_all or f)
 end

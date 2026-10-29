@@ -29,7 +29,12 @@ local P = {
     },
     image = {
         load = function() end,
-        draw = function() end
+        draw = function() end,
+        exists = function() end,
+        mensure = function() end,
+        error = function() end,
+        unload = function() end,
+        unload_all = function() end
     },
     app = {
         width = 1280,
