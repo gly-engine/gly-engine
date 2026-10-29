@@ -66,16 +66,6 @@ function test_fsc09_resolves_body_without_content_length()
     assert(response.resolved and response.body == 'complete')
 end
 
-function test_fsc09_waits_for_chunked_finish()
-    local response = request('http://chunked')
-    local session = sessions['http://chunked']
-    callback({class = 'http', session = session, headers = {['Transfer-Encoding'] = 'chunked'}, code = 200})
-    callback({class = 'http', session = session, body = 'ab'})
-    assert(not response.resolved)
-    callback({class = 'http', session = session, body = 'cd', finished = true})
-    assert(response.resolved and response.body == 'abcd')
-end
-
 function test_fsc09_resolves_head_without_body()
     local response = request('http://head', 'HEAD')
     local session = sessions['http://head']

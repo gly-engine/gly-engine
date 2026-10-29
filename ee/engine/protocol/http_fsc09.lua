@@ -48,14 +48,8 @@ local function callback(evt)
     end
 
     if evt.headers then
-        local length, encoded = nil, false
-        for name, value in pairs(evt.headers) do
-            local key = string.lower(tostring(name))
-            if key == 'content-length' then length = tonumber(value) end
-            if key == 'content-encoding' and string.lower(tostring(value)) ~= 'identity' then encoded = true end
-        end
-        if length and not encoded then
-            content_length[session] = length
+        if evt.headers['Content-Length'] then
+            content_length[session] = tonumber(evt.headers['Content-Length'])
         end
         self.set('headers', deep_copy.table(evt.headers))
     end
@@ -69,7 +63,7 @@ local function callback(evt)
         data_dict[session] = data_dict[session]..evt.body
     end
 
-    if evt.finished or raise_error or (content_length[session] >= 0 and content_length[session] <= #data_dict[session]) then
+    if evt.finished or raise_error or content_length[session] <= #data_dict[session] then
         self.set('body', data_dict[session])
         content_length[session] = nil
         request_dict[session] = nil
