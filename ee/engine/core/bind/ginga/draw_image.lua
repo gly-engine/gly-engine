@@ -1,44 +1,19 @@
 local png_validator = require('source/shared/image/check_png')
-local zcis_decoder = require('source/shared/image/decoder_zcis')
+local zcis_sheets = require('ee/engine/core/bind/ginga/draw_image_zcis')
 local create_counter = require('source/shared/functional/counter')
 local engine_draw_img = require('source/engine/api/draw/image')
-local cobs = require('source/shared/string/encode/cobs')
 
 local next_id, clear_id, clear_all = create_counter()
 local image_ids = {}
 local image_keys = {}
 local image_error = {}
 local image_canvas = {}
-local image_sheet = {}
+local image_base = {}
 local image_index = {}
-local sheets = {}
-local decoder_queue = {}
-local decoder_cursor = 1
-local ignore = function() end
-local remote_queue = {}
-local remote_head = 1
-local remote_tail = 0
-local remote_active = false
+local sheets
 
-local function finish_request(sheet)
-    if sheet and sheet.started and not sheet.finished then
-        sheet.finished = true
-        remote_active = false
-    end
-end
-
-local function cancel_request(sheet)
-    local request = sheet and sheet.request
-    if request then
-        request.success_handler = ignore
-        request.failed_handler = ignore
-        request.error_handler = ignore
-        if request.cancel then
-            request.cancel()
-        end
-        sheet.request = nil
-    end
-    finish_request(sheet)
+local function key_of(base, index)
+    return base..'#index='..index
 end
 
 local function canonical(src)
@@ -49,7 +24,7 @@ local function canonical(src)
 
     local base, fragment = key:match('^([^#]*)#(.*)$')
     if not base then
-        return key..'#index=0', key, 0
+        return key_of(key, 0), key, 0
     end
 
     local index = fragment:match('^index=(%d+)$')
@@ -58,250 +33,22 @@ local function canonical(src)
     end
 
     index = tonumber(index)
-    return base..'#index='..index, base, index
+    return key_of(base, index), base, index
 end
 
-local function with_cobs(src)
-    if not src:find('[?&]format=zcis') or src:find('[?&]encoding=') then
-        return src
-    end
-    return src..'&encoding=cobs'
-end
-
-local function is_cobs(headers)
-    for name, value in pairs(headers or {}) do
-        if string.lower(name) == 'x-encoding' then
-            return string.lower(tostring(value)) == 'cobs'
-        end
-    end
-    return false
-end
-
-local function content_type(headers)
-    for name, value in pairs(headers or {}) do
-        if string.lower(name) == 'content-type' then
-            return string.lower(tostring(value)):match('^%s*([^;%s]+)')
-        end
+local function on_ready(base, index, texture)
+    local id = image_ids[key_of(base, index)]
+    if id then
+        image_canvas[id] = texture
     end
 end
 
-local function unsupported_format(headers, body)
-    local kind = content_type(headers)
-    if kind and kind:find('^image/') and not kind:find('zcis') then
-        return 'remote '..kind:sub(7)..' not supported, use format=zcis'
-    end
-    if body:sub(1, 8) ~= '!<arch>\n' then
-        return 'remote image must be zcis'
-    end
-end
-
-local function make_canvas_ops(canvas)
-    return {
-        start = function(width, height)
-            local target = canvas.new(canvas, width, height)
-            return target, target.pixel
-        end,
-        color = function(target, r, g, b, a)
-            target:attrColor(r, g, b, a)
-        end,
-        pixel = function(target, x, y, width, height)
-            target:drawRect('fill', x, y, width, height)
-        end,
-        commit = function(target)
-            target:flush()
-        end
-    }
-end
-local function remove_decoder(sheet)
-    local state = sheet and sheet.state
-    if not state then return end
-
-    local index = state.index
-    local last = decoder_queue[#decoder_queue]
-    decoder_queue[index] = last
-    if last then
-        last.index = index
-    end
-    decoder_queue[#decoder_queue] = nil
-    sheet.state = nil
-    if decoder_cursor > #decoder_queue then
-        decoder_cursor = 1
-    end
-end
-
-local function add_decoder(sheet, decoder)
-    local state = {
-        sheet = sheet,
-        decoder = decoder,
-        index = #decoder_queue + 1
-    }
-    sheet.state = state
-    decoder_queue[state.index] = state
-end
-
-local function whole_canvas(decoder, cut)
-    return #decoder.cuts == 1 and cut.x == 0 and cut.y == 0
-        and cut.width == decoder.width and cut.height == decoder.height
-end
-
-local function carve(sheet, decoder)
-    local ready = decoder:take_ready()
-    for at = 1, #ready do
-        local order = ready[at]
-        local cut = decoder.cuts[order]
-        local index = order - 1
-        local target = sheet.carved[index]
-
-        if not target then
-            target = whole_canvas(decoder, cut) and decoder.canvas
-                or sheet.root.new(sheet.root, cut.width, cut.height)
-            sheet.carved[index] = target
-        end
-        if target ~= decoder.canvas then
-            target:compose(-cut.x, -cut.y, decoder.canvas)
-        end
-
-        local id = sheet.ids[index]
-        if id then
-            image_canvas[id] = target
-        end
-    end
-end
-
-local function fail_sheet(sheet, message)
-    cancel_request(sheet)
-    remove_decoder(sheet)
-    sheet.carved = {}
-    sheet.error = message
-    for _, id in pairs(sheet.ids) do
+local function on_failed(base, index, message)
+    local id = image_ids[key_of(base, index)]
+    if id then
         image_canvas[id] = nil
         image_error[id] = message
     end
-end
-
-local function process_decoders()
-    if #decoder_queue == 0 then return end
-    if decoder_cursor > #decoder_queue then
-        decoder_cursor = 1
-    end
-
-    local state = decoder_queue[decoder_cursor]
-    local sheet = state.sheet
-    if sheets[sheet.base] ~= sheet then
-        remove_decoder(sheet)
-        return
-    end
-
-    local ok, done = pcall(state.decoder.step_commit, state.decoder)
-    if ok and state.decoder.canvas and state.decoder.commits > 0 then
-        carve(sheet, state.decoder)
-    end
-    if not ok then
-        fail_sheet(sheet, done)
-    elseif done then
-        remove_decoder(sheet)
-        finish_request(sheet)
-        state.decoder:close()
-    else
-        decoder_cursor = decoder_cursor == #decoder_queue and 1 or decoder_cursor + 1
-    end
-end
-
-local function process_requests()
-    if remote_active then return end
-
-    while remote_head <= remote_tail do
-        local sheet = remote_queue[remote_head]
-        remote_queue[remote_head] = nil
-        remote_head = remote_head + 1
-        if sheets[sheet.base] == sheet then
-            remote_active = true
-            sheet.started = true
-            sheet.start()
-            return
-        end
-    end
-
-    remote_queue = {}
-    remote_head = 1
-    remote_tail = 0
-end
-
-local function process_images()
-    process_requests()
-    process_decoders()
-end
-
-local function load_remote(std, canvas, sheet)
-    local function is_active()
-        return sheets[sheet.base] == sheet
-    end
-
-    local function fail(message)
-        if not is_active() then return end
-        fail_sheet(sheet, message)
-    end
-
-    local function set_error(http_std)
-        fail(http_std.http.error or tostring(http_std.http.status))
-    end
-
-    local function finish(http_std)
-        if not is_active() then return end
-
-        local body = http_std.http.body or ''
-        local headers = http_std.http.headers
-        if is_cobs(headers) then
-            local ok, message = pcall(cobs.decode, body)
-            if not ok then
-                fail(message)
-                return
-            end
-            body = message
-        end
-
-        local message = unsupported_format(headers, body)
-        if message then
-            fail(message)
-            return
-        end
-
-        local ok, decoder = pcall(zcis_decoder.new, body, make_canvas_ops(canvas))
-        if not ok then
-            fail(decoder)
-            return
-        end
-
-        sheet.request = nil
-        add_decoder(sheet, decoder)
-    end
-
-    local request = std.http.get(with_cobs(sheet.base))
-    sheet.request = request
-    request
-        :success(finish)
-        :failed(set_error)
-        :error(set_error)
-        :run()
-end
-
-local function join_sheet(std, canvas, base, index, id)
-    local sheet = sheets[base]
-    if not sheet then
-        sheet = {base = base, ids = {}, carved = {}, root = canvas}
-        sheet.start = function()
-            load_remote(std, canvas, sheet)
-        end
-        sheets[base] = sheet
-        remote_tail = remote_tail + 1
-        remote_queue[remote_tail] = sheet
-    end
-
-    sheet.ids[index] = id
-    image_sheet[id] = sheet
-    image_index[id] = index
-    image_canvas[id] = sheet.carved[index]
-    image_error[id] = sheet.error
 end
 
 local function image_load(std, canvas)
@@ -333,7 +80,9 @@ local function image_load(std, canvas)
                 image_error[id] = 'remote images need http'
                 return id, false
             end
-            join_sheet(std, canvas, base, index, id)
+            image_base[id] = base
+            image_index[id] = index
+            image_canvas[id], image_error[id] = sheets.want(base, index)
             return id, image_canvas[id] ~= nil
         end
 
@@ -400,48 +149,34 @@ local function image_unload(src)
     local id = image_id(src)
     local key = id and image_keys[id]
     if key then
-        local sheet = image_sheet[id]
-        if sheet then
-            sheet.ids[image_index[id]] = nil
-            if next(sheet.ids) == nil then
-                sheets[sheet.base] = nil
-                cancel_request(sheet)
-                remove_decoder(sheet)
-            end
+        if image_base[id] then
+            sheets.release(image_base[id], image_index[id])
         end
         image_ids[key] = nil
         image_keys[id] = nil
         image_canvas[id] = nil
         image_error[id] = nil
-        image_sheet[id] = nil
+        image_base[id] = nil
         image_index[id] = nil
         clear_id(id)
     end
 end
 
 local function image_unload_all()
-    for _, sheet in pairs(sheets) do
-        cancel_request(sheet)
-    end
+    sheets.clear()
     image_ids = {}
     image_keys = {}
     image_canvas = {}
     image_error = {}
-    image_sheet = {}
+    image_base = {}
     image_index = {}
-    sheets = {}
-    decoder_queue = {}
-    decoder_cursor = 1
-    remote_queue = {}
-    remote_head = 1
-    remote_tail = 0
-    remote_active = false
     clear_all()
 end
 
 local function install(std, engine)
     local load = image_load(std, engine.canvas)
-    std.bus.listen('loop', process_images)
+    sheets = zcis_sheets.create(std, engine.canvas, {ready = on_ready, failed = on_failed})
+    std.bus.listen('loop', sheets.process)
     engine_draw_img.install(std, engine, {
         load = load,
         draw = image_draw(engine.canvas, load),
