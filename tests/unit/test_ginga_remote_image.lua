@@ -282,4 +282,44 @@ function test_remote_image_rejects_non_zcis()
     std.image.unload_all()
 end
 
+function test_remote_fragments_share_one_request()
+    local env = fake_engine()
+    local std = env.std
+    local body = '!<arch>\n'
+        ..member('0000000000.txt', '0 0 1 1\r\n')
+        ..member('1A00000101.ppm', 'P6\n1 1\n255\n'..string.char(12, 34, 56))
+    local url = 'http://localhost/sheet.zcis?format=zcis'
+
+    local first = std.image.load(url..'#index=0')
+    local second = std.image.load(url..'#index=1')
+    assert(first and second and first ~= second)
+    assert(std.image.load(url) == first)
+
+    env.loop()
+    assert(#env.requests == 1)
+    assert(env.requests[1].url == url..'&encoding=cobs')
+
+    env.requests[1].success_handler({http = {body = body}})
+    for _ = 1, 4 do
+        env.loop()
+    end
+
+    assert(#env.requests == 1)
+    assert(std.image.exists(first))
+    std.image.unload_all()
+end
+
+function test_remote_image_refuses_unknown_fragment()
+    local env = fake_engine()
+    local std = env.std
+
+    local id = std.image.load('http://localhost/a.zcis#page=2')
+    assert(id)
+    assert(std.image.error(id) == 'invalid image fragment: page=2')
+
+    env.loop()
+    assert(#env.requests == 0)
+    std.image.unload_all()
+end
+
 test.unit(_G)

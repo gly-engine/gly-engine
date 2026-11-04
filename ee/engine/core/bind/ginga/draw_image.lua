@@ -9,8 +9,9 @@ local image_ids = {}
 local image_keys = {}
 local image_error = {}
 local image_canvas = {}
-local image_request = {}
-local image_decoder = {}
+local image_sheet = {}
+local image_index = {}
+local sheets = {}
 local decoder_queue = {}
 local decoder_cursor = 1
 local ignore = function() end
@@ -19,15 +20,15 @@ local remote_head = 1
 local remote_tail = 0
 local remote_active = false
 
-local function finish_request(token)
-    if token and token.started and not token.finished then
-        token.finished = true
+local function finish_request(sheet)
+    if sheet and sheet.started and not sheet.finished then
+        sheet.finished = true
         remote_active = false
     end
 end
 
-local function cancel_request(token)
-    local request = token and token.request
+local function cancel_request(sheet)
+    local request = sheet and sheet.request
     if request then
         request.success_handler = ignore
         request.failed_handler = ignore
@@ -35,9 +36,29 @@ local function cancel_request(token)
         if request.cancel then
             request.cancel()
         end
-        token.request = nil
+        sheet.request = nil
     end
-    finish_request(token)
+    finish_request(sheet)
+end
+
+local function canonical(src)
+    local key = tostring(src)
+    if type(src) ~= 'string' or not src:find('^https?://') then
+        return key
+    end
+
+    local base, fragment = key:match('^([^#]*)#(.*)$')
+    if not base then
+        return key..'#index=0', key, 0
+    end
+
+    local index = fragment:match('^index=(%d+)$')
+    if not index then
+        return key, nil, nil, 'invalid image fragment: '..fragment
+    end
+
+    index = tonumber(index)
+    return base..'#index='..index, base, index
 end
 
 local function with_cobs(src)
@@ -91,8 +112,8 @@ local function make_canvas_ops(canvas)
         end
     }
 end
-local function remove_decoder(id)
-    local state = image_decoder[id]
+local function remove_decoder(sheet)
+    local state = sheet and sheet.state
     if not state then return end
 
     local index = state.index
@@ -102,21 +123,38 @@ local function remove_decoder(id)
         last.index = index
     end
     decoder_queue[#decoder_queue] = nil
-    image_decoder[id] = nil
+    sheet.state = nil
     if decoder_cursor > #decoder_queue then
         decoder_cursor = 1
     end
 end
 
-local function add_decoder(id, decoder, token)
+local function add_decoder(sheet, decoder)
     local state = {
-        id = id,
+        sheet = sheet,
         decoder = decoder,
-        token = token,
         index = #decoder_queue + 1
     }
-    image_decoder[id] = state
+    sheet.state = state
     decoder_queue[state.index] = state
+end
+
+local function publish(sheet, canvas)
+    sheet.canvas = canvas
+    for _, id in pairs(sheet.ids) do
+        image_canvas[id] = canvas
+    end
+end
+
+local function fail_sheet(sheet, message)
+    cancel_request(sheet)
+    remove_decoder(sheet)
+    sheet.canvas = nil
+    sheet.error = message
+    for _, id in pairs(sheet.ids) do
+        image_canvas[id] = nil
+        image_error[id] = message
+    end
 end
 
 local function process_decoders()
@@ -126,27 +164,22 @@ local function process_decoders()
     end
 
     local state = decoder_queue[decoder_cursor]
-    local id = state.id
-    if image_request[id] ~= state.token then
-        remove_decoder(id)
+    local sheet = state.sheet
+    if sheets[sheet.base] ~= sheet then
+        remove_decoder(sheet)
         return
     end
 
     local ok, done = pcall(state.decoder.step_commit, state.decoder)
     if ok and state.decoder.canvas and state.decoder.commits > 0 then
-        image_canvas[id] = state.decoder.canvas
+        publish(sheet, state.decoder.canvas)
     end
     if not ok then
-        remove_decoder(id)
-        image_canvas[id] = nil
-        image_request[id] = nil
-        finish_request(state.token)
-        image_error[id] = done
+        fail_sheet(sheet, done)
     elseif done then
-        remove_decoder(id)
-        finish_request(state.token)
-        image_request[id] = nil
-        image_canvas[id] = state.decoder:close()
+        remove_decoder(sheet)
+        finish_request(sheet)
+        publish(sheet, state.decoder:close())
     else
         decoder_cursor = decoder_cursor == #decoder_queue and 1 or decoder_cursor + 1
     end
@@ -156,13 +189,13 @@ local function process_requests()
     if remote_active then return end
 
     while remote_head <= remote_tail do
-        local state = remote_queue[remote_head]
+        local sheet = remote_queue[remote_head]
         remote_queue[remote_head] = nil
         remote_head = remote_head + 1
-        if image_request[state.id] == state.token then
+        if sheets[sheet.base] == sheet then
             remote_active = true
-            state.token.started = true
-            state.start()
+            sheet.started = true
+            sheet.start()
             return
         end
     end
@@ -177,20 +210,14 @@ local function process_images()
     process_decoders()
 end
 
-local function load_remote(std, canvas, id, src, token)
-    local request
-
+local function load_remote(std, canvas, sheet)
     local function is_active()
-        return image_request[id] == token
+        return sheets[sheet.base] == sheet
     end
 
     local function fail(message)
         if not is_active() then return end
-        cancel_request(token)
-        image_request[id] = nil
-        remove_decoder(id)
-        image_canvas[id] = nil
-        image_error[id] = message
+        fail_sheet(sheet, message)
     end
 
     local function set_error(http_std)
@@ -223,17 +250,36 @@ local function load_remote(std, canvas, id, src, token)
             return
         end
 
-        token.request = nil
-        add_decoder(id, decoder, token)
+        sheet.request = nil
+        add_decoder(sheet, decoder)
     end
 
-    request = std.http.get(with_cobs(src))
-    token.request = request
+    local request = std.http.get(with_cobs(sheet.base))
+    sheet.request = request
     request
         :success(finish)
         :failed(set_error)
         :error(set_error)
         :run()
+end
+
+local function join_sheet(std, canvas, base, index, id)
+    local sheet = sheets[base]
+    if not sheet then
+        sheet = {base = base, ids = {}}
+        sheet.start = function()
+            load_remote(std, canvas, sheet)
+        end
+        sheets[base] = sheet
+        remote_tail = remote_tail + 1
+        remote_queue[remote_tail] = sheet
+    end
+
+    sheet.ids[index] = id
+    image_sheet[id] = sheet
+    image_index[id] = index
+    image_canvas[id] = sheet.canvas
+    image_error[id] = sheet.error
 end
 
 local function image_load(std, canvas)
@@ -245,7 +291,7 @@ local function image_load(std, canvas)
             return src, image_canvas[src] ~= nil
         end
 
-        local key = tostring(src)
+        local key, base, index, refusal = canonical(src)
         local id = image_ids[key]
         if id then
             return id, image_canvas[id] ~= nil
@@ -255,27 +301,21 @@ local function image_load(std, canvas)
         image_ids[key] = id
         image_keys[id] = key
 
-        local is_userdata = type(src) == 'userdata'
-        local is_remote = type(src) == 'string' and src:find('^https?://') ~= nil
-        if is_remote then
+        if refusal then
+            image_error[id] = refusal
+            return id, false
+        end
+
+        if base then
             if not std.http then
                 image_error[id] = 'remote images need http'
                 return id, false
             end
-            local token = {}
-            image_request[id] = token
-            remote_tail = remote_tail + 1
-            remote_queue[remote_tail] = {
-                id = id,
-                token = token,
-                start = function()
-                    load_remote(std, canvas, id, src, token)
-                end
-            }
-            return id, false
+            join_sheet(std, canvas, base, index, id)
+            return id, image_canvas[id] ~= nil
         end
 
-        if not is_userdata then
+        if type(src) ~= 'userdata' then
             local valid, message = png_validator.check_error(src)
             if not valid then
                 image_error[id] = message or 'invalid png'
@@ -326,7 +366,7 @@ local function image_id(src)
     if type(src) == 'number' then
         return src
     end
-    return src ~= nil and image_ids[tostring(src)]
+    return src ~= nil and image_ids[(canonical(src))]
 end
 
 local function get_image_error(src)
@@ -338,27 +378,36 @@ local function image_unload(src)
     local id = image_id(src)
     local key = id and image_keys[id]
     if key then
-        cancel_request(image_request[id])
+        local sheet = image_sheet[id]
+        if sheet then
+            sheet.ids[image_index[id]] = nil
+            if next(sheet.ids) == nil then
+                sheets[sheet.base] = nil
+                cancel_request(sheet)
+                remove_decoder(sheet)
+            end
+        end
         image_ids[key] = nil
         image_keys[id] = nil
         image_canvas[id] = nil
         image_error[id] = nil
-        image_request[id] = nil
-        remove_decoder(id)
+        image_sheet[id] = nil
+        image_index[id] = nil
         clear_id(id)
     end
 end
 
 local function image_unload_all()
-    for _, token in pairs(image_request) do
-        cancel_request(token)
+    for _, sheet in pairs(sheets) do
+        cancel_request(sheet)
     end
     image_ids = {}
     image_keys = {}
     image_canvas = {}
     image_error = {}
-    image_request = {}
-    image_decoder = {}
+    image_sheet = {}
+    image_index = {}
+    sheets = {}
     decoder_queue = {}
     decoder_cursor = 1
     remote_queue = {}
