@@ -27,7 +27,7 @@ local function parse_bounds(member)
     local header = member.body:sub(member.offset, member.offset + member.size - 1)
     local width = 0
     local height = 0
-    local count = 0
+    local cuts = {}
 
     for line in header:gmatch('[^\r\n]+') do
         local x, y, w, h = line:match('^(%d+)%s+(%d+)%s+(%d+)%s+(%d+)$')
@@ -40,13 +40,14 @@ local function parse_bounds(member)
         end
         width = math.max(width, x + w)
         height = math.max(height, y + h)
-        count = count + 1
+        cuts[#cuts + 1] = {x = x, y = y, width = w, height = h}
     end
 
-    if count == 0 then
+    if #cuts == 0 then
         error('empty zcis header')
     end
-    return width, height
+
+    return width, height, cuts
 end
 
 local function parse_chunk(member, atlas_width, atlas_height)
@@ -421,7 +422,7 @@ local function add_member(self, member)
         if not member.name:match('^0+%.txt$') then
             error('missing zcis header')
         end
-        self.width, self.height = parse_bounds(member)
+        self.width, self.height, self.cuts = parse_bounds(member)
         self.canvas, self.point = self.ops.start(self.width, self.height)
         return
     end
@@ -446,6 +447,7 @@ local function create(ops)
         member_count = 0,
         width = 0,
         height = 0,
+        cuts = {},
         masks = {},
         chunk_masks = {},
         active_masks = {},

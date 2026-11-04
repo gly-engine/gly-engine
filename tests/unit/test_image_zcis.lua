@@ -282,4 +282,20 @@ function test_zcis_step_commit_is_one_blit()
     assert(decoder.commits == 2 and current().commits == 2)
 end
 
+function test_zcis_cuts_from_header()
+    local ops = canvas_ops()
+    local body = archive('0 0 2 1\r\n4 0 2 1\r\n', {
+        {'1a00000201.ppm', ppm_data(2, 1, string.char(255, 0, 0, 0, 255, 0))},
+        {'2A04000201.ppm', ppm_data(2, 1, string.char(0, 0, 255, 0, 0, 255))}
+    })
+    local decoder = zcis.new(body, ops)
+
+    assert(decoder.width == 6 and decoder.height == 1)
+    assert(#decoder.cuts == 2)
+    assert(decoder.cuts[1].x == 0 and decoder.cuts[1].y == 0)
+    assert(decoder.cuts[1].width == 2 and decoder.cuts[1].height == 1)
+    assert(decoder.cuts[2].x == 4 and decoder.cuts[2].y == 0)
+    assert(decoder.cuts[2].width == 2 and decoder.cuts[2].height == 1)
+end
+
 test.unit(_G)
