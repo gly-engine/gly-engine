@@ -48,6 +48,10 @@ local function make_canvas_ops(canvas)
     }
 end
 
+local function out_of_range(count, index)
+    return 'zcis has '..count..' cuts, no index '..index
+end
+
 local function whole_canvas(decoder, cut)
     return #decoder.cuts == 1 and cut.x == 0 and cut.y == 0
         and cut.width == decoder.width and cut.height == decoder.height
@@ -192,6 +196,12 @@ local function create(std, canvas, handlers)
             end
 
             sheet.request = nil
+            sheet.count = #decoder.cuts
+            for index in pairs(sheet.wanted) do
+                if index >= sheet.count then
+                    handlers.failed(sheet.base, index, out_of_range(sheet.count, index))
+                end
+            end
             add_decoder(sheet, decoder)
         end
 
@@ -247,6 +257,7 @@ local function create(std, canvas, handlers)
             remove_decoder(sheet)
             finish_request(sheet)
             state.decoder:close()
+            sheet.done = true
         else
             decoder_cursor = decoder_cursor == #decoder_queue and 1 or decoder_cursor + 1
         end
@@ -254,6 +265,13 @@ local function create(std, canvas, handlers)
 
     function self.want(base, index)
         local sheet = sheets[base]
+        if sheet and sheet.count and index >= sheet.count then
+            return nil, out_of_range(sheet.count, index)
+        end
+        if sheet and sheet.done and not sheet.carved[index] then
+            drop_sheet(sheet)
+            sheet = nil
+        end
         if not sheet then
             sheet = {base = base, wanted = {}, carved = {}}
             sheets[base] = sheet
@@ -270,6 +288,7 @@ local function create(std, canvas, handlers)
         if not sheet then return end
 
         sheet.wanted[index] = nil
+        sheet.carved[index] = nil
         if next(sheet.wanted) == nil then
             drop_sheet(sheet)
         end

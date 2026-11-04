@@ -457,4 +457,75 @@ function test_remote_image_refuses_https()
     std.image.unload_all()
 end
 
+function test_remote_zcis_refuses_index_out_of_range()
+    local env = sheet_engine()
+    local std = env.std
+    local url = 'http://localhost/one.zcis'
+    local body = '!<arch>\n'
+        ..member('0000000000.txt', '0 0 1 1\r\n')
+        ..member('1A00000101.ppm', 'P6\n1 1\n255\n'..string.char(12, 34, 56))
+
+    std.image.load(url..'#index=0')
+    std.image.load(url..'#index=1')
+    env.loop()
+    env.requests[1].success_handler({http = {body = body}})
+    for _ = 1, 6 do
+        env.loop()
+    end
+
+    assert(std.image.exists(url..'#index=0'))
+    assert(not std.image.exists(url..'#index=1'))
+    assert(std.image.error(url..'#index=1') == 'zcis has 1 cuts, no index 1')
+
+    assert(not std.image.exists(url..'#index=4'))
+    assert(std.image.error(url..'#index=4') == 'zcis has 1 cuts, no index 4')
+    assert(#env.requests == 1)
+    std.image.unload_all()
+end
+
+function test_remote_zcis_failure_reaches_late_load()
+    local env = sheet_engine()
+    local std = env.std
+    local url = 'http://localhost/gone.zcis'
+
+    std.image.load(url..'#index=0')
+    env.loop()
+    env.requests[1].failed_handler({http = {status = 404}})
+
+    assert(std.image.error(url..'#index=0') == '404')
+
+    local late, loaded = std.image.load(url..'#index=1')
+    assert(late and loaded == false)
+    assert(std.image.error(url..'#index=1') == '404')
+
+    env.loop()
+    assert(#env.requests == 1)
+    std.image.unload_all()
+end
+
+function test_remote_zcis_reload_after_unload_fetches_again()
+    local env = sheet_engine()
+    local std = env.std
+    local url = 'http://localhost/again.zcis'
+    local body = '!<arch>\n'
+        ..member('0000000000.txt', '0 0 1 1\r\n')
+        ..member('1A00000101.ppm', 'P6\n1 1\n255\n'..string.char(12, 34, 56))
+
+    std.image.load(url)
+    env.loop()
+    env.requests[1].success_handler({http = {body = body}})
+    for _ = 1, 6 do
+        env.loop()
+    end
+    assert(std.image.exists(url))
+
+    std.image.unload(url)
+    assert(not std.image.exists(url))
+
+    std.image.load(url)
+    env.loop()
+    assert(#env.requests == 2)
+    std.image.unload_all()
+end
+
 test.unit(_G)
