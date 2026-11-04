@@ -188,7 +188,7 @@ function test_remote_zcis_image_cobs()
         request.success_handler({http = {body = ''}})
     end
     assert(env.requests[1].url == 'http://localhost/a.png')
-    assert(env.requests[2].url == 'http://localhost/b.zcis?format=zcis&encoding=cobs')
+    assert(env.requests[2].url == 'http://localhost/b.zcis?format=zcis')
     assert(env.requests[3].url == 'http://localhost/c?format=zcis&encoding=base64')
     std.image.unload_all()
 
@@ -279,6 +279,252 @@ function test_remote_image_rejects_non_zcis()
         http = {body = '<html>', headers = {['Content-Type'] = 'text/html; charset=utf-8'}}
     })
     assert(std.image.error(html_url) == 'remote image must be zcis')
+    std.image.unload_all()
+end
+
+function test_remote_fragments_share_one_request()
+    local env = fake_engine()
+    local std = env.std
+    local body = '!<arch>\n'
+        ..member('0000000000.txt', '0 0 1 1\r\n')
+        ..member('1A00000101.ppm', 'P6\n1 1\n255\n'..string.char(12, 34, 56))
+    local url = 'http://localhost/sheet.zcis?format=zcis'
+
+    local first = std.image.load(url..'#index=0')
+    local second = std.image.load(url..'#index=1')
+    assert(first and second and first ~= second)
+    assert(std.image.load(url) == first)
+
+    env.loop()
+    assert(#env.requests == 1)
+    assert(env.requests[1].url == url)
+
+    env.requests[1].success_handler({http = {body = body}})
+    for _ = 1, 4 do
+        env.loop()
+    end
+
+    assert(#env.requests == 1)
+    assert(std.image.exists(first))
+    std.image.unload_all()
+end
+
+function test_remote_image_refuses_unknown_fragment()
+    local env = fake_engine()
+    local std = env.std
+
+    local id = std.image.load('http://localhost/a.zcis#page=2')
+    assert(id)
+    assert(std.image.error(id) == 'invalid image fragment: page=2')
+
+    env.loop()
+    assert(#env.requests == 0)
+    std.image.unload_all()
+end
+
+local function sheet_engine()
+    local created = {}
+    local canvas = {}
+
+    function canvas.new(_, width, height)
+        local target = {width = width, height = height, composes = {}}
+        function target:pixel() end
+        function target:flush() end
+        function target:attrColor() end
+        function target:drawRect() end
+        function target:attrSize()
+            return self.width, self.height
+        end
+        function target:compose(x, y, src)
+            self.composes[#self.composes + 1] = {x, y, src}
+        end
+        created[#created + 1] = target
+        return target
+    end
+
+    function canvas:compose(x, y, image)
+        self.composed = {x, y, image}
+    end
+
+    local requests = {}
+    local env = {canvas = canvas, created = created, requests = requests}
+    local std = {
+        image = {},
+        http = {},
+        bus = {
+            listen = function(_, handler)
+                env.loop = handler
+            end
+        }
+    }
+    function std.http.get(url)
+        local request = {url = url}
+        function request:success(handler)
+            self.success_handler = handler
+            return self
+        end
+        function request:failed(handler)
+            self.failed_handler = handler
+            return self
+        end
+        function request:error(handler)
+            self.error_handler = handler
+            return self
+        end
+        function request:run()
+            requests[#requests + 1] = self
+        end
+        return request
+    end
+
+    draw_image.install(std, {canvas = canvas, offset_x = 0, offset_y = 0})
+    std.image.unload_all()
+    env.std = std
+    return env
+end
+
+function test_remote_zcis_sheet_carves_each_cut()
+    local cobs = require('source/shared/string/encode/cobs')
+    local pixels = string.char(0, 34, 0, 56, 0, 78)
+    local body = '!<arch>\n'
+        ..member('0000000000.txt', '0 0 2 1\r\n4 0 2 1\r\n')
+        ..member('1a00000201.ppm', 'P6\n2 1\n255\n'..pixels)
+        ..member('2A04000201.ppm', 'P6\n2 1\n255\n'..pixels)
+
+    local env = sheet_engine()
+    local std = env.std
+    local url = 'http://localhost/sheet?format=zcis'
+
+    std.image.load(url..'#index=0')
+    std.image.load(url..'#index=1')
+    env.loop()
+    env.requests[1].success_handler({http = {body = cobs.encode(body), headers = {['x-encoding'] = 'cobs'}}})
+    for _ = 1, 6 do
+        env.loop()
+    end
+
+    assert(#env.created == 3)
+    assert(env.created[1].width == 6 and env.created[1].height == 1)
+    assert(env.created[2].width == 2 and env.created[2].height == 1)
+    assert(env.created[3].width == 2 and env.created[3].height == 1)
+
+    assert(env.created[2].composes[1][1] == 0 and env.created[2].composes[1][2] == 0)
+    assert(env.created[3].composes[1][1] == -4 and env.created[3].composes[1][2] == 0)
+    assert(env.created[2].composes[1][3] == env.created[1])
+    assert(env.created[3].composes[1][3] == env.created[1])
+
+    assert(std.image.exists(url..'#index=0'))
+    assert(std.image.exists(url..'#index=1'))
+
+    local width, height = std.image.mensure(url..'#index=1')
+    assert(width == 2 and height == 1)
+
+    std.image.draw(url..'#index=1', 7, 8)
+    assert(env.canvas.composed[3] == env.created[3])
+    std.image.unload_all()
+end
+
+function test_remote_zcis_whole_image_is_not_copied()
+    local env = sheet_engine()
+    local std = env.std
+    local body = '!<arch>\n'
+        ..member('0000000000.txt', '0 0 1 1\r\n')
+        ..member('1A00000101.ppm', 'P6\n1 1\n255\n'..string.char(12, 34, 56))
+
+    std.image.load('http://localhost/whole.zcis')
+    env.loop()
+    env.requests[1].success_handler({http = {body = body}})
+    for _ = 1, 6 do
+        env.loop()
+    end
+
+    assert(#env.created == 1)
+    assert(#env.created[1].composes == 0)
+    assert(std.image.exists('http://localhost/whole.zcis'))
+    std.image.unload_all()
+end
+
+function test_remote_image_refuses_https()
+    local env = fake_engine()
+    local std = env.std
+
+    local id = std.image.load('https://localhost/a.zcis')
+    assert(id)
+    assert(std.image.error(id) == 'HTTPS is not supported!')
+
+    env.loop()
+    assert(#env.requests == 0)
+    std.image.unload_all()
+end
+
+function test_remote_zcis_refuses_index_out_of_range()
+    local env = sheet_engine()
+    local std = env.std
+    local url = 'http://localhost/one.zcis'
+    local body = '!<arch>\n'
+        ..member('0000000000.txt', '0 0 1 1\r\n')
+        ..member('1A00000101.ppm', 'P6\n1 1\n255\n'..string.char(12, 34, 56))
+
+    std.image.load(url..'#index=0')
+    std.image.load(url..'#index=1')
+    env.loop()
+    env.requests[1].success_handler({http = {body = body}})
+    for _ = 1, 6 do
+        env.loop()
+    end
+
+    assert(std.image.exists(url..'#index=0'))
+    assert(not std.image.exists(url..'#index=1'))
+    assert(std.image.error(url..'#index=1') == 'zcis has 1 cuts, no index 1')
+
+    assert(not std.image.exists(url..'#index=4'))
+    assert(std.image.error(url..'#index=4') == 'zcis has 1 cuts, no index 4')
+    assert(#env.requests == 1)
+    std.image.unload_all()
+end
+
+function test_remote_zcis_failure_reaches_late_load()
+    local env = sheet_engine()
+    local std = env.std
+    local url = 'http://localhost/gone.zcis'
+
+    std.image.load(url..'#index=0')
+    env.loop()
+    env.requests[1].failed_handler({http = {status = 404}})
+
+    assert(std.image.error(url..'#index=0') == '404')
+
+    local late, loaded = std.image.load(url..'#index=1')
+    assert(late and loaded == false)
+    assert(std.image.error(url..'#index=1') == '404')
+
+    env.loop()
+    assert(#env.requests == 1)
+    std.image.unload_all()
+end
+
+function test_remote_zcis_reload_after_unload_fetches_again()
+    local env = sheet_engine()
+    local std = env.std
+    local url = 'http://localhost/again.zcis'
+    local body = '!<arch>\n'
+        ..member('0000000000.txt', '0 0 1 1\r\n')
+        ..member('1A00000101.ppm', 'P6\n1 1\n255\n'..string.char(12, 34, 56))
+
+    std.image.load(url)
+    env.loop()
+    env.requests[1].success_handler({http = {body = body}})
+    for _ = 1, 6 do
+        env.loop()
+    end
+    assert(std.image.exists(url))
+
+    std.image.unload(url)
+    assert(not std.image.exists(url))
+
+    std.image.load(url)
+    env.loop()
+    assert(#env.requests == 2)
     std.image.unload_all()
 end
 
