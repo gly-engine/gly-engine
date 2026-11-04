@@ -139,17 +139,39 @@ local function add_decoder(sheet, decoder)
     decoder_queue[state.index] = state
 end
 
-local function publish(sheet, canvas)
-    sheet.canvas = canvas
-    for _, id in pairs(sheet.ids) do
-        image_canvas[id] = canvas
+local function whole_canvas(decoder, cut)
+    return #decoder.cuts == 1 and cut.x == 0 and cut.y == 0
+        and cut.width == decoder.width and cut.height == decoder.height
+end
+
+local function carve(sheet, decoder)
+    local ready = decoder:take_ready()
+    for at = 1, #ready do
+        local order = ready[at]
+        local cut = decoder.cuts[order]
+        local index = order - 1
+        local target = sheet.carved[index]
+
+        if not target then
+            target = whole_canvas(decoder, cut) and decoder.canvas
+                or sheet.root.new(sheet.root, cut.width, cut.height)
+            sheet.carved[index] = target
+        end
+        if target ~= decoder.canvas then
+            target:compose(-cut.x, -cut.y, decoder.canvas)
+        end
+
+        local id = sheet.ids[index]
+        if id then
+            image_canvas[id] = target
+        end
     end
 end
 
 local function fail_sheet(sheet, message)
     cancel_request(sheet)
     remove_decoder(sheet)
-    sheet.canvas = nil
+    sheet.carved = {}
     sheet.error = message
     for _, id in pairs(sheet.ids) do
         image_canvas[id] = nil
@@ -172,14 +194,14 @@ local function process_decoders()
 
     local ok, done = pcall(state.decoder.step_commit, state.decoder)
     if ok and state.decoder.canvas and state.decoder.commits > 0 then
-        publish(sheet, state.decoder.canvas)
+        carve(sheet, state.decoder)
     end
     if not ok then
         fail_sheet(sheet, done)
     elseif done then
         remove_decoder(sheet)
         finish_request(sheet)
-        publish(sheet, state.decoder:close())
+        state.decoder:close()
     else
         decoder_cursor = decoder_cursor == #decoder_queue and 1 or decoder_cursor + 1
     end
@@ -266,7 +288,7 @@ end
 local function join_sheet(std, canvas, base, index, id)
     local sheet = sheets[base]
     if not sheet then
-        sheet = {base = base, ids = {}}
+        sheet = {base = base, ids = {}, carved = {}, root = canvas}
         sheet.start = function()
             load_remote(std, canvas, sheet)
         end
@@ -278,7 +300,7 @@ local function join_sheet(std, canvas, base, index, id)
     sheet.ids[index] = id
     image_sheet[id] = sheet
     image_index[id] = index
-    image_canvas[id] = sheet.canvas
+    image_canvas[id] = sheet.carved[index]
     image_error[id] = sheet.error
 end
 
