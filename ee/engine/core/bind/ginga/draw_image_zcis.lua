@@ -3,13 +3,6 @@ local cobs = require('source/shared/string/encode/cobs')
 
 local ignore = function() end
 
-local function with_cobs(src)
-    if not src:find('[?&]format=zcis') or src:find('[?&]encoding=') then
-        return src
-    end
-    return src..'&encoding=cobs'
-end
-
 local function is_cobs(headers)
     for name, value in pairs(headers or {}) do
         if string.lower(name) == 'x-encoding' then
@@ -202,7 +195,7 @@ local function create(std, canvas, handlers)
             add_decoder(sheet, decoder)
         end
 
-        local request = std.http.get(with_cobs(sheet.base))
+        local request = std.http.get(sheet.base)
         sheet.request = request
         request
             :success(finish)

@@ -21,6 +21,9 @@ local function canonical(src)
     if type(src) ~= 'string' or not src:find('^https?://') then
         return key
     end
+    if src:find('^https://') then
+        return key, nil, nil, 'HTTPS is not supported!'
+    end
 
     local base, fragment = key:match('^([^#]*)#(.*)$')
     if not base then

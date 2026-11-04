@@ -188,7 +188,7 @@ function test_remote_zcis_image_cobs()
         request.success_handler({http = {body = ''}})
     end
     assert(env.requests[1].url == 'http://localhost/a.png')
-    assert(env.requests[2].url == 'http://localhost/b.zcis?format=zcis&encoding=cobs')
+    assert(env.requests[2].url == 'http://localhost/b.zcis?format=zcis')
     assert(env.requests[3].url == 'http://localhost/c?format=zcis&encoding=base64')
     std.image.unload_all()
 
@@ -297,7 +297,7 @@ function test_remote_fragments_share_one_request()
 
     env.loop()
     assert(#env.requests == 1)
-    assert(env.requests[1].url == url..'&encoding=cobs')
+    assert(env.requests[1].url == url)
 
     env.requests[1].success_handler({http = {body = body}})
     for _ = 1, 4 do
@@ -441,6 +441,19 @@ function test_remote_zcis_whole_image_is_not_copied()
     assert(#env.created == 1)
     assert(#env.created[1].composes == 0)
     assert(std.image.exists('http://localhost/whole.zcis'))
+    std.image.unload_all()
+end
+
+function test_remote_image_refuses_https()
+    local env = fake_engine()
+    local std = env.std
+
+    local id = std.image.load('https://localhost/a.zcis')
+    assert(id)
+    assert(std.image.error(id) == 'HTTPS is not supported!')
+
+    env.loop()
+    assert(#env.requests == 0)
     std.image.unload_all()
 end
 
