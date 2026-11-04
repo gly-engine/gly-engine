@@ -298,8 +298,25 @@ local function select_masks(self, chunk)
     end
 end
 
+local function touch_cuts(self, chunk)
+    for index = 1, #self.cuts do
+        local cut = self.cuts[index]
+        if chunk.x < cut.x + cut.width and cut.x < chunk.x + chunk.width
+            and chunk.y < cut.y + cut.height and cut.y < chunk.y + chunk.height then
+            self.touched[index] = true
+        end
+    end
+end
+
 local function finish_chunk(self)
+    touch_cuts(self, self.chunk)
     if self.chunk.command == self.chunk.command:upper() then
+        for index = 1, #self.cuts do
+            if self.touched[index] then
+                self.ready[#self.ready + 1] = index
+                self.touched[index] = nil
+            end
+        end
         self.ops.commit(self.canvas)
         self.commits = self.commits + 1
     end
@@ -406,6 +423,12 @@ local function step_commit(self)
     end
 end
 
+local function take_ready(self)
+    local ready = self.ready
+    self.ready = {}
+    return ready
+end
+
 local function is_done(self)
     return self.done
 end
@@ -448,6 +471,8 @@ local function create(ops)
         width = 0,
         height = 0,
         cuts = {},
+        touched = {},
+        ready = {},
         masks = {},
         chunk_masks = {},
         active_masks = {},
@@ -457,6 +482,7 @@ local function create(ops)
         commits = 0,
         step = step,
         step_commit = step_commit,
+        take_ready = take_ready,
         is_done = is_done,
         close = close
     }

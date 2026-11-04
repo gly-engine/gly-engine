@@ -298,4 +298,46 @@ function test_zcis_cuts_from_header()
     assert(decoder.cuts[2].width == 2 and decoder.cuts[2].height == 1)
 end
 
+function test_zcis_ready_cuts_share_one_commit()
+    local ops = canvas_ops()
+    local body = archive('0 0 2 1\r\n4 0 2 1\r\n', {
+        {'1a00000201.ppm', ppm_data(2, 1, string.char(255, 0, 0, 0, 255, 0))},
+        {'2A04000201.ppm', ppm_data(2, 1, string.char(0, 0, 255, 0, 0, 255))},
+        {'3A00000201.ppm', ppm_data(2, 1, string.char(0, 255, 0, 0, 255, 0))}
+    })
+    local decoder = zcis.new(body, ops)
+
+    assert(#decoder:take_ready() == 0)
+    decoder:step_commit()
+
+    local ready = decoder:take_ready()
+    assert(decoder.commits == 1)
+    assert(#ready == 2 and ready[1] == 1 and ready[2] == 2)
+    assert(#decoder:take_ready() == 0)
+
+    decoder:step_commit()
+    ready = decoder:take_ready()
+    assert(decoder.commits == 2)
+    assert(#ready == 1 and ready[1] == 1)
+end
+
+function test_zcis_ready_cut_per_commit()
+    local ops = canvas_ops()
+    local body = archive('0 0 2 1\r\n0 2 2 1\r\n', {
+        {'1A00000201.ppm', ppm_data(2, 1, string.char(255, 0, 0, 0, 255, 0))},
+        {'2A00020201.ppm', ppm_data(2, 1, string.char(0, 0, 255, 0, 0, 255))}
+    })
+    local decoder = zcis.new(body, ops)
+
+    decoder:step_commit()
+    local ready = decoder:take_ready()
+    assert(decoder.commits == 1)
+    assert(#ready == 1 and ready[1] == 1)
+
+    decoder:step_commit()
+    ready = decoder:take_ready()
+    assert(decoder.commits == 2)
+    assert(#ready == 1 and ready[1] == 2)
+end
+
 test.unit(_G)
