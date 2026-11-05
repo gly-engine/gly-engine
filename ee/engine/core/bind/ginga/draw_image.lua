@@ -24,6 +24,15 @@ local function canonical(src)
     return key, key
 end
 
+local function alias_id(key)
+    local id = key:match('^id://(%d+)$')
+    if id then
+        id = tonumber(id)
+        image_ids[key] = id
+    end
+    return id
+end
+
 local function id_of(base, index)
     local first = image_ids[base]
     return first and index < image_count[base] and first + index
@@ -88,7 +97,7 @@ local function image_load(std, canvas)
             return load_sheet(std, base, count and count > 1 and count or 1)
         end
 
-        local id = image_ids[key]
+        local id = image_ids[key] or alias_id(key)
         if id then
             return id, image_canvas[id] ~= nil
         end
@@ -155,7 +164,11 @@ local function image_id(src)
     if type(src) == 'number' then
         return src
     end
-    return src ~= nil and image_ids[(canonical(src))]
+    if src == nil then
+        return false
+    end
+    local key = canonical(src)
+    return image_ids[key] or alias_id(key)
 end
 
 local function get_image_error(src)

@@ -475,6 +475,7 @@ function test_remote_zcis_refuses_index_out_of_range()
     assert(std.image.exists(first))
     assert(not std.image.exists(first + 1))
     assert(std.image.error(first + 1) == 'zcis has 1 cuts, no index 1')
+    assert(std.image.error('id://'..(first + 1)) == 'zcis has 1 cuts, no index 1')
     assert(#env.requests == 1)
     std.image.unload_all()
 end
@@ -657,6 +658,41 @@ function test_remote_image_without_http_yet()
     assert(select(2, std.image.load(url, 3)) == false)
     assert(std.image.error(late) == nil)
     loop()
+    std.image.unload_all()
+end
+
+function test_image_alias_by_id()
+    local env = sheet_engine()
+    local std = env.std
+    local url = 'http://localhost/alias.zcis?format=zcis'
+
+    local first = std.image.load(url, 3)
+    local middle = 'id://'..(first + 1)
+    local last = 'id://'..(first + 2)
+
+    assert(std.image.load('id://'..first) == first)
+    assert(std.image.load(last) == first + 2)
+    assert(not std.image.exists(middle))
+    assert(std.image.error(middle) == nil)
+    assert(not std.image.exists('id://999'))
+
+    env.loop()
+    assert(#env.requests == 1)
+    env.requests[1].success_handler({http = {body = sheet_body()}})
+    for _ = 1, 8 do
+        env.loop()
+    end
+
+    assert(std.image.exists(middle))
+    local width, height = std.image.mensure(last)
+    assert(width == 2 and height == 1)
+
+    std.image.draw(last, 5, 6)
+    assert(env.canvas.composed[1] == 5 and env.canvas.composed[2] == 6)
+
+    std.image.unload(middle)
+    assert(not std.image.exists(middle))
+    assert(std.image.exists(last))
     std.image.unload_all()
 end
 
