@@ -177,8 +177,9 @@ interface GlyStdHttpResponse {
 interface GlyStdImage {
   mensure(src: string): LuaMultiReturn<[number, number]>;
   draw(src: string, x?: number, y?: number): void;
-  load(src: string): number;
+  load(src: string, count?: number): number;
   exists(src: string): boolean;
+  error(src: string): string | undefined;
   unload(src: string): void;
   unload_all(): void;
 }
