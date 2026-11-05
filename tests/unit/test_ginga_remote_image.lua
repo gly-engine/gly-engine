@@ -290,9 +290,8 @@ function test_remote_fragments_share_one_request()
         ..member('1A00000101.ppm', 'P6\n1 1\n255\n'..string.char(12, 34, 56))
     local url = 'http://localhost/sheet.zcis?format=zcis'
 
-    local first = std.image.load(url..'#index=0')
-    local second = std.image.load(url..'#index=1')
-    assert(first and second and first ~= second)
+    local first, ready = std.image.load(url, 2)
+    assert(first and ready == false)
     assert(std.image.load(url) == first)
 
     env.loop()
@@ -309,16 +308,18 @@ function test_remote_fragments_share_one_request()
     std.image.unload_all()
 end
 
-function test_remote_image_refuses_unknown_fragment()
+function test_remote_image_keeps_the_fragment()
     local env = fake_engine()
     local std = env.std
+    local url = 'http://localhost/a.zcis#page=2'
 
-    local id = std.image.load('http://localhost/a.zcis#page=2')
+    local id = std.image.load(url)
     assert(id)
-    assert(std.image.error(id) == 'invalid image fragment: page=2')
+    assert(std.image.error(id) == nil)
 
     env.loop()
-    assert(#env.requests == 0)
+    assert(#env.requests == 1)
+    assert(env.requests[1].url == url)
     std.image.unload_all()
 end
 
@@ -395,8 +396,7 @@ function test_remote_zcis_sheet_carves_each_cut()
     local std = env.std
     local url = 'http://localhost/sheet?format=zcis'
 
-    std.image.load(url..'#index=0')
-    std.image.load(url..'#index=1')
+    local first = std.image.load(url, 2)
     env.loop()
     env.requests[1].success_handler({http = {body = cobs.encode(body), headers = {['x-encoding'] = 'cobs'}}})
     for _ = 1, 6 do
@@ -413,13 +413,13 @@ function test_remote_zcis_sheet_carves_each_cut()
     assert(env.created[2].composes[1][3] == env.created[1])
     assert(env.created[3].composes[1][3] == env.created[1])
 
-    assert(std.image.exists(url..'#index=0'))
-    assert(std.image.exists(url..'#index=1'))
+    assert(std.image.exists(first))
+    assert(std.image.exists(first + 1))
 
-    local width, height = std.image.mensure(url..'#index=1')
+    local width, height = std.image.mensure(first + 1)
     assert(width == 2 and height == 1)
 
-    std.image.draw(url..'#index=1', 7, 8)
+    std.image.draw(first + 1, 7, 8)
     assert(env.canvas.composed[3] == env.created[3])
     std.image.unload_all()
 end
@@ -465,20 +465,16 @@ function test_remote_zcis_refuses_index_out_of_range()
         ..member('0000000000.txt', '0 0 1 1\r\n')
         ..member('1A00000101.ppm', 'P6\n1 1\n255\n'..string.char(12, 34, 56))
 
-    std.image.load(url..'#index=0')
-    std.image.load(url..'#index=1')
+    local first = std.image.load(url, 2)
     env.loop()
     env.requests[1].success_handler({http = {body = body}})
     for _ = 1, 6 do
         env.loop()
     end
 
-    assert(std.image.exists(url..'#index=0'))
-    assert(not std.image.exists(url..'#index=1'))
-    assert(std.image.error(url..'#index=1') == 'zcis has 1 cuts, no index 1')
-
-    assert(not std.image.exists(url..'#index=4'))
-    assert(std.image.error(url..'#index=4') == 'zcis has 1 cuts, no index 4')
+    assert(std.image.exists(first))
+    assert(not std.image.exists(first + 1))
+    assert(std.image.error(first + 1) == 'zcis has 1 cuts, no index 1')
     assert(#env.requests == 1)
     std.image.unload_all()
 end
@@ -488,15 +484,14 @@ function test_remote_zcis_failure_reaches_late_load()
     local std = env.std
     local url = 'http://localhost/gone.zcis'
 
-    std.image.load(url..'#index=0')
+    local first, loaded = std.image.load(url, 2)
+    assert(first and loaded == false)
     env.loop()
     env.requests[1].failed_handler({http = {status = 404}})
 
-    assert(std.image.error(url..'#index=0') == '404')
-
-    local late, loaded = std.image.load(url..'#index=1')
-    assert(late and loaded == false)
-    assert(std.image.error(url..'#index=1') == '404')
+    assert(std.image.error(first) == '404')
+    assert(std.image.error(first + 1) == '404')
+    assert(select(2, std.image.load(url, 2)) == false)
 
     env.loop()
     assert(#env.requests == 1)
@@ -525,6 +520,143 @@ function test_remote_zcis_reload_after_unload_fetches_again()
     std.image.load(url)
     env.loop()
     assert(#env.requests == 2)
+    std.image.unload_all()
+end
+
+local function sheet_body()
+    local pixels = string.char(0, 34, 0, 56, 0, 78)
+    return '!<arch>\n'
+        ..member('0000000000.txt', '0 0 2 1\r\n2 0 2 1\r\n4 0 2 1\r\n')
+        ..member('1A00000201.ppm', 'P6\n2 1\n255\n'..pixels)
+        ..member('2A02000201.ppm', 'P6\n2 1\n255\n'..pixels)
+        ..member('3A04000201.ppm', 'P6\n2 1\n255\n'..pixels)
+end
+
+function test_remote_zcis_sheet_reserves_sequential_ids()
+    local env = sheet_engine()
+    local std = env.std
+    local url = 'http://localhost/block.zcis?format=zcis'
+
+    local first, loaded = std.image.load(url, 3)
+    assert(first and loaded == false)
+    assert(std.image.load(url, 3) == first)
+    assert(std.image.load(url) == first)
+
+    env.loop()
+    assert(#env.requests == 1)
+    env.requests[1].success_handler({http = {body = sheet_body()}})
+    for _ = 1, 8 do
+        env.loop()
+    end
+
+    assert(#env.requests == 1)
+    assert(std.image.exists(first))
+    assert(std.image.exists(first + 1))
+    assert(std.image.exists(first + 2))
+    assert(select(2, std.image.load(url, 3)) == true)
+
+    local width, height = std.image.mensure(first + 2)
+    assert(width == 2 and height == 1)
+
+    std.image.draw(first + 2, 7, 8)
+    assert(env.canvas.composed[1] == 7 and env.canvas.composed[2] == 8)
+    assert(env.canvas.composed[3] ~= nil)
+
+    std.image.unload(first + 1)
+    assert(not std.image.exists(first + 1))
+    assert(std.image.exists(first) and std.image.exists(first + 2))
+
+    assert(std.image.load(url, 3) == first)
+    env.loop()
+    assert(#env.requests == 1)
+    std.image.unload_all()
+end
+
+function test_remote_zcis_sheet_keeps_the_first_load()
+    local env = sheet_engine()
+    local std = env.std
+    local url = 'http://localhost/first-wins.zcis?format=zcis'
+
+    local alone = std.image.load(url)
+    assert(std.image.load(url, 3) == alone)
+
+    env.loop()
+    assert(#env.requests == 1)
+    env.requests[1].success_handler({http = {body = sheet_body()}})
+    for _ = 1, 8 do
+        env.loop()
+    end
+    assert(std.image.exists(alone))
+    assert(not std.image.exists(alone + 1))
+    std.image.unload_all()
+
+    local first = std.image.load(url, 3)
+    assert(std.image.load(url, 9) == first)
+    assert(std.image.load(url) == first)
+    std.image.unload_all()
+end
+
+function test_remote_zcis_sheet_counts_below_two_are_one()
+    local env = sheet_engine()
+    local std = env.std
+    local url = 'http://localhost/none.zcis'
+
+    local first = std.image.load(url, 0)
+    assert(first and not std.image.exists(first + 1))
+    assert(std.image.error(first) == nil)
+
+    env.loop()
+    assert(#env.requests == 1)
+    std.image.unload_all()
+end
+
+function test_remote_image_without_http_yet()
+    local canvas = {}
+    function canvas.new()
+        return {}
+    end
+
+    local loop
+    local std = {
+        image = {},
+        bus = {
+            listen = function(_, handler)
+                loop = handler
+            end
+        }
+    }
+
+    draw_image.install(std, {canvas = canvas, offset_x = 0, offset_y = 0})
+    std.image.unload_all()
+
+    local url = 'http://localhost/late.zcis'
+    local first, ready = std.image.load(url, 3)
+    assert(first and ready == false)
+    assert(std.image.error(first) == 'remote images need http')
+    assert(std.image.error(first + 2) == 'remote images need http')
+    loop()
+
+    std.image.unload_all()
+    std.http = {
+        get = function()
+            local request = {}
+            function request:success()
+                return self
+            end
+            function request:failed()
+                return self
+            end
+            function request:error()
+                return self
+            end
+            function request:run() end
+            return request
+        end
+    }
+    local late = std.image.load(url, 3)
+    assert(select(2, std.image.load(url, 3)) == false)
+    assert(std.image.error(late) == nil)
+    loop()
     std.image.unload_all()
 end
 

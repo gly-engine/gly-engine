@@ -13,8 +13,8 @@ local function image_mensure(func)
 end
 
 local function image_load(func)
-    return function(src, url_wip)
-        return func(src, url_wip)
+    return function(src, count)
+        return func(src, count)
     end
 end
 

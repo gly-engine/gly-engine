@@ -3,18 +3,15 @@ local zcis_sheets = require('ee/engine/core/bind/ginga/draw_image_zcis')
 local create_counter = require('source/shared/functional/counter')
 local engine_draw_img = require('source/engine/api/draw/image')
 
-local next_id, clear_id, clear_all = create_counter()
+local next_id, clear_id, clear_all, reserve_ids = create_counter()
 local image_ids = {}
-local image_keys = {}
+local image_count = {}
 local image_error = {}
 local image_canvas = {}
 local image_base = {}
 local image_index = {}
-local sheets
 
-local function key_of(base, index)
-    return base..'#index='..index
-end
+local sheets
 
 local function canonical(src)
     local key = tostring(src)
@@ -22,32 +19,55 @@ local function canonical(src)
         return key
     end
     if src:find('^https://') then
-        return key, nil, nil, 'HTTPS is not supported!'
+        return key, nil, 'HTTPS is not supported!'
+    end
+    return key, key
+end
+
+local function id_of(base, index)
+    local first = image_ids[base]
+    return first and index < image_count[base] and first + index
+end
+
+local function load_sheet(std, base, count)
+    local first = image_ids[base]
+    if first then
+        return first, image_canvas[first + image_count[base] - 1] ~= nil
     end
 
-    local base, fragment = key:match('^([^#]*)#(.*)$')
-    if not base then
-        return key_of(key, 0), key, 0
+    local refusal = not std.http and 'remote images need http'
+    local ready = not refusal
+    local at = 0
+
+    first = count > 1 and reserve_ids(count) or next_id()
+    image_ids[base] = first
+    image_count[base] = count
+
+    while at < count do
+        local id = first + at
+        image_base[id] = base
+        image_index[id] = at
+        if refusal then
+            image_error[id] = refusal
+        else
+            image_canvas[id], image_error[id] = sheets.want(base, at)
+            ready = ready and image_canvas[id] ~= nil
+        end
+        at = at + 1
     end
 
-    local index = fragment:match('^index=(%d+)$')
-    if not index then
-        return key, nil, nil, 'invalid image fragment: '..fragment
-    end
-
-    index = tonumber(index)
-    return key_of(base, index), base, index
+    return first, ready
 end
 
 local function on_ready(base, index, texture)
-    local id = image_ids[key_of(base, index)]
+    local id = id_of(base, index)
     if id then
         image_canvas[id] = texture
     end
 end
 
 local function on_failed(base, index, message)
-    local id = image_ids[key_of(base, index)]
+    local id = id_of(base, index)
     if id then
         image_canvas[id] = nil
         image_error[id] = message
@@ -55,7 +75,7 @@ local function on_failed(base, index, message)
 end
 
 local function image_load(std, canvas)
-    return function(src)
+    return function(src, count)
         if src == nil then
             return nil, false
         end
@@ -63,7 +83,11 @@ local function image_load(std, canvas)
             return src, image_canvas[src] ~= nil
         end
 
-        local key, base, index, refusal = canonical(src)
+        local key, base, refusal = canonical(src)
+        if base then
+            return load_sheet(std, base, count and count > 1 and count or 1)
+        end
+
         local id = image_ids[key]
         if id then
             return id, image_canvas[id] ~= nil
@@ -71,22 +95,13 @@ local function image_load(std, canvas)
 
         id = next_id()
         image_ids[key] = id
-        image_keys[id] = key
+        image_count[key] = 1
+        image_base[id] = key
+        image_index[id] = 0
 
         if refusal then
             image_error[id] = refusal
             return id, false
-        end
-
-        if base then
-            if not std.http then
-                image_error[id] = 'remote images need http'
-                return id, false
-            end
-            image_base[id] = base
-            image_index[id] = index
-            image_canvas[id], image_error[id] = sheets.want(base, index)
-            return id, image_canvas[id] ~= nil
         end
 
         if type(src) ~= 'userdata' then
@@ -150,13 +165,14 @@ end
 
 local function image_unload(src)
     local id = image_id(src)
-    local key = id and image_keys[id]
-    if key then
-        if image_base[id] then
-            sheets.release(image_base[id], image_index[id])
+    local base = id and image_base[id]
+    if base then
+        local index = image_index[id]
+        sheets.release(base, index)
+        if index == 0 then
+            image_ids[base] = nil
+            image_count[base] = nil
         end
-        image_ids[key] = nil
-        image_keys[id] = nil
         image_canvas[id] = nil
         image_error[id] = nil
         image_base[id] = nil
@@ -168,7 +184,7 @@ end
 local function image_unload_all()
     sheets.clear()
     image_ids = {}
-    image_keys = {}
+    image_count = {}
     image_canvas = {}
     image_error = {}
     image_base = {}
