@@ -80,4 +80,37 @@ function test_fsc09_resolves_no_content_status()
     assert(response.resolved and response.body == '')
 end
 
+--- a compressed response declares the bytes on the wire, and ginga hands over the
+--- inflated ones: the declared length is reached long before the body is whole, and
+--- resolving there used to hand half a zcis to the decoder ("truncated ar member").
+function test_fsc09_waits_past_a_compressed_length()
+    local response = request('http://gzipped')
+    local session = sessions['http://gzipped']
+    callback({class = 'http', session = session, code = 200,
+              headers = {['Content-Length'] = '8', ['Content-Encoding'] = 'gzip'}})
+    callback({class = 'http', session = session, body = 'aaaaaaaa'})
+    assert(not response.resolved, 'the wire length is not the inflated length')
+    callback({class = 'http', session = session, body = 'bbbb'})
+    assert(not response.resolved)
+    callback({class = 'http', session = session, finished = true})
+    assert(response.resolved and response.body == 'aaaaaaaabbbb')
+end
+
+-- some boxes lowercase the response headers and some do not
+function test_fsc09_reads_a_lowercased_length()
+    local response = request('http://lowercase')
+    local session = sessions['http://lowercase']
+    callback({class = 'http', session = session, headers = {['content-length'] = '4'}, code = 200})
+    callback({class = 'http', session = session, body = 'ab'})
+    assert(not response.resolved, 'half the body is not the body')
+    callback({class = 'http', session = session, body = 'cd'})
+    assert(response.resolved and response.body == 'abcd')
+end
+
+-- the request says identity so the length it is given is the length that arrives
+function test_fsc09_asks_for_identity_encoding()
+    local _, self = request('http://plain')
+    assert(self.header_dict['Accept-Encoding'] == 'identity')
+end
+
 test.unit(_G)
