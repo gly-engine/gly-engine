@@ -3,8 +3,6 @@ local convert = require('source/shared/image/convert_color')
 
 local floor = math.floor
 local ceil = math.ceil
-local yuv2rgb = convert.yuv2rgb
-local yuv2rgb_limited = convert.yuv2rgb_limited
 
 local chroma_420 = {
     ['420'] = true,
@@ -29,14 +27,14 @@ local function raw(data, offset, size, width, height, limited)
 
     local u_offset = offset + y_size
     local v_offset = u_offset + uv_size
-    local convert_pixel = limited ~= false and yuv2rgb_limited or yuv2rgb
+    local convert_pixel = convert.yuv_converter(limited ~= false)
 
     local cached_y = -1
     local cached_uv = -1
     local y_row = 0
     local uv_row = 0
-    local u_value = 0
-    local v_value = 0
+    local u_value = 128
+    local v_value = 128
 
     local function pixel(x, y)
         if y ~= cached_y then
@@ -48,8 +46,8 @@ local function raw(data, offset, size, width, height, limited)
         local uv_index = uv_row + floor(x / 2)
         if uv_index ~= cached_uv then
             cached_uv = uv_index
-            u_value = data:byte(u_offset + uv_index) - 128
-            v_value = data:byte(v_offset + uv_index) - 128
+            u_value = data:byte(u_offset + uv_index)
+            v_value = data:byte(v_offset + uv_index)
         end
         local y_value = data:byte(offset + y_row + x)
         local r, g, b = convert_pixel(y_value, u_value, v_value)
