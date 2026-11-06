@@ -322,7 +322,7 @@ declare class GlyQueryResult {
   isVisible(): boolean;
 }
 
-type GlyFocusDirection = 'left' | 'right' | 'up' | 'down';
+type GlyFocusDirection = 'left' | 'right' | 'up' | 'down' | 'left+' | 'right+';
 type GlyFocusSelector = `#${string}` | `.${string}`;
 
 type GlyStyleProps = {
