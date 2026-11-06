@@ -15,6 +15,12 @@ local function creater_counter(start)
         return next_id
     end
 
+    local function reserveIds(amount)
+        local first = next_id + 1
+        next_id = next_id + amount
+        return first
+    end
+
     local function clearId(id)
         if id == nil then return end
 
@@ -28,7 +34,7 @@ local function creater_counter(start)
         free_top = 0
     end
 
-    return nextId, clearId, clearAll
+    return nextId, clearId, clearAll, reserveIds
 end
 
 return creater_counter

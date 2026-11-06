@@ -4,6 +4,20 @@ local user_agent = require('source/agent')
 local content_length = {}
 local request_dict = {}
 local data_dict = {}
+local status_dict = {}
+local inflated_dict = {}
+
+local function header_of(headers, wanted)
+    for name, value in pairs(headers or {}) do
+        if string.lower(tostring(name)) == wanted then
+            return value
+        end
+    end
+end
+
+local function bodyless(method, status)
+    return method == 'HEAD' or status == 204 or status == 205 or status == 304
+end
 
 local function handler(self)
     local uri = self.url..str_url.search_param(self.param_list, self.param_dict)
@@ -17,9 +31,15 @@ local function handler(self)
         headers['User-Agent'] = user_agent
     end
 
+    if not headers['Accept-Encoding'] then
+        headers['Accept-Encoding'] = 'identity'
+    end
+
     data_dict[session] = ''
     request_dict[session] = self
-    content_length[session] = -1
+    status_dict[session] = nil
+    content_length[session] = nil
+    inflated_dict[session] = false
 
     self.promise()
     event.post({
@@ -31,6 +51,23 @@ local function handler(self)
         body = body,
         session = session
     })
+end
+
+local function complete(self, session, evt)
+    if bodyless(self.method, status_dict[session]) then
+        return true
+    end
+
+    if inflated_dict[session] then
+        return false
+    end
+
+    local length = content_length[session]
+    if length then
+        return #data_dict[session] >= length
+    end
+
+    return evt.body ~= nil
 end
 
 local function callback(evt)
@@ -48,13 +85,18 @@ local function callback(evt)
     end
 
     if evt.headers then
-        if evt.headers['Content-Length'] then
-            content_length[session] = tonumber(evt.headers['Content-Length'])
+        if header_of(evt.headers, 'content-encoding') then
+            inflated_dict[session] = true
+        end
+        local length = header_of(evt.headers, 'content-length')
+        if length then
+            content_length[session] = tonumber(length)
         end
         self.set('headers', deep_copy.table(evt.headers))
     end
 
     if evt.code then
+        status_dict[session] = tonumber(evt.code)
         self.set('ok', 200 <= tonumber(evt.code) and tonumber(evt.code) < 300)
         self.set('status', evt.code)
     end
@@ -63,9 +105,11 @@ local function callback(evt)
         data_dict[session] = data_dict[session]..evt.body
     end
 
-    if evt.finished or raise_error or content_length[session] <= #data_dict[session] then
+    if evt.finished or raise_error or complete(self, session, evt) then
         self.set('body', data_dict[session])
         content_length[session] = nil
+        status_dict[session] = nil
+        inflated_dict[session] = nil
         request_dict[session] = nil
         data_dict[session] = nil
         self.resolve()
