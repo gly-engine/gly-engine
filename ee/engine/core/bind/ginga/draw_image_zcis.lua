@@ -33,8 +33,7 @@ end
 local function make_canvas_ops(canvas)
     return {
         start = function(width, height)
-            local target = canvas.new(canvas, width, height)
-            return target, target.pixel
+            return canvas.new(canvas, width, height)
         end,
         color = function(target, r, g, b, a)
             target:attrColor(r, g, b, a)

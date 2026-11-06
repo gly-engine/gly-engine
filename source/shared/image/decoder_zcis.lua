@@ -148,9 +148,6 @@ local function masked_alpha(active_masks, count, x, step, alpha)
 end
 
 local function paint(self, canvas, x, y, width, r, g, b, a)
-    if width == 1 and a == 255 and self.point and self.chunk.extension == 'ppm' then
-        return self.point(canvas, x, y, r, g, b, a)
-    end
     self.ops.color(canvas, r, g, b, a)
     self.ops.pixel(canvas, x, y, width, 1)
 end
@@ -446,7 +443,7 @@ local function add_member(self, member)
             error('missing zcis header')
         end
         self.width, self.height, self.cuts = parse_bounds(member)
-        self.canvas, self.point = self.ops.start(self.width, self.height)
+        self.canvas = self.ops.start(self.width, self.height)
         return
     end
     self.member_count = self.member_count + 1

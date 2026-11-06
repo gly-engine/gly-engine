@@ -13,9 +13,14 @@ function test_remote_zcis_image()
         ..member('1A00000101.ppm', ppm)
     local texture = {points = 0, commits = 0}
 
-    function texture:pixel(x, y, r, g, b, a)
-        self.points = self.points + 1
-        self.point = {x, y, r, g, b, a}
+    function texture:attrColor(r, g, b, a)
+        self.color = {r, g, b, a}
+    end
+
+    function texture:drawRect(_, x, y, width)
+        local color = self.color or {}
+        self.points = self.points + width
+        self.point = {x, y, color[1], color[2], color[3], color[4]}
     end
 
     function texture:flush()
@@ -112,9 +117,13 @@ end
 
 local function fake_engine()
     local texture = {points = 0}
-    function texture:pixel(x, y, r, g, b, a)
-        self.points = self.points + 1
-        self.point = {x, y, r, g, b, a}
+    function texture:attrColor(r, g, b, a)
+        self.color = {r, g, b, a}
+    end
+    function texture:drawRect(_, x, y, width)
+        local color = self.color or {}
+        self.points = self.points + width
+        self.point = {x, y, color[1], color[2], color[3], color[4]}
     end
     function texture:flush() end
     function texture:attrSize()
