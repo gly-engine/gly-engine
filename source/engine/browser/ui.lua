@@ -52,8 +52,10 @@ local function install(std, engine)
         elseif type(target) == 'string' then
             -- 'right'/'left'/'up'/'down', optionally followed by a selector
             -- (e.g. 'right .modal') to restrict which focusable it can land on
-            local dir, sel = target:match('^(%a+)%s+(.+)$')
+            local dir, sel = target:match('^(%a+%+?)%s+(.+)$')
             dir = dir or target
+            local wide = dir:sub(-1) == '+'
+            dir = wide and dir:sub(1, -2) or dir
             if dir == 'right' or dir == 'left'
             or dir == 'up'   or dir == 'down' then
                 -- if there's no anchor focus yet, seed with the first focusable
@@ -69,10 +71,10 @@ local function install(std, engine)
                     -- unlike plain directional focus it never falls back to the
                     -- node that's already focused
                     local filter = query.make_filter(sel)
-                    local moved  = filter and nav.focus_navigate(dom_obj, dir, filter)
+                    local moved  = filter and nav.focus_navigate(dom_obj, dir, filter, wide)
                     return moved and query.wrap(dom_obj, moved) or nil
                 end
-                local moved = nav.focus_navigate(dom_obj, dir)
+                local moved = nav.focus_navigate(dom_obj, dir, nil, wide)
                 if moved then return query.wrap(dom_obj, moved) end
                 -- no movement: keep the current focus (may be the seed we just placed)
                 return dom_obj.focus_current and query.wrap(dom_obj, dom_obj.focus_current) or nil
