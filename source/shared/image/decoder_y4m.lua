@@ -1,7 +1,6 @@
 local math = require('math')
 local convert = require('source/shared/image/convert_color')
 
-local yuv2rgb = convert.yuv2rgb
 local floor = math.floor
 
 local CHROMA = {
@@ -38,19 +37,15 @@ local function decode_line(self, y)
 
     for x = 0, w - 1 do
         local Yv = data:byte(y_row + x + 1)
-        local Uv, Vv = 0, 0
+        local Uv, Vv = 128, 128
 
         if has_chroma then
             local cxi = floor(x / cx)
-            Uv = data:byte(Y_size + uv_row + cxi + 1) - 128
-            Vv = data:byte(Y_size + U_size + uv_row + cxi + 1) - 128
+            Uv = data:byte(Y_size + uv_row + cxi + 1)
+            Vv = data:byte(Y_size + U_size + uv_row + cxi + 1)
         end
 
-        local r, g, b = yuv2rgb(Yv, Uv, Vv)
-
-        if r < 0 then r = 0 elseif r > 255 then r = 255 end
-        if g < 0 then g = 0 elseif g > 255 then g = 255 end
-        if b < 0 then b = 0 elseif b > 255 then b = 255 end
+        local r, g, b = self.yuv2rgb(Yv, Uv, Vv)
 
         self.rgba[p]   = r
         self.rgba[p+1] = g
@@ -210,6 +205,7 @@ local function new(mode)
 
     local self = {
         stride = stride,
+        yuv2rgb = convert.yuv_converter(false),
         push = push,
         step = step,
         close = close,

@@ -11,9 +11,33 @@ and @ref nds "nds" to draw images,
 as they use a specific bitmap and it is necessary to implement a
 [sprite conversion tool](https://github.com/RodrigoDornelles/ultimate-sprite-sheet-replacer/).
 
+@par Remote Sheets
+
+@details A remote image is a zcis sheet, a single file that holds many cuts,
+and the second argument of @c load is how many cuts to take from it.
+
+@li @c load(url) @n loads the cut zero and returns its id.
+@li @c load(url,\ count) @n loads the first @c count cuts, reserves @c count
+sequential ids and returns the id of the cut zero.
+
+@details Sequential ids let the draw calls do arithmetic instead of building
+strings every frame, which matters on slow runtimes like @ref ginga "ginga".
+
+@note The first load of an url wins, loading it again answers with the same
+ids and the same count. Unloading is per image and its id is recycled.
+
+@details Any id also answers by the string @c id://N, for callers that carry
+pictures around as text. It names the number, not the picture, so @c id://5
+follows whatever the id 5 holds.
+
+```java
+local first = std.image.load('http://cdn/sheet.zcis?format=zcis', 26)
+std.image.draw(first + 7, 10, 20)
+```
+
 @fakefunc draw(src, pos_x, pos_y)
 
-@fakefunc load(src)
+@fakefunc load(src, count)
 
 @fakefunc mensure(src)
 

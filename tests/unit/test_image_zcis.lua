@@ -1,0 +1,442 @@
+local test = require('tests/framework/microtest')
+local zcis = require('source/shared/image/decoder_zcis')
+local pcx = require('source/shared/image/reader_pcx')
+local yuv = require('source/shared/image/reader_yuv')
+
+local function raw_member(name, data)
+    local header = string.format('%-16s%-12d%-6d%-6d%-8o%-10d`\n', name, 0, 0, 0, 420, #data)
+    assert(#header == 60)
+    return header..data..(#data % 2 == 1 and '\n' or '')
+end
+
+local function member(name, data)
+    return raw_member(name, data)
+end
+
+local function archive(bounds, chunks)
+    local body = '!<arch>\n'..member('0000000000.txt', bounds)
+    for index = 1, #chunks do
+        body = body..member(chunks[index][1], chunks[index][2])
+    end
+    return body
+end
+
+local function ppm_data(width, height, pixels)
+    return string.format('P6\n%d %d\n255\n', width, height)..pixels
+end
+
+local function canvas_ops()
+    local canvas
+    local ops = {
+        start = function(width, height)
+            canvas = {width = width, height = height, rectangles = {}, commits = 0}
+            return canvas
+        end,
+        color = function(target, r, g, b, a)
+            target.color = {r, g, b, a}
+        end,
+        pixel = function(target, x, y, width, height)
+            target.rectangles[#target.rectangles + 1] = {x, y, width, height, target.color[1], target.color[2], target.color[3], target.color[4]}
+        end,
+        commit = function(target)
+            target.commits = target.commits + 1
+        end
+    }
+    return ops, function() return canvas end
+end
+
+local function pcx_mask(height)
+    height = height or 1
+    local header = {}
+    for index = 1, 128 do
+        header[index] = 0
+    end
+    header[1] = 10
+    header[3] = 1
+    header[4] = 1
+    header[9] = 1
+    header[11] = (height - 1) % 256
+    header[12] = math.floor((height - 1) / 256)
+    header[66] = 1
+    header[67] = 1
+    for index = 1, 128 do
+        header[index] = string.char(header[index])
+    end
+    return table.concat(header)..string.rep(string.char(128), height)
+end
+
+function test_zcis_ppm_commit()
+    local ops, get_canvas = canvas_ops()
+    local body = archive('0 0 2 1\r\n', {
+        {'1A00000201.ppm', ppm_data(2, 1, string.char(255, 0, 0, 0, 255, 0))}
+    })
+    local result, width, height = zcis.decode(body, ops)
+    local canvas = get_canvas()
+    assert(result == canvas)
+    assert(width == 2 and height == 1)
+    assert(canvas.commits == 1)
+    assert(#canvas.rectangles == 2)
+    assert(canvas.rectangles[1][5] == 255 and canvas.rectangles[1][6] == 0)
+    assert(canvas.rectangles[2][5] == 0 and canvas.rectangles[2][6] == 255)
+end
+
+function test_zcis_pcx_erase_mask()
+    local ops, get_canvas = canvas_ops()
+    local body = archive('0 0 2 1\r\n', {
+        {'1e00000201.pcx', pcx_mask()},
+        {'2A00000201.ppm', ppm_data(2, 1, string.char(255, 255, 255, 255, 255, 255))}
+    })
+    zcis.decode(body, ops)
+    local canvas = get_canvas()
+    -- o que a mascara apagou nao e desenhado de forma alguma: antes saia um
+    -- retangulo de alpha zero, que custa a mesma chamada de cor e de retangulo que
+    -- um visivel e e exatamente o que a mascara existe para poupar
+    assert(#canvas.rectangles == 1)
+    assert(canvas.rectangles[1][1] == 0 and canvas.rectangles[1][3] == 1)
+    assert(canvas.rectangles[1][8] == 255)
+end
+
+function test_zcis_patterns()
+    local white = ppm_data(2, 2, string.rep(string.char(255), 12))
+    local ops, get_canvas = canvas_ops()
+    zcis.decode(archive('0 0 8 2\r\n', {
+        {'1A00000202.ppm', white},
+        {'2B02000202.ppm', white},
+        {'3C04000202.ppm', white},
+        {'4D06000202.ppm', white}
+    }), ops)
+    local rectangles = get_canvas().rectangles
+    assert(#rectangles == 6)
+    assert(rectangles[1][1] == 0 and rectangles[1][3] == 2)
+    assert(rectangles[3][1] == 2 and rectangles[4][1] == 2)
+    assert(rectangles[5][1] == 4 and rectangles[5][2] == 0 and rectangles[5][3] == 2)
+    assert(rectangles[6][1] == 6)
+end
+
+function test_yuv420_reader()
+    local data = string.char(16, 235, 81, 145, 128, 128)
+    local reader = yuv.raw(data, 1, #data, 2, 2)
+    local r1, g1, b1 = reader.pixel(0, 0)
+    local r2, g2, b2 = reader.pixel(1, 0)
+    assert(r1 == 0 and g1 == 0 and b1 == 0)
+    assert(r2 == 255 and g2 == 255 and b2 == 255)
+    local full_reader = yuv.raw(data, 1, #data, 2, 2, false)
+    local full_r1 = full_reader.pixel(0, 0)
+    local full_r2 = full_reader.pixel(1, 0)
+    assert(full_r1 == 16 and full_r2 == 235)
+end
+
+function test_pcx_reader()
+    local data = pcx_mask()
+    local reader = pcx.new(data, 1, #data)
+    assert(reader.width == 2 and reader.height == 1)
+    assert(reader.alpha(0, 0) == 255)
+    assert(reader.alpha(1, 0) == 0)
+end
+
+function test_pcx_reader_prepares_bounded_rows()
+    local data = pcx_mask(20)
+    local reader = pcx.new(data, 1, #data)
+    assert(not reader.prepare(19, 8))
+    assert(not reader.prepare(19, 8))
+    assert(reader.prepare(19, 8))
+    assert(reader.alpha(0, 19) == 255)
+end
+
+function test_zcis_gnu_string_table()
+    local bounds = '0 0 1 1\r\n'
+    local ppm = ppm_data(1, 1, string.char(1, 2, 3))
+    local body = '!<arch>\n'
+        ..raw_member('//', '000000000000.txt/\n')
+        ..raw_member('/0', bounds)
+        ..member('1A00000101.ppm', ppm)
+    local ops, get_canvas = canvas_ops()
+    zcis.decode(body, ops)
+    assert(get_canvas().rectangles[1][5] == 1)
+end
+
+function test_zcis_skips_bsd_symbol_table()
+    local bounds = '0 0 1 1\r\n'
+    local ppm = ppm_data(1, 1, string.char(4, 5, 6))
+    local body = '!<arch>\n'
+        ..raw_member('#1/9', '__.SYMDEF'..'index')
+        ..member('0000000000.txt', bounds)
+        ..member('1A00000101.ppm', ppm)
+    local ops, get_canvas = canvas_ops()
+    zcis.decode(body, ops)
+    assert(get_canvas().rectangles[1][5] == 4)
+end
+
+function test_zcis_accepts_bsd_padded_name()
+    local bounds = '0 0 1 1\r\n'
+    local ppm = ppm_data(1, 1, string.char(7, 8, 9))
+    local body = '!<arch>\n'
+        ..raw_member('#1/20', '000000000000.txt\0\0\0\0'..bounds)
+        ..member('1A00000101.ppm', ppm)
+    local ops, get_canvas = canvas_ops()
+    zcis.decode(body, ops)
+    assert(get_canvas().rectangles[1][5] == 7)
+end
+
+function test_zcis_rejects_oversized_bounds()
+    local started = false
+    local ok = pcall(zcis.new, archive('0 0 3844 1\r\n', {}), {
+        start = function()
+            started = true
+        end
+    })
+    assert(not ok and not started)
+end
+
+function test_zcis_incremental_rows()
+    local white = ppm_data(1, 2, string.rep(string.char(255), 6))
+    local ops = canvas_ops()
+    local decoder = zcis.new(archive('0 0 1 2\r\n', {
+        {'1A00000102.ppm', white}
+    }), ops)
+    assert(not decoder:step(1))
+    assert(decoder:step(1))
+end
+
+function test_zcis_stream_rejects_missing_header()
+    local ops = canvas_ops()
+    local decoder = zcis.stream(ops)
+    decoder:push('!<arch>\n')
+    decoder:finish()
+    assert(not pcall(decoder.step, decoder, 1))
+end
+
+function test_zcis_stream_large_image_with_bounded_buffer()
+    local width, height = 321, 241
+    local rows, even, odd = {}, {}, {}
+    for y = 0, height - 1 do
+        local pixels = {}
+        for x = 0, width - 1 do
+            pixels[#pixels + 1] = string.char(x % 256, y % 256, (x + y) % 7 * 30)
+        end
+        rows[y + 1] = table.concat(pixels)
+        local layer = y % 2 == 0 and even or odd
+        layer[#layer + 1] = rows[y + 1]
+    end
+    local body = archive('0 0 321 241\r\n', {
+        {'1A00005B3t.ppm', ppm_data(width, #odd, table.concat(odd))},
+        {'2C00005B3t.ppm', ppm_data(width, #even, table.concat(even))}
+    })
+    local ops, get_canvas = canvas_ops()
+    local decoder = zcis.stream(ops)
+    for offset = 1, #body, 1460 do
+        decoder:push(body:sub(offset, offset + 1459))
+        local done, waiting
+        repeat
+            done, waiting = decoder:step(2048)
+        until done or waiting
+        assert(decoder.parser.length < 1460 + width * 3)
+    end
+    decoder:finish()
+    while not decoder:is_done() do decoder:step(2048) end
+    local image = {}
+    for _, rect in ipairs(get_canvas().rectangles) do
+        for y = rect[2], rect[2] + rect[4] - 1 do
+            for x = rect[1], rect[1] + rect[3] - 1 do
+                image[y * width + x + 1] = string.char(rect[5], rect[6], rect[7])
+            end
+        end
+    end
+    for y = 0, height - 1 do
+        assert(table.concat(image, '', y * width + 1, (y + 1) * width) == rows[y + 1])
+    end
+end
+
+function test_y4m_limited_range()
+    local frame = string.char(16, 235, 81, 145, 128, 128)
+    local data = 'YUV4MPEG2 W2 H2 F1:1 Ip A1:1 C420\nFRAME\n'..frame
+    local reader = yuv.y4m(data, 1, #data)
+    local r1, g1, b1 = reader.pixel(0, 0)
+    local r2, g2, b2 = reader.pixel(1, 0)
+    assert(r1 == 0 and g1 == 0 and b1 == 0)
+    assert(r2 == 255 and g2 == 255 and b2 == 255)
+    local full_data = 'YUV4MPEG2 W2 H2 C420 XCOLORRANGE=FULL\nFRAME\n'..frame
+    local full_reader = yuv.y4m(full_data, 1, #full_data)
+    local full_r1 = full_reader.pixel(0, 0)
+    local full_r2 = full_reader.pixel(1, 0)
+    assert(full_r1 == 16 and full_r2 == 235)
+end
+
+function test_y4m_rejects_high_bit_depth()
+    local data = 'YUV4MPEG2 W2 H2 C420p10\nFRAME\n'..string.rep('\0', 12)
+    assert(not pcall(yuv.y4m, data, 1, #data))
+end
+
+function test_zcis_step_commit_is_one_blit()
+    local row = string.rep(string.char(10, 20, 30), 4)
+    local body = archive('0 0 4 2\r\n', {
+        {'1A00000402.ppm', ppm_data(4, 1, row)},
+        {'2b00000402.ppm', ppm_data(4, 1, row)},
+        {'3C00000402.ppm', ppm_data(4, 1, row)}
+    })
+    local ops, current = canvas_ops()
+    local decoder = zcis.new(body, ops)
+
+    local done = decoder:step_commit()
+    assert(not done)
+    assert(decoder.commits == 1 and current().commits == 1)
+
+    done = decoder:step_commit()
+    assert(done)
+    assert(decoder.commits == 2 and current().commits == 2)
+end
+
+function test_zcis_cuts_from_header()
+    local ops = canvas_ops()
+    local body = archive('0 0 2 1\r\n4 0 2 1\r\n', {
+        {'1a00000201.ppm', ppm_data(2, 1, string.char(255, 0, 0, 0, 255, 0))},
+        {'2A04000201.ppm', ppm_data(2, 1, string.char(0, 0, 255, 0, 0, 255))}
+    })
+    local decoder = zcis.new(body, ops)
+
+    assert(decoder.width == 6 and decoder.height == 1)
+    assert(#decoder.cuts == 2)
+    assert(decoder.cuts[1].x == 0 and decoder.cuts[1].y == 0)
+    assert(decoder.cuts[1].width == 2 and decoder.cuts[1].height == 1)
+    assert(decoder.cuts[2].x == 4 and decoder.cuts[2].y == 0)
+    assert(decoder.cuts[2].width == 2 and decoder.cuts[2].height == 1)
+end
+
+function test_zcis_ready_cuts_share_one_commit()
+    local ops = canvas_ops()
+    local body = archive('0 0 2 1\r\n4 0 2 1\r\n', {
+        {'1a00000201.ppm', ppm_data(2, 1, string.char(255, 0, 0, 0, 255, 0))},
+        {'2A04000201.ppm', ppm_data(2, 1, string.char(0, 0, 255, 0, 0, 255))},
+        {'3A00000201.ppm', ppm_data(2, 1, string.char(0, 255, 0, 0, 255, 0))}
+    })
+    local decoder = zcis.new(body, ops)
+
+    assert(#decoder:take_ready() == 0)
+    decoder:step_commit()
+
+    local ready = decoder:take_ready()
+    assert(decoder.commits == 1)
+    assert(#ready == 2 and ready[1] == 1 and ready[2] == 2)
+    assert(#decoder:take_ready() == 0)
+
+    decoder:step_commit()
+    ready = decoder:take_ready()
+    assert(decoder.commits == 2)
+    assert(#ready == 1 and ready[1] == 1)
+end
+
+function test_zcis_ready_cut_per_commit()
+    local ops = canvas_ops()
+    local body = archive('0 0 2 1\r\n0 2 2 1\r\n', {
+        {'1A00000201.ppm', ppm_data(2, 1, string.char(255, 0, 0, 0, 255, 0))},
+        {'2A00020201.ppm', ppm_data(2, 1, string.char(0, 0, 255, 0, 0, 255))}
+    })
+    local decoder = zcis.new(body, ops)
+
+    decoder:step_commit()
+    local ready = decoder:take_ready()
+    assert(decoder.commits == 1)
+    assert(#ready == 1 and ready[1] == 1)
+
+    decoder:step_commit()
+    ready = decoder:take_ready()
+    assert(decoder.commits == 2)
+    assert(#ready == 1 and ready[1] == 2)
+end
+
+--- a mascara de um byte por linha, com o padrao de bits que se quiser
+local function pcx_bits(rows, bytes_per_line)
+    bytes_per_line = bytes_per_line or 1
+    local header = {}
+    for index = 1, 128 do
+        header[index] = 0
+    end
+    header[1] = 10
+    header[3] = 0
+    header[4] = 1
+    header[9] = (bytes_per_line * 8 - 1) % 256
+    header[10] = math.floor((bytes_per_line * 8 - 1) / 256)
+    header[11] = (#rows - 1) % 256
+    header[12] = math.floor((#rows - 1) / 256)
+    header[66] = 1
+    header[67] = bytes_per_line % 256
+    header[68] = math.floor(bytes_per_line / 256)
+    for index = 1, 128 do
+        header[index] = string.char(header[index])
+    end
+    local body = {}
+    for index = 1, #rows do
+        body[index] = string.char(rows[index])
+    end
+    return table.concat(header)..table.concat(body)
+end
+
+--- o comando f: a cor no nome, os retangulos no corpo, um desenho por retangulo
+function test_zcis_fill_paints_one_rectangle()
+    local ops, get_canvas = canvas_ops()
+    zcis.decode(archive('0 0 8 4\r\n', {
+        {'1F1020C0FF.txt', '0 0 8 4\r\n'}
+    }), ops)
+    local canvas = get_canvas()
+    assert(#canvas.rectangles == 1, 'um retangulo e nao um por linha')
+    local one = canvas.rectangles[1]
+    assert(one[1] == 0 and one[2] == 0 and one[3] == 8 and one[4] == 4, 'a altura inteira de uma vez')
+    assert(one[5] == 16 and one[6] == 32 and one[7] == 192 and one[8] == 255, 'a cor vem do nome em hex')
+    assert(canvas.commits == 1, 'maiusculo mostra')
+end
+
+--- varios retangulos da mesma cor cabem num membro so
+function test_zcis_fill_many_rectangles()
+    local ops, get_canvas = canvas_ops()
+    zcis.decode(archive('0 0 8 4\r\n', {
+        {'1f000000FF.txt', '0 0 2 2\r\n4 2 4 2\r\n'},
+        {'2A00000801.ppm', ppm_data(8, 1, string.rep(string.char(9), 24))}
+    }), ops)
+    local rectangles = get_canvas().rectangles
+    assert(rectangles[1][3] == 2 and rectangles[1][4] == 2, 'o primeiro retangulo')
+    assert(rectangles[2][1] == 4 and rectangles[2][2] == 2, 'o segundo, no mesmo membro')
+end
+
+--- a mascara apaga um pedaco do meio: a run quebra e o buraco nao e desenhado
+function test_zcis_mask_splits_the_run()
+    local ops, get_canvas = canvas_ops()
+    -- 11001111: os pixeis 2 e 3 apagados
+    zcis.decode(archive('0 0 8 1\r\n', {
+        {'1e00000801.pcx', pcx_bits({0xCF})},
+        {'2A00000801.ppm', ppm_data(8, 1, string.rep(string.char(255), 24))}
+    }), ops)
+    local rectangles = get_canvas().rectangles
+    assert(#rectangles == 2, 'duas faixas e nao uma nem oito, deu '..#rectangles)
+    assert(rectangles[1][1] == 0 and rectangles[1][3] == 2, 'a faixa da esquerda')
+    assert(rectangles[2][1] == 4 and rectangles[2][3] == 4, 'a da direita')
+end
+
+--- a mascara tambem vale para o preenchimento que vier depois dela
+function test_zcis_mask_cuts_the_fill()
+    local ops, get_canvas = canvas_ops()
+    zcis.decode(archive('0 0 8 2\r\n', {
+        {'1e00000802.pcx', pcx_bits({0xCF, 0xFF})},
+        {'2F00FF00FF.txt', '0 0 8 2\r\n'}
+    }), ops)
+    local rectangles = get_canvas().rectangles
+    assert(#rectangles == 3, 'duas faixas na primeira linha e a segunda inteira, deu '..#rectangles)
+    assert(rectangles[1][2] == 0 and rectangles[1][3] == 2)
+    assert(rectangles[2][2] == 0 and rectangles[2][1] == 4)
+    assert(rectangles[3][2] == 1 and rectangles[3][3] == 8, 'linha sem nada apagado sai inteira')
+end
+
+--- duas mascaras sobre o mesmo lugar somam o que cada uma apagou
+function test_zcis_two_masks_add_up()
+    local ops, get_canvas = canvas_ops()
+    zcis.decode(archive('0 0 8 1\r\n', {
+        {'1e00000801.pcx', pcx_bits({0xF0})},
+        {'2e00000801.pcx', pcx_bits({0x3C})},
+        {'3A00000801.ppm', ppm_data(8, 1, string.rep(string.char(255), 24))}
+    }), ops)
+    local rectangles = get_canvas().rectangles
+    -- 11110000 e 00111100 deixam 00110000
+    assert(#rectangles == 1, 'uma faixa so, deu '..#rectangles)
+    assert(rectangles[1][1] == 2 and rectangles[1][3] == 2, 'o que as duas deixaram')
+end
+
+test.unit(_G)
