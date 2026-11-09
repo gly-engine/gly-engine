@@ -88,8 +88,12 @@ function test_zcis_pcx_erase_mask()
     })
     zcis.decode(body, ops)
     local canvas = get_canvas()
+    -- o que a mascara apagou nao e desenhado de forma alguma: antes saia um
+    -- retangulo de alpha zero, que custa a mesma chamada de cor e de retangulo que
+    -- um visivel e e exatamente o que a mascara existe para poupar
+    assert(#canvas.rectangles == 1)
+    assert(canvas.rectangles[1][1] == 0 and canvas.rectangles[1][3] == 1)
     assert(canvas.rectangles[1][8] == 255)
-    assert(canvas.rectangles[2][8] == 0)
 end
 
 function test_zcis_patterns()
@@ -338,6 +342,101 @@ function test_zcis_ready_cut_per_commit()
     ready = decoder:take_ready()
     assert(decoder.commits == 2)
     assert(#ready == 1 and ready[1] == 2)
+end
+
+--- a mascara de um byte por linha, com o padrao de bits que se quiser
+local function pcx_bits(rows, bytes_per_line)
+    bytes_per_line = bytes_per_line or 1
+    local header = {}
+    for index = 1, 128 do
+        header[index] = 0
+    end
+    header[1] = 10
+    header[3] = 0
+    header[4] = 1
+    header[9] = (bytes_per_line * 8 - 1) % 256
+    header[10] = math.floor((bytes_per_line * 8 - 1) / 256)
+    header[11] = (#rows - 1) % 256
+    header[12] = math.floor((#rows - 1) / 256)
+    header[66] = 1
+    header[67] = bytes_per_line % 256
+    header[68] = math.floor(bytes_per_line / 256)
+    for index = 1, 128 do
+        header[index] = string.char(header[index])
+    end
+    local body = {}
+    for index = 1, #rows do
+        body[index] = string.char(rows[index])
+    end
+    return table.concat(header)..table.concat(body)
+end
+
+--- o comando f: a cor no nome, os retangulos no corpo, um desenho por retangulo
+function test_zcis_fill_paints_one_rectangle()
+    local ops, get_canvas = canvas_ops()
+    zcis.decode(archive('0 0 8 4\r\n', {
+        {'1F1020C0FF.txt', '0 0 8 4\r\n'}
+    }), ops)
+    local canvas = get_canvas()
+    assert(#canvas.rectangles == 1, 'um retangulo e nao um por linha')
+    local one = canvas.rectangles[1]
+    assert(one[1] == 0 and one[2] == 0 and one[3] == 8 and one[4] == 4, 'a altura inteira de uma vez')
+    assert(one[5] == 16 and one[6] == 32 and one[7] == 192 and one[8] == 255, 'a cor vem do nome em hex')
+    assert(canvas.commits == 1, 'maiusculo mostra')
+end
+
+--- varios retangulos da mesma cor cabem num membro so
+function test_zcis_fill_many_rectangles()
+    local ops, get_canvas = canvas_ops()
+    zcis.decode(archive('0 0 8 4\r\n', {
+        {'1f000000FF.txt', '0 0 2 2\r\n4 2 4 2\r\n'},
+        {'2A00000801.ppm', ppm_data(8, 1, string.rep(string.char(9), 24))}
+    }), ops)
+    local rectangles = get_canvas().rectangles
+    assert(rectangles[1][3] == 2 and rectangles[1][4] == 2, 'o primeiro retangulo')
+    assert(rectangles[2][1] == 4 and rectangles[2][2] == 2, 'o segundo, no mesmo membro')
+end
+
+--- a mascara apaga um pedaco do meio: a run quebra e o buraco nao e desenhado
+function test_zcis_mask_splits_the_run()
+    local ops, get_canvas = canvas_ops()
+    -- 11001111: os pixeis 2 e 3 apagados
+    zcis.decode(archive('0 0 8 1\r\n', {
+        {'1e00000801.pcx', pcx_bits({0xCF})},
+        {'2A00000801.ppm', ppm_data(8, 1, string.rep(string.char(255), 24))}
+    }), ops)
+    local rectangles = get_canvas().rectangles
+    assert(#rectangles == 2, 'duas faixas e nao uma nem oito, deu '..#rectangles)
+    assert(rectangles[1][1] == 0 and rectangles[1][3] == 2, 'a faixa da esquerda')
+    assert(rectangles[2][1] == 4 and rectangles[2][3] == 4, 'a da direita')
+end
+
+--- a mascara tambem vale para o preenchimento que vier depois dela
+function test_zcis_mask_cuts_the_fill()
+    local ops, get_canvas = canvas_ops()
+    zcis.decode(archive('0 0 8 2\r\n', {
+        {'1e00000802.pcx', pcx_bits({0xCF, 0xFF})},
+        {'2F00FF00FF.txt', '0 0 8 2\r\n'}
+    }), ops)
+    local rectangles = get_canvas().rectangles
+    assert(#rectangles == 3, 'duas faixas na primeira linha e a segunda inteira, deu '..#rectangles)
+    assert(rectangles[1][2] == 0 and rectangles[1][3] == 2)
+    assert(rectangles[2][2] == 0 and rectangles[2][1] == 4)
+    assert(rectangles[3][2] == 1 and rectangles[3][3] == 8, 'linha sem nada apagado sai inteira')
+end
+
+--- duas mascaras sobre o mesmo lugar somam o que cada uma apagou
+function test_zcis_two_masks_add_up()
+    local ops, get_canvas = canvas_ops()
+    zcis.decode(archive('0 0 8 1\r\n', {
+        {'1e00000801.pcx', pcx_bits({0xF0})},
+        {'2e00000801.pcx', pcx_bits({0x3C})},
+        {'3A00000801.ppm', ppm_data(8, 1, string.rep(string.char(255), 24))}
+    }), ops)
+    local rectangles = get_canvas().rectangles
+    -- 11110000 e 00111100 deixam 00110000
+    assert(#rectangles == 1, 'uma faixa so, deu '..#rectangles)
+    assert(rectangles[1][1] == 2 and rectangles[1][3] == 2, 'o que as duas deixaram')
 end
 
 test.unit(_G)

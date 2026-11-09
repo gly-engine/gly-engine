@@ -50,7 +50,69 @@ local function parse_bounds(member)
     return width, height, cuts
 end
 
+--- os retangulos que o corpo de um preenchimento lista, um por linha em decimal
+local function parse_rects(member, atlas_width, atlas_height)
+    local body = member.body:sub(member.offset, member.offset + member.size - 1)
+    local rects = {}
+
+    for line in body:gmatch('[^\r\n]+') do
+        local x, y, width, height = line:match('^(%d+)%s+(%d+)%s+(%d+)%s+(%d+)$')
+        x = tonumber(x)
+        y = tonumber(y)
+        width = tonumber(width)
+        height = tonumber(height)
+        if not x or not height or width <= 0 or height <= 0
+            or x + width > atlas_width or y + height > atlas_height then
+            error('invalid zcis fill rectangle')
+        end
+        rects[#rects + 1] = {x = x, y = y, width = width, height = height}
+    end
+
+    if #rects == 0 then
+        error('empty zcis fill')
+    end
+    return rects
+end
+
+--- a cor que o nome de um preenchimento carrega, dois digitos por canal
+local function parse_colour(hex)
+    return {
+        r = tonumber(hex:sub(1, 2), 16),
+        g = tonumber(hex:sub(3, 4), 16),
+        b = tonumber(hex:sub(5, 6), 16),
+        a = tonumber(hex:sub(7, 8), 16)
+    }
+end
+
+--- o preenchimento, cujo nome e a cor e cujo corpo sao os retangulos dela.
+--
+-- a cor vem no nome e nao no corpo porque um membro por cor junta todos os
+-- retangulos dela, e o nome ja estava ali de graca. os oito digitos caem onde um
+-- chunk de imagem poe as quatro posicoes, entao e a letra do comando que decide como
+-- o nome e lido -- por isso isto e tentado antes.
+local function parse_fill(member, atlas_width, atlas_height)
+    local command, hex, extension = member.name:match('^[0-9A-Za-z]([fF])(%x%x%x%x%x%x%x%x)%.(%a+)$')
+    if not command then
+        return nil
+    end
+    if lower(extension) ~= 'txt' then
+        error('zcis fill must be txt')
+    end
+    return {
+        command = command,
+        fill = parse_colour(hex),
+        rects = parse_rects(member, atlas_width, atlas_height),
+        extension = 'txt',
+        member = member
+    }
+end
+
 local function parse_chunk(member, atlas_width, atlas_height)
+    local filled = parse_fill(member, atlas_width, atlas_height)
+    if filled then
+        return filled
+    end
+
     local command, x, y, width, height, extension = member.name:match(
         '^[0-9A-Za-z]([a-eA-E])([0-9A-Za-z][0-9A-Za-z])([0-9A-Za-z][0-9A-Za-z])([0-9A-Za-z][0-9A-Za-z])([0-9A-Za-z][0-9A-Za-z])%.([0-9A-Za-z]+)$'
     )
@@ -75,6 +137,9 @@ end
 
 local function make_reader(chunk)
     local member = chunk.member
+    if chunk.fill then
+        return chunk.fill
+    end
     if member.stream then
         local data = member.stream:read(math.min(member.size, 1024))
         return data and ppm.new(data, 1, member.size, member.stream)
@@ -90,66 +155,158 @@ local function make_reader(chunk)
     error('unsupported zcis chunk format: '..chunk.extension)
 end
 
-local function prepare_masks(masks, active_masks, y, start_x, step)
+--- as faixas da linha que ainda se desenha, em coordenadas do chunk e base 1.
+--
+-- a mascara existe sempre e comeca inteira preenchida: o comando e nao traz uma
+-- mascara nova, apaga um pedaco da que ja estava la. por isso o nil aqui quer dizer
+-- "nada foi apagado nessa linha", que e o caso de quase toda linha de quase todo
+-- arquivo, e nesse caso nao se gasta nada.
+--
+-- a linha da mascara chega como um byte por pixel e as faixas saem dela com
+-- string.find, que roda em c. achar as faixas assim e varias vezes mais barato do
+-- que perguntar pixel a pixel se ele esta apagado -- e o que importa e que depois
+-- disso o trecho apagado e pulado de uma vez, sem nem ler o pixel que estava la.
+local function drawn_spans(bits, from, to)
+    local spans = {}
     local count = 0
+    local at = from
+    while at <= to do
+        local first, last = bits:find('\1+', at)
+        if not first or first > to then break end
+        if last > to then last = to end
+        spans[count + 1] = first
+        spans[count + 2] = last
+        count = count + 2
+        at = last + 1
+    end
+    return spans, count
+end
+
+--- o que sobra de duas listas de faixas, que e a interseccao delas
+local function both(left, left_count, right, right_count)
+    local out = {}
+    local count = 0
+    local a = 1
+    local b = 1
+    while a <= left_count and b <= right_count do
+        local from = left[a] > right[b] and left[a] or right[b]
+        local to = left[a + 1] < right[b + 1] and left[a + 1] or right[b + 1]
+        if from <= to then
+            out[count + 1] = from
+            out[count + 2] = to
+            count = count + 2
+        end
+        if left[a + 1] < right[b + 1] then a = a + 2 else b = b + 2 end
+    end
+    return out, count
+end
+
+--- a mascara de uma linha, ja recortada ao chunk, ou nil quando nada foi apagado
+local function row_mask(self, chunk, y)
+    local masks = self.chunk_masks
+    local spans, count = nil, 0
+
     for index = 1, #masks do
         local mask = masks[index]
-        local relative_y = y - mask.y
-        if relative_y >= 0 and relative_y < mask.height then
-            mask.source_y = mask.direct_height
-                and relative_y
-                or floor(relative_y * mask.reader.height / mask.height)
-            if mask.reader.prepare and not mask.reader.prepare(mask.source_y, 2048) then
-                return nil
+        local inside = y - mask.y
+        if inside >= 0 and inside < mask.height then
+            local source_y = mask.direct_height and inside
+                or floor(inside * mask.reader.height / mask.height)
+            if mask.reader.prepare and not mask.reader.prepare(source_y, 2048) then
+                return nil, nil
             end
 
-            local relative_x = start_x - mask.x
-            if mask.direct_width then
-                mask.source_x = relative_x
+            local bits = mask.reader.row(source_y)
+            local mine, how_many
+            if mask.direct_width and mask.x == chunk.x and mask.width >= chunk.width then
+                -- o caso que o encoder escreve: mesma largura, mesmo lugar
+                mine, how_many = drawn_spans(bits, 1, chunk.width)
             else
-                local scaled_x = relative_x * mask.reader.width
-                mask.source_x = floor(scaled_x / mask.width)
-                mask.source_error = scaled_x - mask.source_x * mask.width
-                local delta = mask.reader.width * step
-                mask.source_step = floor(delta / mask.width)
-                mask.source_delta = delta - mask.source_step * mask.width
+                local wide = {}
+                for at = 1, chunk.width do
+                    local x = chunk.x + at - 1 - mask.x
+                    if x < 0 or x >= mask.width then
+                        wide[at] = '\1'
+                    else
+                        local source_x = mask.direct_width and x
+                            or floor(x * mask.reader.width / mask.width)
+                        wide[at] = string.char(bits:byte(source_x + 1))
+                    end
+                end
+                mine, how_many = drawn_spans(table.concat(wide), 1, chunk.width)
             end
-            count = count + 1
-            active_masks[count] = mask
-        end
-    end
-    for index = count + 1, #active_masks do
-        active_masks[index] = nil
-    end
-    return count
-end
 
-local function masked_alpha(active_masks, count, x, step, alpha)
-    local result = alpha
-    for index = 1, count do
-        local mask = active_masks[index]
-        if x >= mask.x and x < mask.x + mask.width
-            and mask.reader.alpha(mask.source_x, mask.source_y) == 0 then
-            result = 0
-        end
-
-        if mask.direct_width then
-            mask.source_x = mask.source_x + step
-        else
-            mask.source_x = mask.source_x + mask.source_step
-            mask.source_error = mask.source_error + mask.source_delta
-            if mask.source_error >= mask.width then
-                mask.source_x = mask.source_x + 1
-                mask.source_error = mask.source_error - mask.width
+            if not spans then
+                spans, count = mine, how_many
+            else
+                spans, count = both(spans, count, mine, how_many)
             end
         end
     end
-    return result
+    return spans, count
 end
 
-local function paint(self, canvas, x, y, width, r, g, b, a)
+--- pinta um retangulo de uma cor so, que e o unico desenho que existe aqui.
+--
+-- alpha zero nao e pintado. a televisao cobra a chamada de cor e a de retangulo do
+-- mesmo jeito tenha o que pintar ou nao, entao desenhar o que a mascara ja apagou
+-- custaria exatamente o que a mascara existe para poupar.
+local function paint(self, canvas, x, y, width, height, r, g, b, a)
+    if a == 0 then return end
     self.ops.color(canvas, r, g, b, a)
-    self.ops.pixel(canvas, x, y, width, 1)
+    self.ops.pixel(canvas, x, y, width, height)
+end
+
+--- onde a fonte esta quando o alvo esta em target_x, recomecado do zero.
+--
+-- so e preciso quando se salta um trecho apagado, e e por isso que a conta e feita
+-- de novo em vez de ir somando: somar so serve para andar de um em um, e a graca de
+-- ter a mascara em faixas e justamente nao andar.
+local function seek(self, target_x)
+    local chunk = self.chunk
+    self.row_target_x = target_x
+    if self.row_direct_width then
+        self.row_source_x = target_x
+        self.row_source_error = 0
+        return
+    end
+    local scaled = target_x * self.reader.width
+    self.row_source_x = floor(scaled / chunk.width)
+    self.row_source_error = scaled - self.row_source_x * chunk.width
+end
+
+--- a primeira faixa que ainda alcanca o alvo, ou nil quando a linha acabou
+local function next_span(self)
+    local spans = self.row_spans
+    if not spans then
+        if self.row_target_x >= self.chunk.width then return nil end
+        return self.chunk.width
+    end
+
+    local at = self.row_span
+    while at <= self.row_span_count do
+        local from = spans[at] - 1
+        local to = spans[at + 1]
+        if self.row_target_x < to then
+            if self.row_target_x < from then
+                -- o passo de b e d so pinta coluna par, entao a faixa comeca na
+                -- primeira que ele alcanca
+                local start = from
+                if self.row_step == 2 and start % 2 == 1 then start = start + 1 end
+                if start < to then
+                    self.row_span = at
+                    seek(self, start)
+                    return to
+                end
+            else
+                self.row_span = at
+                return to
+            end
+        end
+        at = at + 2
+    end
+    self.row_span = at
+    return nil
 end
 
 local function begin_row(self)
@@ -163,33 +320,106 @@ local function begin_row(self)
     local step = (command == 'b' or command == 'd') and 2 or 1
     local direct_height = reader.height == chunk.height
     local absolute_y = chunk.y + self.target_y
-    local active_count = prepare_masks(
-        self.chunk_masks,
-        self.active_masks,
-        absolute_y,
-        chunk.x,
-        step
-    )
-    if not active_count then
-        return nil
-    end
 
-    self.row_started = true
     self.row_step = step
     self.row_direct_width = reader.width == chunk.width
     self.row_source_y = direct_height
         and self.target_y
         or floor(self.target_y * reader.height / chunk.height)
     self.row_absolute_y = absolute_y
-    self.row_active_count = active_count
-    self.row_source_x = 0
-    self.row_source_error = 0
+
+    local spans, count = row_mask(self, chunk, absolute_y)
+    if #self.chunk_masks > 0 and not spans and not count then
+        return nil
+    end
+    self.row_spans = spans
+    self.row_span_count = count or 0
+    self.row_span = 1
+
     local delta = reader.width * step
     self.row_source_step = floor(delta / chunk.width)
     self.row_source_delta = delta - self.row_source_step * chunk.width
-    self.row_target_x = 0
     self.row_run_x = nil
+    seek(self, 0)
+    self.row_started = true
     return false
+end
+
+local function flush_run(self)
+    if not self.row_run_x then return end
+    paint(
+        self,
+        self.canvas,
+        self.row_run_x,
+        self.row_absolute_y,
+        self.row_run_end - self.row_run_x + 1,
+        1,
+        self.row_run_r,
+        self.row_run_g,
+        self.row_run_b,
+        self.row_run_a
+    )
+    self.row_run_x = nil
+end
+
+local function select_masks(self, chunk)
+    local count = 0
+    local selected = self.chunk_masks
+    for index = 1, #self.masks do
+        local mask = self.masks[index]
+        if chunk.x < mask.x + mask.width
+            and mask.x < chunk.x + chunk.width
+            and chunk.y < mask.y + mask.height
+            and mask.y < chunk.y + chunk.height then
+            count = count + 1
+            selected[count] = mask
+        end
+    end
+    for index = count + 1, #selected do
+        selected[index] = nil
+    end
+end
+
+--- pinta os retangulos de um preenchimento, respeitando o que a mascara apagou.
+--
+-- um retangulo que a mascara nao alcanca sai numa chamada so, com a altura inteira,
+-- porque a televisao cobra o mesmo por um retangulo de uma linha e por um de cem.
+-- esse e o motivo de o preenchimento existir: e o desenho mais barato que ha.
+--
+-- so quando alguma mascara encosta nele e que ele vira linha por linha, e ai cada
+-- faixa que sobrou sai como um retangulo de uma linha.
+local function paint_fill(self, chunk)
+    local colour = chunk.fill
+    local rects = chunk.rects
+    local painted = 0
+
+    for index = 1, #rects do
+        local rect = rects[index]
+        select_masks(self, rect)
+
+        if #self.chunk_masks == 0 then
+            paint(self, self.canvas, rect.x, rect.y, rect.width, rect.height,
+                  colour.r, colour.g, colour.b, colour.a)
+            painted = painted + 1
+        else
+            for y = rect.y, rect.y + rect.height - 1 do
+                local spans, count = row_mask(self, rect, y)
+                if not spans then
+                    paint(self, self.canvas, rect.x, y, rect.width, 1,
+                          colour.r, colour.g, colour.b, colour.a)
+                    painted = painted + 1
+                else
+                    for at = 1, count, 2 do
+                        paint(self, self.canvas, rect.x + spans[at] - 1, y,
+                              spans[at + 1] - spans[at] + 1, 1,
+                              colour.r, colour.g, colour.b, colour.a)
+                        painted = painted + 1
+                    end
+                end
+            end
+        end
+    end
+    return painted
 end
 
 local function draw_pixels(self, budget)
@@ -202,18 +432,11 @@ local function draw_pixels(self, budget)
 
     local chunk = self.chunk
     local consumed = 0
-    while consumed < budget and self.row_target_x < chunk.width do
+    local stop = next_span(self)
+
+    while consumed < budget and stop do
         local r, g, b, a = self.reader.pixel(self.row_source_x, self.row_source_y)
         local absolute_x = chunk.x + self.row_target_x
-        if self.row_active_count > 0 then
-            a = masked_alpha(
-                self.active_masks,
-                self.row_active_count,
-                absolute_x,
-                self.row_step,
-                a
-            )
-        end
 
         if self.row_run_x
             and (absolute_x ~= self.row_run_end + 1
@@ -221,18 +444,7 @@ local function draw_pixels(self, budget)
                 or self.row_run_g ~= g
                 or self.row_run_b ~= b
                 or self.row_run_a ~= a) then
-            paint(
-                self,
-                self.canvas,
-                self.row_run_x,
-                self.row_absolute_y,
-                self.row_run_end - self.row_run_x + 1,
-                self.row_run_r,
-                self.row_run_g,
-                self.row_run_b,
-                self.row_run_a
-            )
-            self.row_run_x = nil
+            flush_run(self)
         end
         if not self.row_run_x then
             self.row_run_x = absolute_x
@@ -255,54 +467,49 @@ local function draw_pixels(self, budget)
         end
         self.row_target_x = self.row_target_x + self.row_step
         consumed = consumed + 1
+
+        if self.row_target_x >= stop then
+            -- a faixa acabou: o que vem depois nao encosta nela, entao a run fecha
+            flush_run(self)
+            self.row_span = self.row_span + 2
+            stop = next_span(self)
+        end
     end
 
-    if self.row_target_x >= chunk.width then
-        if self.row_run_x then
-            paint(
-                self,
-                self.canvas,
-                self.row_run_x,
-                self.row_absolute_y,
-                self.row_run_end - self.row_run_x + 1,
-                self.row_run_r,
-                self.row_run_g,
-                self.row_run_b,
-                self.row_run_a
-            )
-        end
+    if not stop then
+        flush_run(self)
         self.row_started = false
+        -- uma linha que a mascara apagou inteira nao desenha nada, e e justamente
+        -- por isso que ela existe; mas quem chama le zero como "ainda nao deu, volte
+        -- depois", entao ela conta como um passo mesmo sem ter pintado
+        if consumed == 0 then
+            return 1, true
+        end
         return consumed, true
     end
     return consumed, false
 end
 
-local function select_masks(self, chunk)
-    local count = 0
-    local selected = self.chunk_masks
-    for index = 1, #self.masks do
-        local mask = self.masks[index]
-        if chunk.x < mask.x + mask.width
-            and mask.x < chunk.x + chunk.width
-            and chunk.y < mask.y + mask.height
-            and mask.y < chunk.y + chunk.height then
-            count = count + 1
-            selected[count] = mask
-        end
-    end
-    for index = count + 1, #selected do
-        selected[index] = nil
-    end
-end
-
-local function touch_cuts(self, chunk)
+local function touch_rect(self, rect)
     for index = 1, #self.cuts do
         local cut = self.cuts[index]
-        if chunk.x < cut.x + cut.width and cut.x < chunk.x + chunk.width
-            and chunk.y < cut.y + cut.height and cut.y < chunk.y + chunk.height then
+        if rect.x < cut.x + cut.width and cut.x < rect.x + rect.width
+            and rect.y < cut.y + cut.height and cut.y < rect.y + rect.height then
             self.touched[index] = true
         end
     end
+end
+
+--- quais cortes o chunk encostou, que e o que decide o que um commit mostra.
+-- um preenchimento nao tem um retangulo so, tem a lista que o corpo dele trouxe.
+local function touch_cuts(self, chunk)
+    if chunk.rects then
+        for index = 1, #chunk.rects do
+            touch_rect(self, chunk.rects[index])
+        end
+        return
+    end
+    touch_rect(self, chunk)
 end
 
 local function finish_chunk(self)
@@ -335,6 +542,13 @@ local function prepare_chunk(self)
         local reader = make_reader(chunk)
         if not reader then return false end
         local command = lower(chunk.command)
+
+        if command == 'f' then
+            paint_fill(self, chunk)
+            self.chunk = chunk
+            finish_chunk(self)
+            return true
+        end
 
         if command == 'e' then
             if chunk.extension ~= 'pcx' then

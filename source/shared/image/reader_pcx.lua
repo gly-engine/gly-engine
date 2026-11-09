@@ -3,6 +3,26 @@ local math = require('math')
 local floor = math.floor
 local masks = {128, 64, 32, 16, 8, 4, 2, 1}
 
+--- os oito pixeis de cada byte, prontos, em '\1' opaco e '\0' transparente.
+-- a tabela e montada uma vez na carga e depois nao se faz conta nenhuma por pixel:
+-- a linha inteira vira uma string de um byte por pixel com uma busca a cada oito.
+--
+-- o byte e lido de tras para frente de proposito. tirar o bit de baixo e dividir por
+-- dois e subtrair o dobro do resultado, que e o mais barato que da para fazer sem
+-- operador de bit -- e ginga nao tem operador de bit. ir do outro lado obrigaria a
+-- dividir por 128, 64, 32 e por ai, que e uma constante diferente a cada passo.
+local spread = {}
+for value = 0, 255 do
+    local pixels = {}
+    local rest = value
+    for index = 8, 1, -1 do
+        local half = floor(rest / 2)
+        pixels[index] = string.char(rest - half - half)
+        rest = half
+    end
+    spread[value] = table.concat(pixels)
+end
+
 local function little16(data, offset)
     local low, high = data:byte(offset, offset + 1)
     return low + high * 256
@@ -106,16 +126,20 @@ local function new(data, offset, size)
 
     local pixel_offset = offset + 128
     local get_byte
+    local get_row
     local prepare
     if encoding == 0 then
         if pixel_offset + bytes_per_line * height - 1 > limit then
             error('truncated pcx data')
         end
+        get_row = function(y)
+            local at = pixel_offset + y * bytes_per_line
+            return data:sub(at, at + bytes_per_line - 1)
+        end
         get_byte = function(x, y)
             return data:byte(pixel_offset + y * bytes_per_line + floor(x / 8))
         end
     elseif encoding == 1 then
-        local get_row
         get_row, prepare = make_rle_rows(data, pixel_offset, limit, bytes_per_line, height)
         get_byte = function(x, y)
             return get_row(y):byte(floor(x / 8) + 1)
@@ -129,10 +153,24 @@ local function new(data, offset, size)
         return floor(byte / masks[x % 8 + 1]) % 2 == 1 and 255 or 0
     end
 
+    --- uma linha inteira como um byte por pixel, '\1' onde se pinta.
+    -- quem le a mascara pixel a pixel paga uma divisao e uma chamada de funcao em
+    -- cada um; quem le assim paga uma busca de tabela a cada oito e depois so
+    -- string.byte, que nao e conta nenhuma.
+    local function row(y)
+        local packed = get_row(y)
+        local out = {}
+        for index = 1, #packed do
+            out[index] = spread[packed:byte(index)]
+        end
+        return table.concat(out)
+    end
+
     return {
         width = width,
         height = height,
         alpha = alpha,
+        row = row,
         prepare = prepare
     }
 end
