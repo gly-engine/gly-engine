@@ -157,6 +157,17 @@ function test_target_and_core_alias()
     assert(help:find('%-%-core') == nil)
 end
 
+function test_target_native_bundled()
+    local ok, out, state = cli2.parse(dsl, {'build', '@pong', '--target', 'native'})
+    assert(ok == true)
+    assert(state.target == 'native')
+    assert(state.bundler == true)
+    assert(state.engine == 'source/engine/core/vacuum/native/main.lua')
+    local ok2, out2, state2 = cli2.parse(dsl, {'build', '@pong', '--target', 'native', '--engine', '@micro'})
+    assert(ok2 == true)
+    assert(state2.engine == 'source/engine/core/vacuum/micro/main.lua')
+end
+
 function test_global_short()
     local ok, out = cli2.parse(dsl, {'-v'})
     local ok2, out2 = cli2.parse(dsl, {'--version'})

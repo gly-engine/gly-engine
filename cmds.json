@@ -252,6 +252,21 @@
                             "variant": "ginga"
                         },
                         {
+                            "name": "native",
+                            "description": "Build the game with the native engine (game.lua + main.lua)",
+                            "values": {
+                                "bundler": true
+                            },
+                            "flags": [
+                                {
+                                    "name": "engine",
+                                    "type": "file",
+                                    "default": "@native",
+                                    "description": "Select subset of gly-engine or another engine"
+                                }
+                            ]
+                        },
+                        {
                             "name": "love",
                             "description": "Build for LÖVE (Love2D) framework"
                         },

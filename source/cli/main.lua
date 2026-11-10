@@ -33,6 +33,7 @@ local cores = {
     ['html5:ginga'] = {'build-ginga', 'html5'},
     ['ginga:html5'] = {'build-ginga', 'html5'},
     ['ginga'] = {'build-ginga', 'ncl'},
+    ['native'] = {'build', 'native'},
     ['love'] = {'build', 'love'},
     ['love:zip'] = {'build', 'love'},
     ['love:exe'] = {'love-exe'},
