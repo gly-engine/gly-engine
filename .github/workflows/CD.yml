@@ -36,6 +36,8 @@ jobs:
       -
         run: npm config set allow-git true
       -
+        run: npm install --no-package-lock --ignore-scripts
+      -
         if: matrix.package != 'gly-cli'
         working-directory: ./npm/${{ matrix.package }}
         run: npm run build
@@ -63,6 +65,8 @@ jobs:
         run: npm install -g npm@latest
       -
         run: npm config set allow-git true
+      -
+        run: npm install --no-package-lock --ignore-scripts
       -
         if: inputs.npm != 'gly-cli'
         working-directory: ./npm/${{ inputs.npm }}
