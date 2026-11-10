@@ -278,7 +278,7 @@ local function move(src_filename, out_filename, options)
     local src_file = io.open(full_src, 'r')
     local out_file = src_file and io.open(out_filename, 'w')
     local pattern_require = "local ([%w_%-]+)%s*=%s*require%(['\"]([%w%.@_/-]+)['\"]%)"
-    local pattern_gameload = "std%.node%.load%(['\"](.-)['\"]\\%)"
+    local pattern_gameload = "std%.node%.load%(['\"](.-)['\"]%)"
     local pattern_comment = '%-%-'
 
     if src_file and out_file then
@@ -299,7 +299,7 @@ local function move(src_filename, out_filename, options)
                     imported[var_name..var_import] = true
                 end
                 deps[#deps + 1] = module_path..'.lua'
-                content = content..line:gsub(pattern_gameload, 'std.node.load('..var_name..')')..'\\n'
+                content = content..line:gsub(pattern_gameload, 'std.node.load('..var_name..')')..'\n'
             elseif line_require and #line_require > 0 and not is_comment then
                 local var_name = line_require[1]
                 local resolved = resolve_require(line_require[2], src_dir, src_dir, cwd, node_root)

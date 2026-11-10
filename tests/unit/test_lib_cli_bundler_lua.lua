@@ -1,5 +1,5 @@
 local test = require('tests/framework/microtest')
-local zeebo_bundler = require('source/cli/build/bundler')
+local zeebo_bundler = require('source/cli/build/bundler_lua')
 local mock_io = require('tests/mock/io')
 
 io.open = mock_io.open({
