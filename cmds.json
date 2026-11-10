@@ -121,6 +121,11 @@
                             "description": "Build only the game"
                         },
                         {
+                            "name": "html",
+                            "hidden": true,
+                            "variant": "html5"
+                        },
+                        {
                             "name": "html5",
                             "description": "Build for web browsers (HTML5/JS)",
                             "flags": [

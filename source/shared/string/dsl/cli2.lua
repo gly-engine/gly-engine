@@ -277,7 +277,7 @@ function cli2.render_help(cmd, display_name, all_classes)
                         else
                             is_v = (v.variant == class.name)
                         end
-                        if is_v then table.insert(variants, v.name) end
+                        if is_v and not v.hidden then table.insert(variants, v.name) end
                     end
                     line = line .. '\n' .. column(8, class.name, class_w, class.description)
                     if #variants > 0 then
