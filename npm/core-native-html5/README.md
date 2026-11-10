@@ -13,10 +13,8 @@ Bundled by the gly-cli itself, `gly-cli build --core html5` emits its own `core-
 | file              | content |
 | :---------------- | :------ |
 | `dist/index.js`   | every driver, global `CoreNativeHtml5`
-| `dist/fengari.js` | only fengari lua vm, global `CoreNativeHtml5`
-| `dist/wasmoon.js` | only wasmoon lua vm, global `CoreNativeHtml5`
-| `dist/index.mjs`  | every driver, es module
-| `dist/index.cjs.js` | every driver, commonjs
+
+The same file serves both lua vms, the vm is chosen at runtime with `.use('fengari', ...)` or `.use('wasmoon', ...)`.
 
 ## Usage
 

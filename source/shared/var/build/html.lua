@@ -1,5 +1,4 @@
 local version = require('source/version')
-local core_version = '0.3'
 
 local function atobify(args, text, render)
     local falsy = render and '' or false 
@@ -31,18 +30,9 @@ local function src_game(args)
     return "'game.lua'"
 end
 
-local function src_core(args)
-    if args.corecdn then
-        local vm = args.fengari and 'fengari' or 'wasmoon'
-        return 'https://cdn.jsdelivr.net/npm/@gamely/core-native-html5@'..core_version..'/dist/'..vm..'.js'
-    end
-    return 'core-native.js'
-end
-
 local P = {
     atobify = atobify,
     src_game = src_game,
-    src_core = src_core,
     src_engine = src_engine
 }
 

@@ -96,7 +96,12 @@
     window.LuaMultiReturn = LuaMultiReturn
     </script>
     {{/ args.fengari }}
-    <script src="{{& var.build.html5.src_core }}" defer></script>
+    {{# args.corecdn }}
+    <script src="https://cdn.jsdelivr.net/npm/@gamely/core-native-html5@0.3.0/dist/index.js" defer></script>
+    {{/ args.corecdn }}
+    {{^ args.corecdn }}
+    <script src="core-native.js" defer></script>
+    {{/ args.corecdn }}
     <script>
       document.addEventListener('DOMContentLoaded', function () {
         CoreNativeHtml5()
