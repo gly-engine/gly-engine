@@ -17,7 +17,7 @@ end
 function test_core_resolution_and_fixed_values()
     local ok, out, state = cli2.parse(dsl, {'build', '--core', 'html5:webos', 'samples/pong/game.lua'})
     assert(ok == true)
-    assert(state.core == 'html5:webos')
+    assert(state.target == 'html5:webos')
     assert(state.atob == true)
 end
 
@@ -114,7 +114,7 @@ end
 function test_core_none_default_hidden()
     local ok, out, state = cli2.parse(dsl, {'build', '@pong'})
     assert(ok == true)
-    assert(state.core == 'none')
+    assert(state.target == 'none')
     local help = cli2.get_help(dsl.commands, 'build')
     assert(help:find('none') == nil)
     assert(help:find('html5') ~= nil)
@@ -142,6 +142,25 @@ end
 function test_rule_not()
     assert(cli2.evaluate_rules({a = 'x'}, {'not', {'eq', 'a', 'y'}}) == true)
     assert(cli2.evaluate_rules({a = 'x'}, {'not', {'eq', 'a', 'x'}}) == false)
+end
+
+function test_target_and_core_alias()
+    local ok1, out1, state1 = cli2.parse(dsl, {'build', '@pong', '--target', 'html'})
+    local ok2, out2, state2 = cli2.parse(dsl, {'build', '@pong', '--core', 'html'})
+    local ok3, out3, state3 = cli2.parse(dsl, {'build', '@pong', '--core=html5:tizen'})
+    assert(ok1 and ok2 and ok3)
+    assert(state1.target == 'html' and state2.target == 'html' and state3.target == 'html5:tizen')
+    assert(state1.core == nil and state2.core == nil and state3.core == nil)
+    assert(state3.atob == true)
+    local help = cli2.get_help(dsl.commands, 'build')
+    assert(help:find('%-%-target') ~= nil)
+    assert(help:find('%-%-core') == nil)
+end
+
+function test_global_short()
+    local ok, out = cli2.parse(dsl, {'-v'})
+    local ok2, out2 = cli2.parse(dsl, {'--version'})
+    assert(ok == ok2 and out == out2)
 end
 
 function test_unknown_short_option()

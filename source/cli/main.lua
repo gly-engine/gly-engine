@@ -43,7 +43,8 @@ local cores = {
 --! translate cli v2 state into the args expected by old handlers
 local function resolve(state)
     if state.command == 'build' then
-        local core = cores[state.core]
+        local core = cores[state.target]
+        state.core = state.target
         state.target = core[2]
         state['non-relative'] = state['disable-relative']
         if core[1] == 'build' then
@@ -61,7 +62,7 @@ local function resolve(state)
 end
 
 local function run(state)
-    local class = state.core
+    local class = state.target
     if type(state.overlay) == 'string' then
         local ok, err = cli_overlay.install(state.overlay, state)
         if not ok then return false, err end

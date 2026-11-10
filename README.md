@@ -15,19 +15,19 @@
 ### Browser :globe_with_meridians:
 
 ```sql
-lua cli.lua build @asteroids
+lua cli.lua build @asteroids --target html5
 ```
 
 ### Love 2D :heart_decoration: :desktop_computer:
 
 ```sql
-lua cli.lua build @asteroids --core love --run
+lua cli.lua build @asteroids --target love --run
 ```
 
 ### Ginga :brazil: :tv:
 
 ```sql
-lua cli.lua build @asteroids --core ginga --enterprise
+lua cli.lua build @asteroids --target ginga --enterprise
 ```
 
 ## How to Install

@@ -472,7 +472,7 @@ local function parse(data, cmds, arg, prefix)
         if class then
             active_cmd = class
             active_help_path = prefix .. base_cmd.name .. " " .. (v or val)
-            state[flag_name or 'core'] = v or val
+            state[flag_name] = v or val
             break
         end
     end
@@ -512,12 +512,12 @@ local function parse(data, cmds, arg, prefix)
                 if not k then k = val:sub(3) end
                 
                 local flag_def
-                for _, f in ipairs(active_cmd.flags or {}) do if f.name == k then flag_def = f break end end
+                for _, f in ipairs(active_cmd.flags or {}) do if f.name == k or f.alias == k then flag_def = f break end end
                 if not flag_def and active_cmd ~= base_cmd then
-                    for _, f in ipairs(base_cmd.flags or {}) do if f.name == k then flag_def = f break end end
+                    for _, f in ipairs(base_cmd.flags or {}) do if f.name == k or f.alias == k then flag_def = f break end end
                 end
 
-                if flag_def and active_cmd.values and active_cmd.values[k] ~= nil then
+                if flag_def and active_cmd.values and active_cmd.values[flag_def.name] ~= nil then
                     flag_def = nil -- Treat as unknown if value is fixed
                 end
                 
@@ -553,7 +553,7 @@ local function parse(data, cmds, arg, prefix)
                     if flag_def.type == 'enum' and not _find_class_in_flag(flag_def, current_val) then
                         table.insert(errors, "Invalid value for --" .. k .. ": " .. tostring(current_val))
                     end
-                    state[k] = current_val
+                    state[flag_def.name] = current_val
                     if consumed_next then skip_next = true end
                 else
                     table.insert(errors, 'Unknown option: ' .. val)
@@ -681,7 +681,7 @@ local function find_cmd(cmds, input)
     return found
 end
 
---! subcommand or class (ex: @c --core html5) mentioned in the arguments
+--! subcommand or class (ex: @c --target html5) mentioned in the arguments
 local function find_target(cmd, arg)
     if cmd.subcommands then
         local sub = find_cmd(cmd.subcommands, arg[2])
@@ -697,7 +697,7 @@ end
 local function apply_globals(data, arg)
     for _, global in ipairs(data.globals or {}) do
         for _, val in ipairs(arg) do
-            if val == '--' .. global.name or val == global.alias then
+            if val == '--' .. global.name or val == global.short then
                 local cmd = find_cmd(data.commands, arg[1])
                 local vars = {
                     command = cmd and cmd.name,

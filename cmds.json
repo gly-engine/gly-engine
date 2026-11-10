@@ -2,12 +2,12 @@
     "globals": [
         {
             "name": "version",
-            "alias": "-v",
+            "short": "-v",
             "redirect": ["version"]
         },
         {
             "name": "help",
-            "alias": "-h",
+            "short": "-h",
             "redirect": ["help", "{{command}}", "{{target}}"]
         }
     ],
@@ -58,7 +58,7 @@
             "message": "please use flag --enterprise to use commercial modules.",
             "when": ["and",
                 ["eq", "enterprise", "false"],
-                ["like", "core", "ginga"]
+                ["like", "target", "ginga"]
             ]
         },
         {
@@ -110,7 +110,8 @@
             ],
             "flags": [
                 {
-                    "name": "core",
+                    "name": "target",
+                    "alias": "core",
                     "type": "enum",
                     "default": "none",
                     "description": "Target platform core engine",
