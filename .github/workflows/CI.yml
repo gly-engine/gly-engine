@@ -26,12 +26,9 @@ jobs:
     -
       uses: actions/checkout@master
     - 
-      uses: leafo/gh-actions-lua@v10
+      uses: luau-project/setup-lua@v3
       with:
-        luaVersion: ${{ matrix.lua_version }}
-    -
-      if: (matrix.lua_version == '5.4')
-      uses: leafo/gh-actions-luarocks@v4
+        lua-version: ${{ matrix.lua_version }}
     -
       if: (matrix.lua_version == '5.4')
       run: |
@@ -57,9 +54,9 @@ jobs:
     -
       uses: actions/checkout@master
     - 
-      uses: leafo/gh-actions-lua@v10
+      uses: luau-project/setup-lua@v3
       with:
-        luaVersion: '5.4'
+        lua-version: '5.4'
     -
       run: |
         lua tools/ci_version_local.lua
@@ -72,9 +69,9 @@ jobs:
     -
       uses: actions/checkout@master
     - 
-      uses: leafo/gh-actions-lua@v10
+      uses: luau-project/setup-lua@v3
       with:
-        luaVersion: '5.4'
+        lua-version: '5.4'
     -
       run: |
         lua tools/ci_asciicheck.lua
@@ -86,9 +83,9 @@ jobs:
     -
       uses: actions/checkout@master
     - 
-      uses: leafo/gh-actions-lua@v10
+      uses: luau-project/setup-lua@v3
       with:
-        luaVersion: '5.4'
+        lua-version: '5.4'
     -
       run: |
         lua tools/ci_floatcheck.lua
@@ -107,9 +104,9 @@ jobs:
     -
       uses: actions/checkout@master
     - 
-      uses: leafo/gh-actions-lua@v10
+      uses: luau-project/setup-lua@v3
       with:
-        luaVersion: '5.4'
+        lua-version: '5.4'
     -
       run: |
         wget https://github.com/luau-lang/luau/releases/download/0.644/luau-ubuntu.zip
