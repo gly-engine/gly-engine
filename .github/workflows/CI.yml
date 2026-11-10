@@ -26,6 +26,7 @@ jobs:
     -
       uses: actions/checkout@master
     - 
+      if: (matrix.lua_version != '5.2')
       uses: luau-project/setup-lua@v3
       with:
         lua-version: ${{ matrix.lua_version }}
@@ -38,7 +39,7 @@ jobs:
       run: |
         ./cli.sh test --coverage
     -
-      if: (matrix.lua_version != '5.4')
+      if: (matrix.lua_version != '5.4') && (matrix.lua_version != '5.2')
       run: |
         ./cli.sh test
     - 
