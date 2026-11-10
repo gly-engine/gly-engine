@@ -96,7 +96,7 @@ function love.load(args)
         })
     end
 
-    local loader = loadcore.setup(std, application, engine)
+    loadcore.setup(std, application, engine)
         :package('@bus', lib_raw_bus)
         :package('@node', lib_raw_node)
         :package('@memory', lib_raw_memory)

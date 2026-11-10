@@ -26,6 +26,7 @@ local function resolve_node(dom_obj, target)
         -- raw node (has .config) or grid/slide object (has .node)
         return target.config and target or target.node
     end
+    return nil
 end
 
 --! @brief Install std.ui.* methods onto std.

@@ -14,8 +14,8 @@ local function real_key(std, engine, rkey, rvalue)
         end
         
         std.key.any = false
-        for _, value in pairs(std.key.press) do
-            if value then std.key.any = true end
+        for _, pressed in pairs(std.key.press) do
+            if pressed then std.key.any = true end
         end
 
         if std.bus and std.bus.emit and engine.keyboard_lock then

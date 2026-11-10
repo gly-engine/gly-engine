@@ -1,5 +1,3 @@
-local json = require('source/third_party/rxi_json')
-
 local cli2 = {}
 
 local VALID_TYPES = {
@@ -104,6 +102,7 @@ local function resolve_class(cmd, class_item)
                 end
             end
         end
+        return nil
     end
 
     local base_name = class_item.alias
@@ -225,7 +224,7 @@ function cli2.render_help(cmd, display_name, all_classes)
         for _, c in ipairs(all_classes) do
             local is_rel = false
             if type(c.variant) == 'table' then
-                for _, vn in ipairs(c.variant) do if vn == cmd.name then is_rel = true break end end
+                for _, vn in ipairs(c.variant) do if vn == cmd.name then is_rel = true; break end end
             elseif c.variant == cmd.name then is_rel = true end
             if c.alias == cmd.name then is_rel = true end
             if is_rel and c.name ~= cmd.name then table.insert(related, c) end
@@ -273,7 +272,7 @@ function cli2.render_help(cmd, display_name, all_classes)
                     for _, v in ipairs(flag.classes) do
                         local is_v = false
                         if type(v.variant) == 'table' then
-                            for _, vn in ipairs(v.variant) do if vn == class.name then is_v = true break end end
+                            for _, vn in ipairs(v.variant) do if vn == class.name then is_v = true; break end end
                         else
                             is_v = (v.variant == class.name)
                         end
@@ -310,6 +309,7 @@ local function _find_class(cmd, name)
             end
         end
     end
+    return nil
 end
 
 local function _find_class_in_flag(flag, name)
@@ -317,6 +317,7 @@ local function _find_class_in_flag(flag, name)
     for _, class in ipairs(flag.classes) do
         if class.name == name then return class end
     end
+    return nil
 end
 
 local function evaluate_rules(state, rules)
@@ -356,7 +357,7 @@ end
 
 local function file_exists(path)
     local f = io.open(path, "r")
-    if f then f:close() return true end
+    if f then f:close(); return true end
     return false
 end
 
@@ -400,7 +401,7 @@ function cli2.get_help(cmds, name, sub_or_class)
     end
 
     local cmd
-    for _, c in ipairs(cmds) do if c.name == name then cmd = c break end end
+    for _, c in ipairs(cmds) do if c.name == name then cmd = c; break end end
     if not cmd then return 'Unknown command: ' .. name end
 
     if not sub_or_class or sub_or_class == '' then
@@ -409,6 +410,7 @@ function cli2.get_help(cmds, name, sub_or_class)
 
     local function _find_sub(c, n)
         for _, s in ipairs(c.subcommands or {}) do if s.name == n then return s end end
+        return nil
     end
     
     local target = _find_sub(cmd, sub_or_class)
@@ -429,7 +431,7 @@ local function parse(data, cmds, arg, prefix)
 
     local matches = {}
     for _, c in ipairs(cmds) do
-        if c.name == input then matches = {c} break end
+        if c.name == input then matches = {c}; break end
         if c.name:sub(1, #input) == input then table.insert(matches, c) end
     end
 
@@ -467,7 +469,7 @@ local function parse(data, cmds, arg, prefix)
     for i = 2, #arg do
         local val = arg[i]
         local k, v = val:match("^%-%-([^=]+)=(.*)$")
-        if not k and val:sub(1,2) == '--' then k = val:sub(3) v = arg[i+1] end
+        if not k and val:sub(1,2) == '--' then k = val:sub(3); v = arg[i+1] end
         local class, flag_name = _find_class(base_cmd, v or val)
         if class then
             active_cmd = class
@@ -499,7 +501,6 @@ local function parse(data, cmds, arg, prefix)
     -- Pass 2: User Inputs (Mapping)
     local positional_idx = 1
     local skip_next = false
-    local user_inputs = {} -- Store raw inputs to resolve shortcuts later
 
     for i = 2, #arg do
         if skip_next then
@@ -512,9 +513,9 @@ local function parse(data, cmds, arg, prefix)
                 if not k then k = val:sub(3) end
                 
                 local flag_def
-                for _, f in ipairs(active_cmd.flags or {}) do if f.name == k or f.alias == k then flag_def = f break end end
+                for _, f in ipairs(active_cmd.flags or {}) do if f.name == k or f.alias == k then flag_def = f; break end end
                 if not flag_def and active_cmd ~= base_cmd then
-                    for _, f in ipairs(base_cmd.flags or {}) do if f.name == k or f.alias == k then flag_def = f break end end
+                    for _, f in ipairs(base_cmd.flags or {}) do if f.name == k or f.alias == k then flag_def = f; break end end
                 end
 
                 if flag_def and active_cmd.values and active_cmd.values[flag_def.name] ~= nil then
@@ -691,6 +692,7 @@ local function find_target(cmd, arg)
         local value = arg[i]:match('^%-%-[^=]+=(.*)$') or arg[i]
         if _find_class(cmd, value) then return value end
     end
+    return nil
 end
 
 --! global flags replace the whole command line by its redirect

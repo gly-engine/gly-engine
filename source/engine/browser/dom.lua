@@ -65,8 +65,7 @@ local function flush_dirty(self)
         local node = queue[i]
         local uid  = node.config.uid
         if uid and not processed[uid] then
-            layout.dom_layout(self, node, node.config.offset_x, node.config.offset_y,
-                node.data.width, node.data.height)
+            layout.dom_layout(self, node, node.config.offset_x, node.config.offset_y, node.data.width, node.data.height)
             walk(node, function(n)
                 if n.config.uid then
                     processed[n.config.uid] = true

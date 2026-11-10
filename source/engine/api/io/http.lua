@@ -225,10 +225,6 @@ local function websocket_request(std, engine, protocol)
             std.http[key] = value
         end
 
-        self:on('disconnect', function()
-            if self.id then engine.http[self.id] = nil end
-        end)
-
         self.pipeline = {
             function()
                 self.id = nextId()
@@ -240,10 +236,10 @@ local function websocket_request(std, engine, protocol)
             function()
                 if std.http.ok then
                     local sock = websocket_create(self, engine, protocol)
-                    for _, h in ipairs(self.handlers.open or {}) do h(sock) end
+                    for _, h in ipairs(self.handlers['open'] or {}) do h(sock) end
                 else
                     if not std.http.error then self.set('error', 'core not upgrade to ws') end
-                    for _, h in ipairs(self.handlers.error or {}) do h(std.http.error) end
+                    for _, h in ipairs(self.handlers['error'] or {}) do h(std.http.error) end
                     engine.http[self.id] = nil
                     clearId(self.id)
                     self.id = nil
@@ -255,6 +251,10 @@ local function websocket_request(std, engine, protocol)
                 zeebo_pipeline.reset(self)
             end
         }
+
+        self:on('disconnect', function()
+            if self.id then engine.http[self.id] = nil end
+        end)
 
         return self
     end

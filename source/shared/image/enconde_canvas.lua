@@ -18,6 +18,7 @@ local function make_reader(read, stride, convert)
             return convert(read(buf, i), read(buf, i+1), read(buf, i+2), read(buf, i+3))
         end
     end
+    return nil
 end
 
 local function push(self, data)

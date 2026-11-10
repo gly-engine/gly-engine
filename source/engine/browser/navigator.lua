@@ -163,8 +163,6 @@ local function set_focus(self, node)
     local old = self.focus_current
     if old == node then return nil end
 
-    local std = self.std
-
     -- remove :focus styles from old node and fire unfocus callback
     if old then
         for name, focus_func in pairs(old.config.style_focus or {}) do
