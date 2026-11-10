@@ -8,7 +8,7 @@ const ROOT_VENDOR = resolve('node_modules');
 
 try {
   if (!existsSync(ROOT_VENDOR)) {
-    execFileSync('npm', ['install', '--no-package-lock'], {
+    execFileSync('npm', ['install', '--no-package-lock', '--ignore-scripts'], {
       shell: true,
       env: process.env,
       stdio: 'inherit'
