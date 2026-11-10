@@ -4,9 +4,9 @@
     "author": "RodrigoDornelles",
     "license": "Apache-2.0",
     "homepage": "https://docs.gamely.com.br/typescript",
-    "repository": "https://github.com/gly-engine/types",
+    "repository": "https://github.com/gly-engine/gly-engine",
     "funding": "https://github.com/sponsors/RodrigoDornelles",
-    "bugs": "https://github.com/gly-engine/types/issues",
+    "bugs": "https://github.com/gly-engine/gly-engine/issues",
     "description": "types for gly engine projects",
     "types": "index.d.ts",
     "keywords": [
