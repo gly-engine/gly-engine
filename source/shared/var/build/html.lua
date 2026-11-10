@@ -12,7 +12,7 @@ end
 
 --! @return javascript expression with url or code of the engine
 local function src_engine(args)
-    if args.enginecdn then
+    if args.cdn then
         local c1, c2, s1, s2 = (args.engine or ''):gsub('/', '_'), args.core or '', '_micro', '_lite'
         local suffix = (c1:match(s1) or c1:match(s2) or c2:match(s1) or c2:match(s2) or ''):gsub('_', '-')
         return "'https://cdn.jsdelivr.net/npm/@gamely/gly-engine"..suffix..'@'..version.."/dist/main.lua'"

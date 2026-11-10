@@ -62,10 +62,10 @@
             ]
         },
         {
-            "message": "--overlay is not compatible with --enginecdn.",
+            "message": "--overlay is not compatible with --cdn.",
             "when": ["and",
                 ["neq", "overlay", "false"],
-                ["eq", "enginecdn", "true"]
+                ["eq", "cdn", "true"]
             ]
         }
     ],
@@ -156,19 +156,14 @@
                                     "description": "Include Video.js support"
                                 },
                                 {
-                                    "name": "enginecdn",
+                                    "name": "cdn",
                                     "type": "boolean",
-                                    "description": "Load engine from CDN"
+                                    "description": "Load engine and core-native-html5 from CDN"
                                 },
                                 {
                                     "name": "aa",
                                     "type": "boolean",
                                     "description": "Enable Anti-Aliasing"
-                                },
-                                {
-                                    "name": "corecdn",
-                                    "type": "boolean",
-                                    "description": "Load core-native-html5 from CDN"
                                 },
                                 {
                                     "name": "gamepadzilla",

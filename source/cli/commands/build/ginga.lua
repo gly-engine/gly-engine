@@ -38,7 +38,7 @@ local function build(args)
         :add_meta('source/engine/meta/html5/index.mustache', {as='index.html'})
         --
         :add_common_func(corenative.builder(args), {when=args.core=='html5'})
-        :add_common_func(atobify.builder('engine_code', args.outdir..'main.lua', args.outdir..'index.js'), {when=args.core=='html5' and not args.enginecdn})
+        :add_common_func(atobify.builder('engine_code', args.outdir..'main.lua', args.outdir..'index.js'), {when=args.core=='html5' and not args.cdn})
         :add_common_func(atobify.builder('game_code', args.outdir..'game.lua', args.outdir..'index.js'), {when=args.core=='html5'})
         :add_common_func(cli_fs.lazy_del(args.outdir..'main.lua'), {when=args.core=='html5'})
         :add_common_func(cli_fs.lazy_del(args.outdir..'game.lua'), {when=args.core=='html5'})

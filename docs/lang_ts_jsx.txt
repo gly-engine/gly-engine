@@ -96,7 +96,7 @@ const Btn = (props: {}, std: GlyStd) => <node draw={() => {
 {
   "scripts": {
     "prebuild": "tstl",
-    "build": "gly-cli build --cwd build src/game.lua --core html5 --fengari --enginecdn"
+    "build": "gly-cli build --cwd build src/game.lua --core html5 --fengari --cdn"
   },
   "dependencies": {
     "@gamely/gly-cli": "0.1.3",
