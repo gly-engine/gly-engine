@@ -2,8 +2,8 @@
 --! @brief Centralised engine error handler factory.
 --! @details
 --! Contract for App.error(self, std, msg):
---!   return true  → quit the application
---!   return false/nil → error was handled, keep running
+--!   return true  -> quit the application
+--!   return false/nil -> error was handled, keep running
 --! Without App.error: prints the message and quits immediately.
 
 local function make_handler(engine, std, quit)

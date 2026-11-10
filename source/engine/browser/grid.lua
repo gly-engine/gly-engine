@@ -1,15 +1,15 @@
 --! @file grid.lua
 --! @brief std.ui.grid() component. Optionally scrollable via options.scroll.
 --! @details Layout string is 'COLSxROWS'.
---!   Auto-detects dir: 1xN → 'col', Nx1 → 'row', NxN → 'row'.
+--!   Auto-detects dir: 1xN -> 'col', Nx1 -> 'row', NxN -> 'row'.
 --!   Nested grids are supported via re-parenting in dom.node_add.
 --!   Scroll behaviour (flow/page/shift) is enabled by passing options.scroll;
---!   scroll state lives in engine.dom.scroll_registry — no extra cost when absent.
+--!   scroll state lives in engine.dom.scroll_registry - no extra cost when absent.
 
 local dom            = require('source/engine/browser/dom')
 local util_decorator = require('source/shared/functional/decorator')
 
--- ─── Child management ────────────────────────────────────────────────────────
+-- --- Child management --------------------------------------------------------
 
 --! @brief Add a child node or data table to a grid container.
 --! @param std table
@@ -56,12 +56,12 @@ local function get_items(self)
     return self.node.childs
 end
 
--- ─── Scroll registration (only used when options.scroll is present) ──────────
+-- --- Scroll registration (only used when options.scroll is present) ----------
 
 --! @brief Register scroll state for a grid node.
 --! @param dom_obj engine.dom
 --! @param node table  the grid node (cols/rows/dir already set)
---! @param options table  {scroll, anchor} — all optional
+--! @param options table  {scroll, anchor} - all optional
 local function scroll_register(dom_obj, node, options)
     options = options or {}
     local cols = node.config.cols
@@ -84,7 +84,7 @@ local function scroll_register(dom_obj, node, options)
     }
 end
 
--- ─── Grid component ──────────────────────────────────────────────────────────
+-- --- Grid component ----------------------------------------------------------
 
 --! @brief Set the fill direction.
 --! @param mode string  'row' or 'col'
@@ -96,13 +96,13 @@ local function dir(self, mode)
 end
 
 --! @brief Create a grid component and register it in the DOM.
---! @details Layout string is 'COLSxROWS' — first number cols, second rows.
+--! @details Layout string is 'COLSxROWS' - first number cols, second rows.
 --!   e.g. '6x2' = 6 columns, 2 rows. '1x5' = 1 column, 5 rows.
 --!   Pass options.scroll to enable scrollable behaviour (flow/page/shift).
 --! @param std table
 --! @param engine table
 --! @param layout string  'COLSxROWS', e.g. '6x2', '1x5'
---! @param options table|nil  {scroll, anchor, focus} — enables scroll when present
+--! @param options table|nil  {scroll, anchor, focus} - enables scroll when present
 --! @return table  grid object with :add, :add_items, :dir, .node
 local function component(std, engine, layout, options)
     local cols, rows = layout:match('(%d+)x(%d+)')

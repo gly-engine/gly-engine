@@ -33,14 +33,14 @@ walk = function(node, fn)
 end
 
 --! @brief Enqueue a node for layout recomputation.
---! @details No per-node dirty flag — presence in dirty_queue IS the dirty state.
+--! @details No per-node dirty flag - presence in dirty_queue IS the dirty state.
 --! @param self engine.dom
 --! @param node table
 mark_dirty = function(self, node)
     self.dirty_queue[#self.dirty_queue + 1] = node
 end
 
--- ─── Dirty queue ─────────────────────────────────────────────────────────────
+-- --- Dirty queue -------------------------------------------------------------
 
 --! @brief Process all pending dirty nodes, recomputing layout only where needed.
 --! @details Fast path: if root is in queue, do a full recompute and clear.
@@ -50,7 +50,7 @@ local function flush_dirty(self)
     local queue = self.dirty_queue
     if #queue == 0 then return end
 
-    -- fast path: root in queue → full recompute
+    -- fast path: root in queue -> full recompute
     for i = 1, #queue do
         if queue[i] == self.root then
             layout.dom_layout(self, self.root, 0, 0, self.width, self.height)
@@ -77,7 +77,7 @@ local function flush_dirty(self)
     for i = #queue, 1, -1 do queue[i] = nil end
 end
 
--- ─── Z-order dispatch list ───────────────────────────────────────────────────
+-- --- Z-order dispatch list ---------------------------------------------------
 
 --! @brief Resolve effective z for a node (override-puro inheritance).
 --! @details Explicit non-zero style z (cfg._style_z) wins. Otherwise walk up the
@@ -142,7 +142,7 @@ local function sort_list(self)
     end)
 end
 
--- ─── Compile ─────────────────────────────────────────────────────────────────
+-- --- Compile -----------------------------------------------------------------
 
 --! @brief Compile DOM into flat render list with screen-culling.
 --! @details Reuses entry tables from previous frame (pool) to avoid GC pressure.
@@ -193,7 +193,7 @@ local function compile(self)
     end
 end
 
--- ─── Tree rebuild ─────────────────────────────────────────────────────────────
+-- --- Tree rebuild -------------------------------------------------------------
 
 --! @brief Rebuild the flat node_list from parent references (drops deleted nodes).
 local function rebuild_list(self)
@@ -220,7 +220,7 @@ local function rebuild_tree_from_parents(self)
     end
 end
 
--- ─── Lifecycle ───────────────────────────────────────────────────────────────
+-- --- Lifecycle ---------------------------------------------------------------
 
 --! @brief Initialize the engine.dom state object.
 --! @param node table  root application node
@@ -234,10 +234,10 @@ local function node_begin(node, width, height, self, std)
     self.root   = node
     self.std    = std or self.std
 
-    -- node list (creation order — used by walk, rebuild_tree, query)
+    -- node list (creation order - used by walk, rebuild_tree, query)
     self.node_list = { node }
 
-    -- dispatch list (z-sorted view of node_list — used by bus, compile)
+    -- dispatch list (z-sorted view of node_list - used by bus, compile)
     self.dispatch_list = { node }
 
     -- render list (pooled)
@@ -392,7 +392,7 @@ end
 
 --! @brief Remove a node subtree from the DOM, cleaning all registries.
 --! @details If focus_current is inside the subtree, fire unfocus and clear it
---!   BEFORE walking — so 'exit' callbacks and any focus reads during teardown
+--!   BEFORE walking - so 'exit' callbacks and any focus reads during teardown
 --!   see a consistent (cleared) state instead of pointing at a dying node.
 --! @param self engine.dom
 --! @param node_root table  root of subtree to remove
@@ -475,7 +475,7 @@ local function resize(self, width, height)
     mark_dirty(self, self.root)
 end
 
--- ─── Bus ─────────────────────────────────────────────────────────────────────
+-- --- Bus ---------------------------------------------------------------------
 
 --! @brief Dispatch an event key to all non-paused nodes in node_list.
 --! @details Rebuilds tree/list if flagged, flushes dirty layout, compiles render list.

@@ -11,7 +11,7 @@ local ui_grid  = require('source/engine/browser/grid')
 local ui_style = require('source/engine/api/draw/ui/style')
 local util_decorator = require('source/shared/functional/decorator')
 
--- ─── Node resolution ──────────────────────────────────────────────────────────
+-- --- Node resolution ----------------------------------------------------------
 
 --! @brief Resolve a target (nil / '#id' / node / grid-object) to a raw node.
 --! @param dom_obj engine.dom
@@ -65,7 +65,7 @@ local function install(std, engine)
                     if not placed then return nil end
                 end
                 if sel then
-                    -- selector-restricted search: no match means null, full stop —
+                    -- selector-restricted search: no match means null, full stop -
                     -- unlike plain directional focus it never falls back to the
                     -- node that's already focused
                     local filter = query.make_filter(sel)

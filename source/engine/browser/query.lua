@@ -1,17 +1,17 @@
 --! @file query.lua
 --! @brief Selector API. Reads: index_id (owned by dom.lua), node.config.style_names.
---! @details Does NOT modify any engine state — pure read operations only.
+--! @details Does NOT modify any engine state - pure read operations only.
 --! query_one() returns a single wrapped node or nil.
 --! query() returns an array of wrapped nodes.
 --! wrap() returns a chainable handle ({dom=, node=} + shared Query metatable)
---! with focus, count, addStyle, etc. — methods are colon-called.
+--! with focus, count, addStyle, etc. - methods are colon-called.
 --! Selector '.name' matches nodes that have stylesheet 'name' applied (config.style_names),
---! NOT options.class — see [[feedback-class-vs-style]].
+--! NOT options.class - see [[feedback-class-vs-style]].
 
 local ss  = require('source/engine/browser/stylesheet')
 local nav = require('source/engine/browser/navigator')
 
--- ─── Query wrapper ────────────────────────────────────────────────────────────
+-- --- Query wrapper ------------------------------------------------------------
 -- Methods live in a shared metatable (Query); wrap() only allocates a small
 -- {dom=, node=} handle instead of rebuilding a table of closures per call.
 -- Methods are colon-called (w:focus()), matching the TSTL output for the
@@ -99,7 +99,7 @@ local function has_style(node, name)
 end
 
 --! @brief Find all raw nodes that have stylesheet `name` applied.
---! @details Skips dead nodes (cfg.parent==nil and not root) — those linger
+--! @details Skips dead nodes (cfg.parent==nil and not root) - those linger
 --!   in node_list until the next bus() rebuild after node_del.
 --! @param self engine.dom
 --! @param name string  stylesheet name (without '.')

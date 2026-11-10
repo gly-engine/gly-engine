@@ -5,7 +5,7 @@
 --! INVARIANT: is_paused(uid, key) returns false for nodes not in registry.
 --! Used by dom.bus() to skip event dispatch and by compile() to skip render.
 --! node_pause() and node_resume() walk the subtree (propagate to children).
---! pause.lua does NOT require dom.lua — defines its own local walk to avoid circular dep.
+--! pause.lua does NOT require dom.lua - defines its own local walk to avoid circular dep.
 
 --! @brief Walk a node subtree recursively, calling fn on each node.
 local function walk(node, fn)

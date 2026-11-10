@@ -7,7 +7,7 @@ local App = {
     }
 }
 
--- ─── Channel data ─────────────────────────────────────────────────────────────
+-- --- Channel data -------------------------------------------------------------
 
 local CHANNELS = {
     { label = 'Noticias',  color = 0x1A6FD4FF },
@@ -22,20 +22,20 @@ local CHANNELS = {
     { label = 'Infantil2', color = 0xDD8800FF },
 }
 
--- ─── Shared focus state (read by App.draw) ───────────────────────────────────
+-- --- Shared focus state (read by App.draw) -----------------------------------
 
 local focused_color = CHANNELS[1].color
 local focused_label = CHANNELS[1].label
 local focused_clicks = 0
 
--- ─── Card layout constants ───────────────────────────────────────────────────
+-- --- Card layout constants ---------------------------------------------------
 
 local HEADER  = 80   -- px reserved at top for chrome
 local FOOTER  = 80   -- px reserved at bottom for chrome
 local LIFT    = 60   -- extra px unfocused cards are pushed down
 local PAD     = 10   -- horizontal padding inside each card
 
--- ─── Channel card ─────────────────────────────────────────────────────────────
+-- --- Channel card -------------------------------------------------------------
 
 local function make_channel(label, base_color)
     return {
@@ -89,7 +89,7 @@ local function make_channel(label, base_color)
     }
 end
 
--- ─── App callbacks ───────────────────────────────────────────────────────────
+-- --- App callbacks -----------------------------------------------------------
 
 function App.load(self, std)
     local s = std.ui.slide('4x1')

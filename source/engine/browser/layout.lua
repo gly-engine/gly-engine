@@ -3,11 +3,11 @@
 --! @details
 --! Owns: cells(), parse_span(), slide_step(), dom_layout().
 --! All functions are pure or receive engine.dom as explicit 'self'.
---! Required by dom.lua and grid.lua — must NOT require any other browser/ module
+--! Required by dom.lua and grid.lua - must NOT require any other browser/ module
 --! to avoid circular dependencies.
 --! Scroll offset is applied when engine.dom.scroll_registry[node] is set.
 
--- ─── Cell geometry ───────────────────────────────────────────────────────────
+-- --- Cell geometry -----------------------------------------------------------
 
 --! @brief Compute cell dimensions for a grid node.
 --! @details COLSxROWS convention: cfg.cols divides width, cfg.rows divides height.
@@ -50,7 +50,7 @@ local function effective_span(cc)
     return s
 end
 
--- ─── Scroll step ─────────────────────────────────────────────────────────────
+-- --- Scroll step -------------------------------------------------------------
 
 --! @brief Compute the number of items to skip per scroll step.
 --! @param scroll table  scroll state from scroll_registry
@@ -69,7 +69,7 @@ end
 
 --! @brief Cell position of each child along a peek grid's scroll axis.
 --! @details Peek grids are a single line (rows==1 for 'col', cols==1 for 'row'),
---!   so position is purely cumulative span+offset+after — mirrors the cursor
+--!   so position is purely cumulative span+offset+after - mirrors the cursor
 --!   advance in dom_layout. Lets peek math work in cell units instead of item
 --!   index units, so items with span>1 keep the focused item anchored and the
 --!   carousel from overlapping. With every span==1 this is the identity (place[i]
@@ -99,17 +99,17 @@ local function peek_axis(childs, dir_val)
     return place, cursor
 end
 
--- ─── Scroll clip depth ───────────────────────────────────────────────────────
+-- --- Scroll clip depth -------------------------------------------------------
 -- Tracks how many clipped scroll-grid ancestors the current recursion is inside.
 -- Incremented before recursing into an out-of-bounds child, decremented after.
 local _clip = 0
 
--- ─── Span-hidden depth ───────────────────────────────────────────────────────
+-- --- Span-hidden depth -------------------------------------------------------
 -- Tracks how many span=0 ancestors the current recursion is inside.
 -- Incremented before recursing into a span=0 child, decremented after.
 local _hide = 0
 
--- ─── Layout engine ───────────────────────────────────────────────────────────
+-- --- Layout engine -----------------------------------------------------------
 
 --! @brief Recursively compute layout for a node and its children.
 --! @details Writes cfg.offset_x/y and dat.width/height for every node in the subtree.
@@ -175,7 +175,7 @@ local function dom_layout(self, node, parent_x, parent_y, parent_w, parent_h)
                         or  -(peek_span_total - axis_max + peek_anchor)
                     local raw = peek_anchor - focus_cell
                     -- once navigator.lua's odometer has carried us past a full
-                    -- lap, the carousel is genuinely infinite from here on —
+                    -- lap, the carousel is genuinely infinite from here on -
                     -- keep showing the circular window (peek of the previous
                     -- item) even at what is otherwise the first item's slot.
                     local looped = scroll.vindex and scroll.vindex >= peek_span_total
@@ -197,7 +197,7 @@ local function dom_layout(self, node, parent_x, parent_y, parent_w, parent_h)
                 local cc   = child.config
                 local size = effective_span(cc)
 
-                -- span=0: hidden — takes no grid space, draw() never called
+                -- span=0: hidden - takes no grid space, draw() never called
                 if size == 0 then
                     _hide = _hide + 1
                     dom_layout(self, child, parent_x, parent_y, 0, 0)
@@ -213,7 +213,7 @@ local function dom_layout(self, node, parent_x, parent_y, parent_w, parent_h)
                     end
 
                     if scroll and scroll.mode == 'peek' and peek_loop then
-                        -- single contiguous circular window anchored on the focused item —
+                        -- single contiguous circular window anchored on the focused item -
                         -- every item gets one consistent slot, never an independent nearest-side pick
                         local focus_cell = peek_place[scroll.index + 1] or 0
                         local slot = (peek_place[i] - focus_cell + peek_anchor) % peek_span_total
@@ -280,7 +280,7 @@ local function dom_layout(self, node, parent_x, parent_y, parent_w, parent_h)
 
     elseif node.childs then
         for _, child in ipairs(node.childs) do
-            -- span=0: hidden — even outside a grid (effective_span honours a
+            -- span=0: hidden - even outside a grid (effective_span honours a
             -- style-provided span or the node's own cfg.size). Whole subtree
             -- marked _span_hidden via the _hide counter, so draw/bus/focus skip it.
             if effective_span(child.config) == 0 then

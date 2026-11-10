@@ -12,7 +12,7 @@ local lifecycle = require('source/engine/browser/lifecycle')
 local dom       = require('source/engine/browser/dom')
 local pause     = require('source/engine/browser/pause')
 
--- ─── Helper functions ───────────────────────────────────────────────────────
+-- --- Helper functions -------------------------------------------------------
 
 --! @brief Check if needle is a descendant of (or equal to) node.
 local function is_descendant(node, needle)
@@ -26,7 +26,7 @@ local function is_descendant(node, needle)
 end
 
 --! @brief Find the first focusable node in a subtree (depth-first).
---! @details Skips dead nodes (cfg.parent==nil) — they linger in parent.childs
+--! @details Skips dead nodes (cfg.parent==nil) - they linger in parent.childs
 --!   until the next bus() rebuild after node_del. Also skips span-hidden
 --!   subtrees (span=0): those are collapsed to 0x0 at their parent's origin
 --!   and must never be reachable as a focus target.
@@ -77,7 +77,7 @@ local function find_scroll_parent(self, node)
     return nil
 end
 
--- ─── ensure_visible ──────────────────────────────────────────────────────────
+-- --- ensure_visible ----------------------------------------------------------
 
 --! @brief Adjust the scroll index so that focus_node is within the visible window.
 --! @param self engine.dom
@@ -143,7 +143,7 @@ local function ensure_visible(self, grid_node, focus_node)
     dom.mark_dirty(self, grid_node)
 end
 
--- ─── set_focus ──────────────────────────────────────────────────────────────
+-- --- set_focus --------------------------------------------------------------
 
 --! @brief Move focus to a new node, swapping :focus styles and firing callbacks.
 --! @param self engine.dom
@@ -175,7 +175,7 @@ local function set_focus(self, node)
         lifecycle.unfocus(self, old)
 
         -- reset scroll position on any scroll ancestor of `old` that the new
-        -- focus actually left — ancestors still shared with `node` (e.g. an
+        -- focus actually left - ancestors still shared with `node` (e.g. an
         -- outer scroll wrapping both grids) keep their position untouched
         local left_scroll = find_scroll_parent(self, old)
         while left_scroll do
@@ -201,7 +201,7 @@ local function set_focus(self, node)
     end
     lifecycle.focus(self, node)
 
-    -- ensure all scroll ancestors reveal this node (inner → outer)
+    -- ensure all scroll ancestors reveal this node (inner -> outer)
     local scroll_parent = find_scroll_parent(self, node)
     while scroll_parent do
         ensure_visible(self, scroll_parent, node)
@@ -211,7 +211,7 @@ local function set_focus(self, node)
     return node
 end
 
--- ─── Spatial navigation ─────────────────────────────────────────────────────
+-- --- Spatial navigation -----------------------------------------------------
 
 --! @brief Score every focusable node against `current` in `direction`, restricted
 --!   to those for which `filter` is true, and return the closest one.
@@ -294,7 +294,7 @@ local function focus_navigate_spatial(self, current, direction, filter)
     if not best_node then return nil end
 
     -- entering a scroll grid from outside always lands on its first focusable
-    -- item instead of whichever of its items scored closest — but only for a
+    -- item instead of whichever of its items scored closest - but only for a
     -- plain (unfiltered) move; a selector-filtered search must land on the
     -- exact node it matched, not just "some node in the same grid".
     if filter == accept_all then
@@ -306,7 +306,7 @@ local function focus_navigate_spatial(self, current, direction, filter)
     return set_focus(self, best_node)
 end
 
--- ─── Index navigation (inside scroll grid) ──────────────────────────────────
+-- --- Index navigation (inside scroll grid) ----------------------------------
 
 --! @brief Single logical-index step within a scroll grid (no filtering).
 --! @param self engine.dom
@@ -340,7 +340,7 @@ local function step_grid_index(self, grid_node, current, direction)
 
     if dir == 'col' then
         -- col-major (horizontal list): left/right are the primary axis
-        -- up/down escape to spatial — single row has nothing above or below
+        -- up/down escape to spatial - single row has nothing above or below
         if rows == 1 and (direction == 'down' or direction == 'up') then
             return nil
         end
@@ -356,7 +356,7 @@ local function step_grid_index(self, grid_node, current, direction)
         end
     else  -- 'row'
         -- row-major (vertical list): up/down are the primary axis
-        -- left/right escape to spatial — single column has nothing beside it
+        -- left/right escape to spatial - single column has nothing beside it
         if cols == 1 and (direction == 'left' or direction == 'right') then
             return nil
         end
@@ -375,7 +375,7 @@ local function step_grid_index(self, grid_node, current, direction)
     -- peek carousels only loop forward, forever (an odometer, not a mirror):
     -- going past the last item always continues from the first again, but
     -- going backward unwinds through every lap it actually took to get here
-    -- and stops dead at the true first item — no wrap, no shortcut back.
+    -- and stops dead at the true first item - no wrap, no shortcut back.
     if mode == 'peek' then
         local step = next_idx - idx
         local vindex = scroll_state.vindex
@@ -397,8 +397,8 @@ local function step_grid_index(self, grid_node, current, direction)
 end
 
 --! @brief Navigate focus within a scroll grid using logical child index.
---! @details With a filter, keeps stepping in `direction` — skipping children
---!   that fail it — until a match is found or the grid boundary is reached.
+--! @details With a filter, keeps stepping in `direction` - skipping children
+--!   that fail it - until a match is found or the grid boundary is reached.
 --!   On failure, rolls back any peek odometer state (scroll_state.vindex)
 --!   mutated while probing, so a failed search never desyncs a later, plain
 --!   directional press. With no filter this degenerates to a single step,
@@ -428,10 +428,10 @@ local function focus_navigate_grid(self, grid_node, current, direction, filter)
     end
 end
 
--- ─── Top-level navigation dispatch ──────────────────────────────────────────
+-- --- Top-level navigation dispatch ------------------------------------------
 
 --! @brief Dispatch a directional navigation event to the appropriate handler.
---! @details Walks scroll parents from nearest to farthest — each off-axis nil
+--! @details Walks scroll parents from nearest to farthest - each off-axis nil
 --!   bubbles up to the next outer grid until one handles it or spatial takes
 --!   over. With a filter (e.g. std.ui.focus('right .modal')), every stage
 --!   only accepts filter-matching nodes.
@@ -455,7 +455,7 @@ local function focus_navigate(self, direction, filter)
     return focus_navigate_spatial(self, current, direction, filter)
 end
 
--- ─── Public interface ────────────────────────────────────────────────────────
+-- --- Public interface --------------------------------------------------------
 
 --! @brief Check whether a node is currently focused.
 --! @param self engine.dom

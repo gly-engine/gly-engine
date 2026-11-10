@@ -51,8 +51,8 @@ end
 --!   When options is nil, returns existing closure (or nil if not registered).
 --! @param self engine.dom
 --! @param name string  stylesheet class name (e.g. 'card', 'card:focus')
---! @param options table|nil  {left,right,top,bottom,margin,width,height} — CSSUnit values
---! @return function(x,y,w,h) → x,y,w,h
+--! @param options table|nil  {left,right,top,bottom,margin,width,height} - CSSUnit values
+--! @return function(x,y,w,h) -> x,y,w,h
 local function stylesheet(self, name, options)
     local css = self.stylesheet_dict[name] or {}
     local exe = self.stylesheet_func[name]
@@ -245,7 +245,7 @@ local function css_add(self, func, node, name)
     end
 
     -- a node's own css is applied by the PARENT's layout pass (it computes the
-    -- child cell then runs child.config.css), so re-flow the parent — marking
+    -- child cell then runs child.config.css), so re-flow the parent - marking
     -- only the node would relayout from its already-styled box and never apply
     -- the new css.
     resolve_style_props(self, node)
@@ -297,7 +297,7 @@ end
 
 --! @brief Create a scroll-offset CSS transform from a scroll_state table.
 --! @param scroll_state table {offset_x: number, offset_y: number}
---! @return function(x,y,w,h) → x,y,w,h
+--! @return function(x,y,w,h) -> x,y,w,h
 local function css_scroll(scroll_state)
     return function(x, y, w, h)
         return x - (scroll_state.offset_x or 0), y - (scroll_state.offset_y or 0), w, h
