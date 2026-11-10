@@ -6,7 +6,7 @@
 
 [<img align="right" width="48%" src="https://raw.githubusercontent.com/RodrigoDornelles/RodrigoDornelles/master/media/ginga-asteroids.gif">](https://github.com/gly-engine/gly-engine/blob/main/samples/asteroids/game.lua)
 
- * **Multiple Programming Language Support** <br/><sup>_(Lua, Javascript, Typescript, Haxe, Kotlin, Dart...)_</sup>
+ * **Write in lua and typescript** <br/><sup>_(and also JSX using Gly Internal Dom)_</sup>
  * **Frictionless Development** <br/><sup>_(Online [IDE](https://playground.gamely.com.br) or very easy installation)_</sup>
  * **Progressive "Television" Apps** <br/><sup>_(Like PWAs, but for Brazilian TVs)_</sup>
  * **Many Testing Tools** <br/><sup>_(REPL, Unit Tests, [TAS](https://tasvideos.org/WelcomeToTASVideos#WhatIsATas) Tests)_</sup>
@@ -15,19 +15,19 @@
 ### Browser :globe_with_meridians:
 
 ```sql
-lua cli.lua build @asteroids
+lua cli.lua build @asteroids --target html5
 ```
 
 ### Love 2D :heart_decoration: :desktop_computer:
 
 ```sql
-lua cli.lua build @asteroids --core love --run
+lua cli.lua build @asteroids --target love --run
 ```
 
 ### Ginga :brazil: :tv:
 
 ```sql
-lua cli.lua build @asteroids --core ginga --enterprise
+lua cli.lua build @asteroids --target ginga --enterprise
 ```
 
 ## How to Install

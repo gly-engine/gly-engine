@@ -2,10 +2,10 @@ local buildsystem = require('source/cli/tools/buildsystem')
 local cli_fs = require('source/cli/tools/fs')
 local str_fs = require('source/shared/string/schema/fs')
 
-local function build(args)
+local function build(args, engine_only)
     args.outdir = str_fs.path(args.outdir).get_fullfilepath()
 
-    if args.engine then
+    if engine_only then
         args.core = args.engine:gsub('@', '')
         args.run = false
     end
@@ -25,12 +25,12 @@ local function build(args)
         --
         :add_core('nano', {src='source/engine/core/vacuum/nano/main.lua'})
         --
-        :add_core('native', {src='source/engine/core/vacuum/native/main.lua'})
+        :add_core('native', {src=(not engine_only and args.engine) or 'source/engine/core/vacuum/native/main.lua'})
         --
         :add_core('love', {src='source/engine/core/bind/love/main.lua'})
         :add_step('love '..args.outdir, {when=args.run})
 
-    if not args.engine then
+    if not engine_only then
         local ok, message = build_game:run()
         if not ok then return false, message end
     end
@@ -44,5 +44,5 @@ end
 
 return {
     build = build,
-    build_engine = function(args) return build(args) end
+    build_engine = function(args) return build(args, true) end
 }

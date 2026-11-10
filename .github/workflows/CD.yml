@@ -2,8 +2,13 @@ name: cd
 
 on:
   workflow_dispatch:
+    inputs:
+      npm:
+        description: 'package (eg: gly-types)'
+        required: false
+        type: string
   push:
-    tags: 
+    tags:
       - "*.*.*"
 
 permissions:
@@ -11,8 +16,9 @@ permissions:
   contents: read
 
 jobs:
-  npm: 
-    runs-on: ubuntu-latest   
+  auto:
+    if: github.event_name == 'push' || inputs.npm == ''
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
@@ -28,12 +34,45 @@ jobs:
       -
         run: npm install -g npm@latest
       -
+        run: npm config set allow-git true
+      -
+        run: npm install --no-package-lock --ignore-scripts
+      -
         if: matrix.package != 'gly-cli'
         working-directory: ./npm/${{ matrix.package }}
         run: npm run build
       -
         if: matrix.package == 'gly-cli'
-        run: npm run build
-      - 
+        run: ./cli.js cli build
+      -
         working-directory: ./dist
         run: npm publish
+
+  manual:
+    if: inputs.npm != ''
+    runs-on: ubuntu-latest
+    env:
+      PACKAGE: ${{ inputs.npm }}
+    steps:
+      -
+        uses: actions/checkout@v4
+      -
+        uses: actions/setup-node@v2
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+      -
+        run: npm install -g npm@latest
+      -
+        run: npm config set allow-git true
+      -
+        run: npm install --no-package-lock --ignore-scripts
+      -
+        if: inputs.npm != 'gly-cli'
+        working-directory: ./npm/${{ inputs.npm }}
+        run: npm run build --if-present
+      -
+        if: inputs.npm == 'gly-cli'
+        run: ./cli.js cli build
+      -
+        run: cd dist 2>/dev/null || cd "npm/$PACKAGE" && npm publish

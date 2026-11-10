@@ -7,33 +7,40 @@ local function setenv(engine)
             error('unauthorized set environment', 0)
         end
         if varname then
-            engine.overrides_envs[varname] = tostring(value)
+            engine.overrides_envs[varname] = value ~= nil and tostring(value) or nil
         end
     end
 end
 
 --! @todo getenv build variables
+--! @return string, or nil when not defined, empty or only spaces
 local function getenv(engine, get_env)
-    return function(varname) 
-        local game_envs = engine.root and engine.root.envs
-        local core_envs = engine.envs
-        
-        if not (varname or #varname > 0) then
+    return function(varname)
+        if type(varname) ~= 'string' or #varname == 0 then
             return nil
         end
-        if engine.overrides_envs[varname] then
-            return engine.overrides_envs[varname]
+
+        local game_envs = engine.root and engine.root.envs
+        local value = engine.overrides_envs[varname]
+
+        if value == nil and game_envs then
+            value = game_envs[varname]
         end
-        if game_envs and game_envs[varname] then
-            return game_envs[varname]
+        if value == nil and engine.envs then
+            value = engine.envs[varname]
         end
-        if core_envs and core_envs[varname] then
-            return core_envs[varname]
-        end    
-        if get_env then
-            return get_env(varname)
+        if value == nil and get_env then
+            value = get_env(varname)
         end
-        return nil
+        if value == nil then
+            return nil
+        end
+
+        value = tostring(value)
+        if not value:find('%S') then
+            return nil
+        end
+        return value
     end
 end
 

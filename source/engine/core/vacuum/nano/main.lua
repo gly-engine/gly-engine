@@ -19,7 +19,6 @@ local application={
 }
 std.log={fatal=f,error=f,warn=f,info=f,debug=f}
 std.bus={emit=f,emit_next=f,listen=f,listen_std_engine=f}
-std.i18n={next=f,back=f,get_language=function()return'en-US'end}
 
 local cfg_poly={
     repeats={

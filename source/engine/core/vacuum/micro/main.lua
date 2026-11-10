@@ -5,7 +5,6 @@ local engine_key = require('source/engine/api/system/key')
 local engine_math = require('source/engine/api/math/basic')
 local engine_math_clib = require('source/engine/api/math/clib')
 local engine_math_random = require('source/engine/api/math/random')
-local engine_array = require('source/engine/api/data/array')
 local engine_api_draw_text = require('source/engine/api/draw/text')
 local engine_api_draw_poly = require('source/engine/api/draw/poly')
 local engine_raw_memory = require('source/engine/api/raw/memory')
@@ -25,15 +24,13 @@ local application={
 }
 std.log={fatal=f,error=f,warn=f,info=f,debug=f}
 std.bus={emit=f,emit_next=f,listen=f,listen_std_engine=f}
-std.i18n={next=f,back=f,get_language=function()return'en-US'end}
 
 local cfg_system={
     exit=native_system_exit,
     reset=native_system_reset,
     title=native_system_title,
     get_fps=native_system_get_fps,
-    get_secret=native_system_get_secret,
-    get_language=native_system_get_language
+    get_secret=native_system_get_secret
 }
 
 local cfg_poly={
@@ -122,7 +119,6 @@ function native_callback_init(width, height, game_lua)
     engine_raw_memory.install(std, engine)
     engine_game.install(std, engine, cfg_system)
     engine_key.install(std, engine, {})
-    engine_array.install(std, engine, nil, 'array')
     engine_api_draw_text.install(std, engine, cfg_text)
     engine_api_draw_poly.install(std, engine, cfg_poly)
     engine_math.install(std, engine)

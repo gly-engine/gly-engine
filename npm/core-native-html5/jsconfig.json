@@ -1,0 +1,14 @@
+{
+    "compilerOptions": {
+        "allowJs": true,
+        "checkJs": true,
+        "noEmit": true,
+        "strict": true,
+        "target": "es5",
+        "lib": ["es5", "es2015.promise", "dom"],
+        "module": "commonjs",
+        "moduleResolution": "node",
+        "resolveJsonModule": true
+    },
+    "include": ["src"]
+}

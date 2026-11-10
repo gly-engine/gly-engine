@@ -40,18 +40,10 @@ local P = {
         exit = function () end
     },
     key = {
+        any = false,
         axis = {
             x = 0,
             y = 0,
-            menu=0,
-            up=0,
-            down=0,
-            left=0,
-            right=0,
-            a = 0,
-            b = 0, 
-            c = 0,
-            d = 0
         },
         press = {
             menu=false,
@@ -62,10 +54,8 @@ local P = {
             a=false,
             b=false,
             c=false,
-            d=false,
-            any=false
+            d=false
         }
     }
 }
-
 return P;

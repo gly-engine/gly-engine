@@ -1,0 +1,58 @@
+{
+    "padmap": {
+        "default": {
+            "pads": ["a", "b", "c", "d", "a", "b", "c", "d", "menu", "menu", "menu", "menu", "up", "down", "left", "right"],
+            "axis": ["left", "right", "up", "down", "left", "right", "up", "down", "left", "right", "up", "down"]
+        },
+        "legacy": {
+            "pads": ["red", "green", "yellow", "blue", "left", "right", "up", "down", "menu"],
+            "axis": ["left", "right", "up", "down", "left", "right", "up", "down"]
+        }
+    },
+    "keymap": {
+        "default": [
+            [13, "a"],
+            [38, "up"],
+            [37, "left"],
+            [40, "down"],
+            [39, "right"],
+            [403, "a"],
+            [404, "b"],
+            [405, "c"],
+            [406, "d"],
+            [461, "menu"],
+            [10009, "menu"],
+            ["KeyZ", "a"],
+            ["KeyX", "b"],
+            ["KeyC", "c"],
+            ["KeyV", "d"],
+            ["Enter", "a"],
+            ["ArrowUp", "up"],
+            ["ArrowDown", "down"],
+            ["ArrowLeft", "left"],
+            ["ArrowRight", "right"],
+            ["ShiftLeft", "menu"]
+        ],
+        "legacy": [
+            [13, "enter"],
+            [38, "up"],
+            [37, "left"],
+            [40, "down"],
+            [39, "right"],
+            [403, "red"],
+            [404, "green"],
+            [405, "yellow"],
+            [406, "blue"],
+            [10009, "enter"],
+            ["KeyZ", "red"],
+            ["KeyX", "green"],
+            ["KeyC", "yellow"],
+            ["KeyV", "blue"],
+            ["Enter", "enter"],
+            ["ArrowUp", "up"],
+            ["ArrowDown", "down"],
+            ["ArrowLeft", "left"],
+            ["ArrowRight", "right"]
+        ]
+    }
+}

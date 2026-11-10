@@ -10,36 +10,30 @@ local function atobify(args, text, render)
     return (by_core or by_flag) and result or falsy
 end
 
+--! @return javascript expression with url or code of the engine
 local function src_engine(args)
-    if args.enginecdn then
+    if args.cdn then
         local c1, c2, s1, s2 = (args.engine or ''):gsub('/', '_'), args.core or '', '_micro', '_lite'
         local suffix = (c1:match(s1) or c1:match(s2) or c2:match(s1) or c2:match(s2) or ''):gsub('_', '-')
-        return 'https://cdn.jsdelivr.net/npm/@gamely/gly-engine'..suffix..'@'..version..'/dist/main.lua'
+        return "'https://cdn.jsdelivr.net/npm/@gamely/gly-engine"..suffix..'@'..version.."/dist/main.lua'"
     elseif atobify(args) then
-        return '${window.engine_code}'
+        return 'window.engine_code'
     end
-    return 'main.lua'
+    return "'main.lua'"
 end
 
+--! @return javascript expression with url or code of the game
 local function src_game(args)
     if atobify(args) then
-        return '${window.game_code}'
+        return 'window.game_code'
     end
-    return 'game.lua'
-end
-
-local function lib_resize(args)
-    if not args.screen then
-        return 'resize'
-    end
-    return 'none'
+    return "'game.lua'"
 end
 
 local P = {
     atobify = atobify,
     src_game = src_game,
-    src_engine = src_engine,
-    lib_resize = lib_resize
+    src_engine = src_engine
 }
 
 return P

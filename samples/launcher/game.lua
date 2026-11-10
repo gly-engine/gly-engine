@@ -29,7 +29,6 @@ local function keys(self, std)
                 self._game = std.node.load(std.http.body)
                 std.node.spawn(self._game)
                 std.bus.emit('init')
-                std.bus.emit('i18n')
             end)
             :run()
     end

@@ -1,0 +1,34 @@
+{
+    "name": "@gamely/core-native-html5",
+    "version": "0.3.0",
+    "author": "RodrigoDornelles",
+    "license": "Apache-2.0",
+    "homepage": "https://gly-engine.github.io/core-native-html5",
+    "repository": "https://github.com/gly-engine/core-native-html5",
+    "funding": "https://github.com/sponsors/RodrigoDornelles",
+    "bugs": "https://github.com/gly-engine/core-native-html5/issues",
+    "description": "create your own game-engine with just javascript or lua.",
+    "browser": "dist/index.js",
+    "main": "dist/index.js",
+    "files": [
+        "dist"
+    ],
+    "keywords": [
+        "game engine",
+        "game",
+        "engine"
+    ],
+    "scripts": {
+        "lint": "eslint",
+        "check": "tsc -p jsconfig.json",
+        "step1": "cd ../.. && rm -Rf dist && mkdir -p ./dist/dist",
+        "step2": "cd ../.. && node cli.js bundler js npm/core-native-html5/src/index.js --outfile dist/dist/index.js --global CoreNativeHtml5",
+        "step3": "cd ../.. && node cli.js meta source/cli/main.lua --infile npm/core-native-html5/package.json --outfile dist/package.json",
+        "build": "npm run step1 && npm run step2 && npm run step3",
+        "test": "npm run lint && npm run check"
+    },
+    "devDependencies": {
+        "eslint": "^10.13.0",
+        "typescript": "~5.9.3"
+    }
+}

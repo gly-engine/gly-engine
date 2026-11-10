@@ -39,6 +39,7 @@
     "native_http_has_callback",
     "native_http_has_ssl",
     "native_http_install",
+    "native_http_sock",
     "native_image_draw",
     "native_image_load",
     "native_image_exists",
