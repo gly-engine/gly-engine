@@ -95,4 +95,42 @@ function test_ipk_encode_invalid()
     end
 end
 
+function test_ipk_encode_canonical_control()
+    local _, ipk = build('Package:   app\r\nVersion:1.0\nDescription:\n  first\n\tsecond  \nKey: old\nSignature: old\n\n')
+    local control = untar(gunzip(ar_members(ipk)['control.tar.gz']))['./control'].body
+    assert(control == 'Package: app\nVersion: 1.0\nDescription: first\n second\nArchitecture: all\nInstalled-Size: 10\n')
+end
+
+function test_ipk_encode_invalid_stanza()
+    local cases = {
+        {'Package: app\nVersion: 1.0\n\nPackage: other\n', 'only one package per file'},
+        {' orphan\nPackage: app\n', 'continues no field'},
+        {'Package: app\nnot a field\n', 'is not "Field: value"'}
+    }
+    for _, case in ipairs(cases) do
+        local name, err = build(case[1])
+        assert(name == nil and err:find(case[2], 1, true), case[2]..': '..tostring(err))
+    end
+end
+
+function test_ipk_encode_protect()
+    local signed = {}
+    local protect = {
+        key = 'abc123',
+        seal = function(data) signed.plain = data return 'SEALED' end,
+        sign = function(control, sealed) signed.control, signed.sealed = control, sealed return 'SIG==' end
+    }
+    local name, ipk = ipk_encode.encode(CONTROL, {{name = 'usr/bin/run', body = '#!/bin/sh\n'}}, {protect = protect})
+    local members = ar_members(ipk)
+    local control = untar(gunzip(members['control.tar.gz']))['./control'].body
+    local head = CONTROL..'Architecture: all\nInstalled-Size: 10\nKey: abc123\n'
+
+    assert(name == 'com.test.app_1.2.3_all.ipk')
+    assert(members['data.tar.gz'] == 'SEALED')
+    assert(untar(gunzip(signed.plain))['./usr/bin/run'].body == '#!/bin/sh\n')
+    assert(signed.sealed == 'SEALED')
+    assert(signed.control == head)
+    assert(control == head..'Signature: SIG==\n')
+end
+
 test.unit(_G)

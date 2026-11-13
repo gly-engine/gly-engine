@@ -1,6 +1,7 @@
 local cli_fs = require('source/cli/tools/fs')
 local str_fs = require('source/shared/string/schema/fs')
 local ipk_encode = require('source/shared/archive/ipk/encode')
+local protect = require('source/cli/tools/protect')
 
 local EXEC_MODE = tonumber('755', 8)
 
@@ -24,8 +25,18 @@ local function write_file(path, content)
     return true
 end
 
+--! @short file or folder exists, os.rename for native lua and io.open for nodejs
+--! (whose io is backed by node fs, while wasmoon os sees only its virtual filesystem)
 local function exists(path)
-    return os.rename(path, path) ~= nil
+    if os.rename(path, path) then
+        return true
+    end
+    local file = io.open(path)
+    if file then
+        file:close()
+        return true
+    end
+    return false
 end
 
 --! @short what a package folder must look like, for the error messages
@@ -36,6 +47,7 @@ local function layout(dir)
 end
 
 --! @short pack indir/control + indir/data/ (the install root) into an .ipk in outdir
+--! @details with `--protect key.pem` (nodejs only) the package is signed and its data encrypted
 local function opkg_build(args)
     local indir = str_fs.path(args.indir).get_fullfilepath()
     local outdir = str_fs.path(args.outdir).get_fullfilepath()
@@ -67,7 +79,16 @@ local function opkg_build(args)
         end
     end
 
-    local name, ipk = ipk_encode.encode(control, files)
+    local options = {}
+    if args.protect then
+        local protector, err = protect.new(read_file(args.protect), args.protect)
+        if not protector then
+            return false, err
+        end
+        options.protect = protector
+    end
+
+    local name, ipk = ipk_encode.encode(control, files, options)
     if not name then
         return false, dir..'/'..ipk
     end

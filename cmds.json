@@ -756,6 +756,11 @@
                             "type": "string",
                             "default": "./",
                             "description": "Output directory"
+                        },
+                        {
+                            "name": "protect",
+                            "type": "string",
+                            "description": "Sign/encrypt with ed25519 private key (nodejs only)"
                         }
                     ]
                 }
