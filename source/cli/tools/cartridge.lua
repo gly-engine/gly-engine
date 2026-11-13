@@ -1,4 +1,11 @@
 local b51 = require('source/bit51')
+
+local function metamock()
+    return { dump = { meta = { tic80 = function()
+        return ''
+    end }}}
+end
+
 local function tic80(metadata, workdir)
     local function writeChunk(file, bank, chunkType, data)
         local size = #data
@@ -16,7 +23,7 @@ local function tic80(metadata, workdir)
     local outputFile = io.open(workdir..'game.tic', 'wb')
     local backendFile = io.open(workdir..'main.lua', 'r')
 
-    local var = metadata()
+    local var = metadata() or metamock()
     local metaCode = var.dump.meta.tic80()
     local gameCode = gameFile:read('*a')
     local engineCode = engineFile:read('*a')
