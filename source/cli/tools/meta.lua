@@ -4,7 +4,7 @@ local env = require('source/shared/string/parse/env')
 local base64 = require('source/shared/string/encode/base64')
 local ltable = require('source/shared/string/encode/table')
 local yaml = require('source/shared/string/encode/yaml')
-local zlib = require('source/third_party/zerkman_zlib')
+local zip = require('source/shared/archive/zip/decode')
 local json = require('source/third_party/rxi_json')
 local javascript = require('source/shared/string/encode/javascript')
 local lustache = require('source/third_party/olivinelabs_lustache')
@@ -188,7 +188,7 @@ local function try_love(love_content)
         _G.love = {}
         local love_start = love_content:find("PK\003\004", 1, true)
         local love_data = love_content:sub(love_start)
-        local love_conf = zlib.unzip(love_data, 'conf.lua')
+        local love_conf = assert(zip.find(love_data, 'conf.lua'))
         local love_meta = {window={},audio={},modules={},screen={}}
         eval_code.script(love_conf)
         if _G.love.conf then
