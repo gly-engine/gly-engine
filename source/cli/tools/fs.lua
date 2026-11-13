@@ -47,6 +47,23 @@ local function files(src_path)
     return list
 end
 
+--! @short set of files with the executable bit, relative to src_path (empty on windows)
+local function executables(src_path)
+    local p = str_fs.path(src_path).get_fullfilepath()
+    local cmd = str_cmd.lsexec(#p > 0 and p or '.')
+    local ls_cmd = cmd and io.popen(cmd)
+    local set = {}
+
+    if ls_cmd then
+        for line in ls_cmd:lines() do
+            set[line:gsub('^%./', '')] = true
+        end
+        ls_cmd:close()
+    end
+
+    return set
+end
+
 local function del(src)
     local p = str_fs.file(src).get_fullfilepath()
     os.execute(str_cmd.del()..p..str_cmd.silent())
@@ -94,6 +111,7 @@ end
 local P = {
     ls = ls,
     files = files,
+    executables = executables,
     del = del,
     move = move,
     clear = clear,

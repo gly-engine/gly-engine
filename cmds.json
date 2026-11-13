@@ -736,6 +736,32 @@
             ]
         },
         {
+            "name": "opkg",
+            "description": "opkg package utilities",
+            "subcommands": [
+                {
+                    "name": "build",
+                    "description": "Pack dir/control + dir/data/ into an .ipk",
+                    "args": [
+                        {
+                            "name": "indir",
+                            "type": "string",
+                            "required": true,
+                            "description": "Package directory"
+                        }
+                    ],
+                    "flags": [
+                        {
+                            "name": "outdir",
+                            "type": "string",
+                            "default": "./",
+                            "description": "Output directory"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
             "name": "hazard",
             "description": "Internal hazard and bootstrap tools",
             "hidden": true,
