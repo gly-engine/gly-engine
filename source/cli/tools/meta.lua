@@ -186,9 +186,7 @@ end
 local function try_love(love_content)
     local ok, data = pcall(function ()
         _G.love = {}
-        local love_start = love_content:find("PK\003\004", 1, true)
-        local love_data = love_content:sub(love_start)
-        local love_conf = assert(zip.find(love_data, 'conf.lua'))
+        local love_conf = assert(zip.find(love_content, 'conf.lua'))
         local love_meta = {window={},audio={},modules={},screen={}}
         eval_code.script(love_conf)
         if _G.love.conf then

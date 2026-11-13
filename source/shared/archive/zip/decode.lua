@@ -34,15 +34,20 @@ end
 local function files(buf)
     local eocd = find_end(buf)
     local count = u16(buf, eocd + 10)
-    local pos = u32(buf, eocd + 16) + 1
+    local base = eocd - u32(buf, eocd + 12) - u32(buf, eocd + 16)
+    local pos = base + u32(buf, eocd + 16)
     local list = {}
+
+    if base < 1 then
+        error('invalid zip central directory')
+    end
 
     for index = 1, count do
         if buf:sub(pos, pos + 3) ~= CENTRAL_SIGNATURE then
             error('invalid zip central directory')
         end
         local name_size = u16(buf, pos + 28)
-        local header = u32(buf, pos + 42) + 1
+        local header = base + u32(buf, pos + 42)
         if buf:sub(header, header + 3) ~= LOCAL_SIGNATURE then
             error('invalid zip local header')
         end
