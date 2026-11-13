@@ -33,10 +33,10 @@ local callbacks = {
         return #self.header_list
     end,
     ['get-header-name'] = function(self, data)
-        return self.header_list[self.data]
+        return self.header_list[data]
     end,
     ['get-header-data'] = function(self, data)
-        return self.heeader_dict[self.data] or self.heeader_dict[self.header_list[self.data]]
+        return self.header_dict[data] or self.header_dict[self.header_list[data]]
     end,
     ['get-sock-upgrade'] = function(self)
         return self.upgrade
