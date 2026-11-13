@@ -277,6 +277,18 @@ local function metadata(infiles, args, optional)
             ..'\n-'..'- desc:   '..meta.description..'\n-'..'- ver:    '..meta.version..'\n-'..'- script: lua'
     end
 
+    data.dump.meta.ipk = function()
+        local package = meta.title:lower():gsub('[^%l%d]+', '-'):gsub('^%-+', ''):gsub('%-+$', '')
+        local lines = {'Package: '..package, 'Version: '..meta.version}
+        if #meta.author > 0 then
+            lines[#lines + 1] = 'Maintainer: '..meta.author
+        end
+        if #meta.description > 0 then
+            lines[#lines + 1] = 'Description: '..meta.description:gsub('\n%s*\n', '\n.\n'):gsub('\n', '\n ')
+        end
+        return table.concat(lines, '\n')..'\n'
+    end
+
     if game.args and not args then
         args = game.args
     end
