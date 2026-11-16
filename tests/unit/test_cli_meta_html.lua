@@ -80,8 +80,8 @@ return P
 
     assert(data.meta.title == 'Tom & Jerry', 'escaped entities should round trip')
     assert(data.meta.description == 'a classic game')
-    assert(data.meta.author == '', 'template does not emit an author meta tag')
-    assert(data.meta.version == '0.0.0', 'template does not emit a version meta tag')
+    assert(data.meta.author == 'RodrigoDornelles')
+    assert(data.meta.version == '1.2.3')
 end
 
 function test_metadata_html_merge_with_game()
