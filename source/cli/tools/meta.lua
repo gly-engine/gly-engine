@@ -1,6 +1,7 @@
 local agent = require('source/agent')
 local version = require('source/version')
 local env = require('source/shared/string/parse/env')
+local html = require('source/shared/string/parse/html')
 local base64 = require('source/shared/string/encode/base64')
 local ltable = require('source/shared/string/encode/table')
 local yaml = require('source/shared/string/encode/yaml')
@@ -165,6 +166,12 @@ local function try_decode(content, parser)
     return ok and next(data or {}) ~= nil and data
 end
 
+local function try_html(content)
+    local lower = content:lower()
+    local is_html = lower:find('<!doctype%s+html') or lower:find('<html[%s>]') or lower:find('<head[%s>]')
+    return is_html and try_decode(content, html)
+end
+
 local function try_tic80(content)
     local ok, data = pcall(function()
         local m = {}
@@ -231,6 +238,7 @@ local function metadata(infiles, args, optional)
         local game_part = try_lua(infile)
             or try_decode(infile, json)
             or try_decode(infile, env)
+            or try_html(infile)
             or try_decode(infile, csv)
             or try_tic80(infile)
             or try_love(infile)
