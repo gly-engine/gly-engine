@@ -199,6 +199,16 @@ local function try_love(love_content)
     return ok and data
 end
 
+local detectors = {
+    {'lua', try_lua},
+    {'json', function(c) return try_decode(c, json) end},
+    {'m3u8', function(c) return try_decode(c, m3u8) end},
+    {'dotenv', function(c) return try_decode(c, env) end},
+    {'tic80', try_tic80},
+    {'csv', function(c) return try_decode(c, csv) end},
+    {'love2d', try_love}
+}
+
 local function vars(args)
     return {
         build = {
@@ -219,6 +229,7 @@ local function metadata(infiles, args, optional)
         infiles = {infiles}
     end
 
+    local is = {}
     local merged_game = nil
     for _, infile in ipairs(infiles) do
         if type(infile) == 'string' then
@@ -229,14 +240,15 @@ local function metadata(infiles, args, optional)
             end
         end
 
-        local game_part = try_lua(infile)
-            or try_decode(infile, json)
-            or try_decode(infile, m3u8)
-            or try_decode(infile, env)
-            or try_decode(infile, csv)
-            or try_tic80(infile)
-            or try_love(infile)
-        
+        local game_part = nil
+        for _, detector in ipairs(detectors) do
+            game_part = detector[2](infile)
+            if game_part then
+                is[detector[1]] = true
+                break
+            end
+        end
+
         merged_game = deep_merge.table(merged_game, game_part)
     end
 
@@ -253,6 +265,7 @@ local function metadata(infiles, args, optional)
         env = envs,
         self = game,
         meta = meta,
+        is = is,
         engine = {
             agent = agent,
             version = version,
