@@ -1,6 +1,7 @@
 local agent = require('source/agent')
 local version = require('source/version')
 local env = require('source/shared/string/parse/env')
+local html = require('source/shared/string/parse/html')
 local base64 = require('source/shared/string/encode/base64')
 local ltable = require('source/shared/string/encode/table')
 local yaml = require('source/shared/string/encode/yaml')
@@ -167,6 +168,12 @@ local function try_decode(content, parser)
     return ok and next(data or {}) ~= nil and data
 end
 
+local function try_html(content)
+    local lower = content:lower()
+    local is_html = lower:find('<!doctype%s+html') or lower:find('<html[%s>]') or lower:find('<head[%s>]')
+    return is_html and try_decode(content, html)
+end
+
 local function try_tic80(content)
     local ok, data = pcall(function()
         local m = {}
@@ -227,6 +234,7 @@ local detectors = {
     {'m3u8', function(c) return try_decode(c, m3u8) end},
     {'desktop', try_desktop},
     {'dotenv', function(c) return try_decode(c, env) end},
+    {'html', try_html},
     {'tic80', try_tic80},
     {'csv', function(c) return try_decode(c, csv) end},
     {'love2d', try_love}
