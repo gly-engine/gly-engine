@@ -6,6 +6,7 @@ local ltable = require('source/shared/string/encode/table')
 local yaml = require('source/shared/string/encode/yaml')
 local zip = require('source/shared/archive/zip/decode')
 local m3u8 = require('source/shared/string/decode/m3u8')
+local desktop = require('source/shared/string/decode/desktop')
 local json = require('source/third_party/rxi_json')
 local javascript = require('source/shared/string/encode/javascript')
 local lustache = require('source/third_party/olivinelabs_lustache')
@@ -199,10 +200,32 @@ local function try_love(love_content)
     return ok and data
 end
 
+local function try_desktop(content)
+    local data = try_decode(content, desktop)
+    local entry = data and data['Desktop Entry']
+    if not entry then return false end
+    local actions = {}
+    for group, keys in pairs(data) do
+        local id = group:match('^Desktop Action (.+)$')
+        if id then actions[id] = keys end
+    end
+    return {
+        meta = {
+            title = entry.Name,
+            description = entry.Comment
+        },
+        desktop = {
+            entry = entry,
+            actions = actions
+        }
+    }
+end
+
 local detectors = {
     {'lua', try_lua},
     {'json', function(c) return try_decode(c, json) end},
     {'m3u8', function(c) return try_decode(c, m3u8) end},
+    {'desktop', try_desktop},
     {'dotenv', function(c) return try_decode(c, env) end},
     {'tic80', try_tic80},
     {'csv', function(c) return try_decode(c, csv) end},
