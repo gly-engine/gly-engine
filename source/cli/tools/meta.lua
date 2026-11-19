@@ -1,10 +1,13 @@
 local agent = require('source/agent')
 local version = require('source/version')
 local env = require('source/shared/string/parse/env')
+local html = require('source/shared/string/parse/html')
 local base64 = require('source/shared/string/encode/base64')
 local ltable = require('source/shared/string/encode/table')
 local yaml = require('source/shared/string/encode/yaml')
-local zlib = require('source/third_party/zerkman_zlib')
+local zip = require('source/shared/archive/zip/decode')
+local m3u8 = require('source/shared/string/decode/m3u8')
+local desktop = require('source/shared/string/decode/desktop')
 local json = require('source/third_party/rxi_json')
 local javascript = require('source/shared/string/encode/javascript')
 local lustache = require('source/third_party/olivinelabs_lustache')
@@ -128,6 +131,13 @@ local function normalize_table(t)
   return count > 0 and r or nil
 end
 
+local function package_name(text)
+    return (text:lower()
+        :gsub('[^%l%d%.%+]+', '-')
+        :gsub('^[%-%.%+]+', '')
+        :gsub('[%-%.%+]+$', ''))
+end
+
 local function normalized_meta(app)
     local meta = app.meta or app.Game or {}
     local scan = function(...)
@@ -143,6 +153,7 @@ local function normalized_meta(app)
         return string.format("%d.%d.%d", tonumber(t[1]) or 0, tonumber(t[2]) or 0, tonumber(t[3]) or 0)
     end
     return {
+        id = scan('id', 'package', 'bundle', 'appid', 'name'),
         title = scan('title', 'name'),
         author = scan('author', 'vendor'),
         version = version(scan('version', 'ver', 'tag')),
@@ -163,6 +174,12 @@ local function try_decode(content, parser)
         return parser.decode(content)
     end)
     return ok and next(data or {}) ~= nil and data
+end
+
+local function try_html(content)
+    local lower = content:lower()
+    local is_html = lower:find('<!doctype%s+html') or lower:find('<html[%s>]') or lower:find('<head[%s>]')
+    return is_html and try_decode(content, html)
 end
 
 local function try_tic80(content)
@@ -186,9 +203,7 @@ end
 local function try_love(love_content)
     local ok, data = pcall(function ()
         _G.love = {}
-        local love_start = love_content:find("PK\003\004", 1, true)
-        local love_data = love_content:sub(love_start)
-        local love_conf = zlib.unzip(love_data, 'conf.lua')
+        local love_conf = assert(zip.find(love_content, 'conf.lua'))
         local love_meta = {window={},audio={},modules={},screen={}}
         eval_code.script(love_conf)
         if _G.love.conf then
@@ -199,6 +214,39 @@ local function try_love(love_content)
     end)
     return ok and data
 end
+
+local function try_desktop(content)
+    local data = try_decode(content, desktop)
+    local entry = data and data['Desktop Entry']
+    if not entry then return false end
+    local actions = {}
+    for group, keys in pairs(data) do
+        local id = group:match('^Desktop Action (.+)$')
+        if id then actions[id] = keys end
+    end
+    return {
+        meta = {
+            title = entry.Name,
+            description = entry.Comment
+        },
+        desktop = {
+            entry = entry,
+            actions = actions
+        }
+    }
+end
+
+local detectors = {
+    {'lua', try_lua},
+    {'json', function(c) return try_decode(c, json) end},
+    {'m3u8', function(c) return try_decode(c, m3u8) end},
+    {'desktop', try_desktop},
+    {'dotenv', function(c) return try_decode(c, env) end},
+    {'html', try_html},
+    {'tic80', try_tic80},
+    {'csv', function(c) return try_decode(c, csv) end},
+    {'love2d', try_love}
+}
 
 local function vars(args)
     return {
@@ -220,6 +268,7 @@ local function metadata(infiles, args, optional)
         infiles = {infiles}
     end
 
+    local is = {}
     local merged_game = nil
     for _, infile in ipairs(infiles) do
         if type(infile) == 'string' then
@@ -230,13 +279,15 @@ local function metadata(infiles, args, optional)
             end
         end
 
-        local game_part = try_lua(infile)
-            or try_decode(infile, json)
-            or try_decode(infile, env)
-            or try_decode(infile, csv)
-            or try_tic80(infile)
-            or try_love(infile)
-        
+        local game_part = nil
+        for _, detector in ipairs(detectors) do
+            game_part = detector[2](infile)
+            if game_part then
+                is[detector[1]] = true
+                break
+            end
+        end
+
         merged_game = deep_merge.table(merged_game, game_part)
     end
 
@@ -253,6 +304,7 @@ local function metadata(infiles, args, optional)
         env = envs,
         self = game,
         meta = meta,
+        is = is,
         engine = {
             agent = agent,
             version = version,
@@ -277,6 +329,18 @@ local function metadata(infiles, args, optional)
     data.dump.meta.tic80 = function()
         return '-'..'- title:  '..meta.title..'\n-'..'- author: '..meta.author
             ..'\n-'..'- desc:   '..meta.description..'\n-'..'- ver:    '..meta.version..'\n-'..'- script: lua'
+    end
+
+    data.dump.meta.ipk = function()
+        local package = package_name(#meta.id > 0 and meta.id or meta.title)
+        local lines = {'Package: '..package, 'Version: '..meta.version}
+        if #meta.author > 0 then
+            lines[#lines + 1] = 'Maintainer: '..meta.author
+        end
+        if #meta.description > 0 then
+            lines[#lines + 1] = 'Description: '..meta.description:gsub('\n%s*\n', '\n.\n'):gsub('\n', '\n ')
+        end
+        return table.concat(lines, '\n')..'\n'
     end
 
     if game.args and not args then

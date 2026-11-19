@@ -9,6 +9,20 @@ local function lsdir()
     return 'ls -1 '
 end
 
+local function lsfiles(path)
+    if dos() then
+        return 'cd /d "'..path..'" && cd && dir /s /b /a-d'
+    end
+    return 'cd "'..path..'" && pwd && find "$PWD" -type f'
+end
+
+local function lsexec(path)
+    if dos() then
+        return nil
+    end
+    return 'cd "'..path..'" 2> /dev/null && find . -type f -perm -u+x 2> /dev/null'
+end
+
 local function rmdir()
     if dos() then
         return 'rmdir /s /q '
@@ -47,6 +61,8 @@ end
 local P = {
     silent=silent,
     lsdir=lsdir,
+    lsfiles=lsfiles,
+    lsexec=lsexec,
     rmdir=rmdir,
     mkdir=mkdir,
     move=move,
