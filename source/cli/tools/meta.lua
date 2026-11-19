@@ -131,6 +131,13 @@ local function normalize_table(t)
   return count > 0 and r or nil
 end
 
+local function package_name(text)
+    return (text:lower()
+        :gsub('[^%l%d%.%+]+', '-')
+        :gsub('^[%-%.%+]+', '')
+        :gsub('[%-%.%+]+$', ''))
+end
+
 local function normalized_meta(app)
     local meta = app.meta or app.Game or {}
     local scan = function(...)
@@ -146,6 +153,7 @@ local function normalized_meta(app)
         return string.format("%d.%d.%d", tonumber(t[1]) or 0, tonumber(t[2]) or 0, tonumber(t[3]) or 0)
     end
     return {
+        id = scan('id', 'package', 'bundle', 'appid', 'name'),
         title = scan('title', 'name'),
         author = scan('author', 'vendor'),
         version = version(scan('version', 'ver', 'tag')),
@@ -324,7 +332,7 @@ local function metadata(infiles, args, optional)
     end
 
     data.dump.meta.ipk = function()
-        local package = meta.title:lower():gsub('[^%l%d]+', '-'):gsub('^%-+', ''):gsub('%-+$', '')
+        local package = package_name(#meta.id > 0 and meta.id or meta.title)
         local lines = {'Package: '..package, 'Version: '..meta.version}
         if #meta.author > 0 then
             lines[#lines + 1] = 'Maintainer: '..meta.author
