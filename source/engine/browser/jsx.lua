@@ -95,6 +95,7 @@ local function create_h(std, engine)
             } or nil
             local grid = std.ui.grid(attribute.class, grid_opts)
             if attribute.dir then grid:dir(attribute.dir) end
+            if attribute.option then grid.node.config.navigator = attribute.option.navigator end
             if attribute.style then add_style(std, grid.node, attribute.style) end
             for i = 1, #childs do
                 local item = childs[i]
