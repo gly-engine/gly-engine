@@ -77,4 +77,52 @@ function test_focus_right_plain_at_boundary_keeps_current()
     assert(result.node == c, 'must stay on C')
 end
 
+local function make_wrap_grid(wrap)
+    local root = { config = {}, data = {} }
+    local self = dom.node_begin(root, 400, 400)
+
+    local grid = { config = {}, data = {}, callbacks = {} }
+    dom.node_add(self, grid, { parent = root })
+    grid.config.navigator = wrap and { wrap = wrap }
+
+    local key = { config = {}, data = {}, callbacks = {} }
+    dom.node_add(self, key, { parent = grid, focusable = true })
+    key.config.offset_x, key.config.offset_y = 0, 0
+    key.data.width, key.data.height = 100, 100
+
+    local button = { config = {}, data = {}, callbacks = {} }
+    dom.node_add(self, button, { parent = root, focusable = true })
+    button.config.offset_x, button.config.offset_y = 200, 250
+    button.data.width, button.data.height = 100, 100
+
+    local std = { ui = {} }
+    ui.install(std, { dom = self })
+    self.focus_current = key
+    return std, self, key, button
+end
+
+function test_focus_right_off_row_stays_without_wrap()
+    local std, self, key = make_wrap_grid(nil)
+    std.ui.focus('right')
+    assert(self.focus_current == key, 'off-row node must not be reached without wrap')
+end
+
+function test_focus_right_off_row_reaches_with_grid_wrap()
+    local std, self, _, button = make_wrap_grid('right')
+    std.ui.focus('right')
+    assert(self.focus_current == button, 'wrap right must reach the off-row node')
+end
+
+function test_focus_right_off_row_reaches_with_grid_wrap_list()
+    local std, self, _, button = make_wrap_grid({ 'left', 'right' })
+    std.ui.focus('right')
+    assert(self.focus_current == button, 'wrap list with right must reach the off-row node')
+end
+
+function test_focus_right_off_row_stays_with_grid_wrap_left()
+    local std, self, key = make_wrap_grid('left')
+    std.ui.focus('right')
+    assert(self.focus_current == key, 'wrap left must not free the right direction')
+end
+
 test.unit(_G)

@@ -220,7 +220,7 @@ end
 --! @param direction string  'up'|'down'|'left'|'right'
 --! @param filter function(node)->boolean
 --! @return table|nil  closest matching candidate, or nil
-local function best_directional_candidate(self, current, direction, filter)
+local function best_directional_candidate(self, current, direction, filter, off_band)
     local cx = current.config.offset_x + current.data.width  / 2
     local cy = current.config.offset_y + current.data.height / 2
     local c_left   = current.config.offset_x
@@ -254,7 +254,7 @@ local function best_directional_candidate(self, current, direction, filter)
             local p_right  = p_left + candidate.data.width
             local p_top    = candidate.config.offset_y
             local p_bottom = p_top  + candidate.data.height
-            local y_overlap = p_top < c_bottom and p_bottom > c_top
+            local y_overlap = off_band or (p_top < c_bottom and p_bottom > c_top)
 
             -- left/right: no X overlap + must share the same Y band
             -- up/down:    no Y overlap (any X is fine, score handles proximity)
@@ -280,6 +280,22 @@ end
 
 local function accept_all() return true end
 
+local function wraps(node, direction)
+    local parent = node.config.parent
+    while parent do
+        local wrap = parent.config.navigator and parent.config.navigator.wrap
+        if wrap then
+            if type(wrap) == 'string' then return wrap == direction end
+            for _, side in ipairs(wrap) do
+                if side == direction then return true end
+            end
+            return false
+        end
+        parent = parent.config.parent
+    end
+    return false
+end
+
 --! @brief Find best focus candidate in a given direction using position scoring.
 --! @param self engine.dom
 --! @param current table  currently focused node
@@ -289,6 +305,7 @@ local function accept_all() return true end
 local function focus_navigate_spatial(self, current, direction, filter)
     filter = filter or accept_all
     local best_node = best_directional_candidate(self, current, direction, filter)
+        or (wraps(current, direction) and best_directional_candidate(self, current, direction, filter, true))
     if not best_node then return nil end
 
     -- entering a scroll grid from outside always lands on its first focusable

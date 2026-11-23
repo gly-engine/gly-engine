@@ -43,7 +43,7 @@ declare namespace JSX {
       style?: string,
       dir?: 'row' | 'col',
       scroll?: 'shift' | 'page' | 'peek',
-      focus?: 'wrap' | 'stop' | 'escape',
+      option?: { navigator?: { wrap?: 'left' | 'right' | ('left' | 'right')[] } },
       children?: JSX.Children
     };
 
