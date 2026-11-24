@@ -758,9 +758,34 @@
                             "description": "Output directory"
                         },
                         {
-                            "name": "protect",
+                            "name": "key",
+                            "type": "file",
+                            "description": "Sign/encrypt with an ed25519 private key (nodejs only)"
+                        }
+                    ]
+                },
+                {
+                    "name": "unzip",
+                    "description": "Unpack an .ipk into dir/control + dir/data/",
+                    "args": [
+                        {
+                            "name": "src",
+                            "type": "file",
+                            "required": true,
+                            "description": "Package file"
+                        }
+                    ],
+                    "flags": [
+                        {
+                            "name": "outdir",
                             "type": "string",
-                            "description": "Sign/encrypt with ed25519 private key (nodejs only)"
+                            "default": "./dist/",
+                            "description": "Output directory"
+                        },
+                        {
+                            "name": "key",
+                            "type": "file",
+                            "description": "Verify/decrypt with an ed25519 key, public or private (nodejs only)"
                         }
                     ]
                 }

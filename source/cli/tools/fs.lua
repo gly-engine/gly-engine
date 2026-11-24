@@ -74,6 +74,13 @@ local function mkdir(src_path)
     os.execute(str_cmd.mkdir()..p..str_cmd.silent())
 end
 
+local function chmod(src, mode)
+    local cmd = str_cmd.chmod(mode, str_fs.file(src).get_fullfilepath())
+    if cmd then
+        os.execute(cmd..str_cmd.silent())
+    end
+end
+
 local function rmdir(src_path)
     local p = str_fs.path(src_path).get_fullfilepath()
     os.execute(str_cmd.rmdir()..p..str_cmd.silent())
@@ -117,6 +124,7 @@ local P = {
     clear = clear,
     rmdir = rmdir,
     mkdir = mkdir,
+    chmod = chmod,
     lazy_del = lazy(del)
 }
 

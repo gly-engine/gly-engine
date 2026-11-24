@@ -23,6 +23,13 @@ local function lsexec(path)
     return 'cd "'..path..'" 2> /dev/null && find . -type f -perm -u+x 2> /dev/null'
 end
 
+local function chmod(mode, path)
+    if dos() then
+        return nil
+    end
+    return 'chmod '..mode..' "'..path..'"'
+end
+
 local function rmdir()
     if dos() then
         return 'rmdir /s /q '
@@ -63,6 +70,7 @@ local P = {
     lsdir=lsdir,
     lsfiles=lsfiles,
     lsexec=lsexec,
+    chmod=chmod,
     rmdir=rmdir,
     mkdir=mkdir,
     move=move,
