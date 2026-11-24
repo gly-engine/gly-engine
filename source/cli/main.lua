@@ -9,12 +9,13 @@ local commands_info = require('source/cli/commands/extra/info')
 local commands_fs = require('source/cli/commands/extra/fs')
 local commands_cli = require('source/cli/commands/extra/cli')
 local commands_love = require('source/cli/commands/extra/love')
+local commands_opkg = require('source/cli/commands/extra/opkg')
 local commands_hazard = require('source/cli/commands/extra/hazard')
 local cli_overlay = require('source/cli/tools/overlay')
 
 --! handlers are named `command` or `command-subcommand`
 local handlers = {}
-for _, group in ipairs({commands_halt, commands_fs, commands_cli, commands_love, commands_hazard}) do
+for _, group in ipairs({commands_halt, commands_fs, commands_cli, commands_love, commands_opkg, commands_hazard}) do
     for name, func in pairs(group) do
         handlers[name] = func
     end

@@ -736,6 +736,62 @@
             ]
         },
         {
+            "name": "opkg",
+            "description": "opkg package utilities",
+            "subcommands": [
+                {
+                    "name": "build",
+                    "description": "Pack dir/control + dir/data/ into an .ipk",
+                    "args": [
+                        {
+                            "name": "indir",
+                            "type": "string",
+                            "required": true,
+                            "description": "Package directory"
+                        }
+                    ],
+                    "flags": [
+                        {
+                            "name": "outdir",
+                            "type": "string",
+                            "default": "./",
+                            "description": "Output directory"
+                        },
+                        {
+                            "name": "key",
+                            "type": "file",
+                            "description": "Sign/encrypt with an ed25519 private key (nodejs only)"
+                        }
+                    ]
+                },
+                {
+                    "name": "unzip",
+                    "description": "Unpack an .ipk into dir/control + dir/data/",
+                    "args": [
+                        {
+                            "name": "src",
+                            "type": "file",
+                            "required": true,
+                            "description": "Package file"
+                        }
+                    ],
+                    "flags": [
+                        {
+                            "name": "outdir",
+                            "type": "string",
+                            "default": "./dist/",
+                            "description": "Output directory"
+                        },
+                        {
+                            "name": "key",
+                            "type": "file",
+                            "description": "Verify/decrypt with an ed25519 key, public or private (nodejs only)"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
             "name": "hazard",
             "description": "Internal hazard and bootstrap tools",
             "hidden": true,

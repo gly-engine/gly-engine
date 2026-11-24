@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const child_process = require('child_process');
+const crypto = require('crypto');
 
 const root = path.resolve(__dirname, '..', '..');
 const ceifa = 'wasmoon';
@@ -156,8 +157,64 @@ function createBufferTable(L) {
   lua.lua_setglobal(L, to_luastring("Buffer"));
 }
 
+const cryptoModule = {
+  publicKey: (pem) => {
+    const key = crypto.createPublicKey(pem);
+    if (key.asymmetricKeyType !== 'ed25519') {
+      throw new Error('not an ed25519 key');
+    }
+    return key.export({ type: 'spki', format: 'der' }).subarray(-32).toString('hex');
+  },
+  verify: (pem, hex, signature) => crypto.verify(
+    null,
+    Buffer.from(hex, 'hex'),
+    crypto.createPublicKey(pem),
+    Buffer.from(signature, 'base64')
+  ) ? '1' : '',
+  sign: (pem, hex) => crypto.sign(null, Buffer.from(hex, 'hex'), crypto.createPrivateKey(pem)).toString('base64'),
+  hash: (algorithm, hex) => crypto.createHash(algorithm).update(Buffer.from(hex, 'hex')).digest('hex'),
+  randomBytes: (size) => crypto.randomBytes(size).toString('hex'),
+  aes256gcm: (keyHex, ivHex, hex) => {
+    const cipher = crypto.createCipheriv('aes-256-gcm', Buffer.from(keyHex, 'hex'), Buffer.from(ivHex, 'hex'));
+    return Buffer.concat([cipher.update(Buffer.from(hex, 'hex')), cipher.final(), cipher.getAuthTag()]).toString('hex');
+  },
+  aes256gcmOpen: (keyHex, ivHex, hex) => {
+    const sealed = Buffer.from(hex, 'hex');
+    if (sealed.length < 16) {
+      throw new Error('sealed data is too short');
+    }
+    const decipher = crypto.createDecipheriv('aes-256-gcm', Buffer.from(keyHex, 'hex'), Buffer.from(ivHex, 'hex'));
+    decipher.setAuthTag(sealed.subarray(-16));
+    try {
+      return Buffer.concat([decipher.update(sealed.subarray(0, -16)), decipher.final()]).toString('hex');
+    } catch (e) {
+      throw new Error('the data does not match the key that signed it');
+    }
+  }
+};
+
+// adapts a plain js function (string/number args, string return) to the fengari stack
+function fengariFunction(fn) {
+  return (L) => {
+    const args = [];
+    for (let i = 1; i <= lua.lua_gettop(L); i++) {
+      args.push(lua.lua_type(L, i) === lua.LUA_TNUMBER ? lua.lua_tonumber(L, i) : to_jsstring(lua.lua_tostring(L, i)));
+    }
+    let result;
+    try {
+      result = fn(...args);
+    } catch (e) {
+      lua.lua_pushstring(L, to_luastring(e.message || String(e)));
+      return lua.lua_error(L);
+    }
+    lua.lua_pushstring(L, to_luastring(result));
+    return 1;
+  };
+}
+
 function getJsModules() {
   return {
+    crypto: Object.fromEntries(Object.entries(cryptoModule).map(([name, fn]) => [name, fengariFunction(fn)])),
     fs: {
       readFileSync: (L) => {
         const file = to_jsstring(lua.lua_tostring(L, 1));
@@ -237,6 +294,7 @@ function resolveFile(file) {
 
 // same lookup of fengari: cwd first, then gly-engine root
 const wasmoonModules = {
+  crypto: cryptoModule,
   fs: Object.assign({}, fs, {
     existsSync: (file) => resolveFile(file) !== undefined,
     readFileSync: (file, encoding) => {

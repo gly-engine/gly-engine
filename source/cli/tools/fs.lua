@@ -25,6 +25,45 @@ local function ls(src_path)
     return ls_files
 end
 
+local function files(src_path)
+    local p = str_fs.path(src_path).get_fullfilepath()
+    local ls_cmd = io.popen(str_cmd.lsfiles(#p > 0 and p or '.'))
+    local list = {}
+    local root = nil
+
+    if ls_cmd then
+        for line in ls_cmd:lines() do
+            line = line:gsub('\r$', '')
+            if not root then
+                root = line:gsub('[/\\]$', '')
+            elseif #line > #root + 1 and line:sub(1, #root) == root then
+                list[#list + 1] = line:sub(#root + 2):gsub('\\', '/')
+            end
+        end
+        ls_cmd:close()
+    end
+
+    table.sort(list)
+    return list
+end
+
+--! @short set of files with the executable bit, relative to src_path (empty on windows)
+local function executables(src_path)
+    local p = str_fs.path(src_path).get_fullfilepath()
+    local cmd = str_cmd.lsexec(#p > 0 and p or '.')
+    local ls_cmd = cmd and io.popen(cmd)
+    local set = {}
+
+    if ls_cmd then
+        for line in ls_cmd:lines() do
+            set[line:gsub('^%./', '')] = true
+        end
+        ls_cmd:close()
+    end
+
+    return set
+end
+
 local function del(src)
     local p = str_fs.file(src).get_fullfilepath()
     os.execute(str_cmd.del()..p..str_cmd.silent())
@@ -33,6 +72,13 @@ end
 local function mkdir(src_path)
     local p = str_fs.path(src_path).get_fullfilepath()
     os.execute(str_cmd.mkdir()..p..str_cmd.silent())
+end
+
+local function chmod(src, mode)
+    local cmd = str_cmd.chmod(mode, str_fs.file(src).get_fullfilepath())
+    if cmd then
+        os.execute(cmd..str_cmd.silent())
+    end
 end
 
 local function rmdir(src_path)
@@ -71,11 +117,14 @@ end
 
 local P = {
     ls = ls,
+    files = files,
+    executables = executables,
     del = del,
     move = move,
     clear = clear,
     rmdir = rmdir,
     mkdir = mkdir,
+    chmod = chmod,
     lazy_del = lazy(del)
 }
 
